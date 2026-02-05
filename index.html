@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sai.fun Transaction Explorer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0a0a0f;
+      color: #e1e1e6;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #2a2a3a;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .fetch-btn {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .fetch-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .fetch-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: #15151f;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #2a2a3a;
+      padding-bottom: 16px;
+    }
+
+    .tab {
+      background: transparent;
+      border: 1px solid #2a2a3a;
+      color: #888;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      border-color: #6366f1;
+      color: #e1e1e6;
+    }
+
+    .tab.active {
+      background: #6366f1;
+      border-color: #6366f1;
+      color: white;
+    }
+
+    .table-container {
+      background: #15151f;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      background: #1a1a25;
+      padding: 14px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-top: 1px solid #2a2a3a;
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: #1a1a25;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .badge-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .badge-yellow {
+      background: rgba(234, 179, 8, 0.15);
+      color: #eab308;
+    }
+
+    .badge-purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+    }
+
+    .pnl-positive {
+      color: #22c55e;
+    }
+
+    .pnl-negative {
+      color: #ef4444;
+    }
+
+    .address {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .tx-hash {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 12px;
+      color: #6366f1;
+      text-decoration: none;
+    }
+
+    .tx-hash:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: #888;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #2a2a3a;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .address-link {
+      color: #6366f1;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .address-link:hover {
+      text-decoration: underline;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: #15151f;
+      border: 1px solid #2a2a3a;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 1200px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid #2a2a3a;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .modal-header .address-full {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 14px;
+      color: #6366f1;
+      margin-left: 12px;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+    }
+
+    .modal-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #2a2a3a;
+    }
+
+    .modal-stat {
+      text-align: center;
+    }
+
+    .modal-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .modal-stat-label {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .modal-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #2a2a3a;
+    }
+
+    .modal-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .modal-content table {
+      font-size: 13px;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      color: #6366f1;
+    }
+
+    .sort-icon {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.3;
+      font-size: 10px;
+    }
+
+    th.sortable:hover .sort-icon {
+      opacity: 0.6;
+    }
+
+    th.sorted .sort-icon {
+      opacity: 1;
+      color: #6366f1;
+    }
+
+    .stat-card.clickable {
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .stat-card.clickable:hover {
+      transform: translateY(-2px);
+      border-color: #6366f1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Sai.fun Transaction Explorer</h1>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <label style="color:#888;font-size:13px;">Network</label>
+          <select id="network-select" onchange="onNetworkChange(this.value)" style="background:#0a0a0f;color:#e1e1e6;border:1px solid #2a2a3a;padding:8px;border-radius:8px;font-size:13px;">
+            <option value="mainnet">Mainnet</option>
+            <option value="testnet">Testnet (Nibiru testnet-2)</option>
+          </select>
+          <button class="fetch-btn" onclick="fetchAllData()">
+            Fetch Transactions
+          </button>
+        </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Volume</div>
+        <div class="stat-value" id="stat-volume">-</div>
+      </div>
+      <div class="stat-card clickable" onclick="showTvlBreakdown()">
+        <div class="stat-label">Total TVL</div>
+        <div class="stat-value" id="stat-tvl">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Perpetual Trades</div>
+        <div class="stat-value" id="stat-trades">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">LP Deposits</div>
+        <div class="stat-value" id="stat-deposits">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Withdraw Requests</div>
+        <div class="stat-value" id="stat-withdraws">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unique Traders</div>
+        <div class="stat-value" id="stat-traders">-</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('trades')">Perpetual Trades</button>
+      <button class="tab" onclick="showTab('deposits')">LP Deposits</button>
+      <button class="tab" onclick="showTab('withdraws')">Withdraw Requests</button>
+      <button class="tab" onclick="showTab('volume')">Stats by User</button>
+      <button class="tab" onclick="showTab('markets')">Markets</button>
+      <button class="tab" onclick="showTab('collateral')">Collateral Indices</button>
+    </div>
+
+    <div class="table-container">
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <span>Fetching transactions...</span>
+      </div>
+
+      <div id="empty" class="empty-state">
+        Click "Fetch Transactions" to load data from Sai Keeper
+      </div>
+
+      <div id="trades-table" class="table-wrapper hidden"></div>
+      <div id="deposits-table" class="table-wrapper hidden"></div>
+      <div id="withdraws-table" class="table-wrapper hidden"></div>
+      <div id="markets-table" class="table-wrapper hidden"></div>
+      <div id="volume-table" class="table-wrapper hidden"></div>
+      <div id="collateral-table" class="table-wrapper hidden"></div>
+    </div>
+  </div>
+
+  <!-- TVL Breakdown Modal -->
+  <div id="tvl-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeTvlBreakdown()">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>TVL Breakdown by Vault</h2>
+        <button class="modal-close" onclick="closeTvlBreakdown()">&times;</button>
+      </div>
+      <div class="modal-content" style="padding: 0;">
+        <div id="tvl-breakdown-table" class="table-wrapper"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeProfile()">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2>User Profile <span id="profile-address" class="address-full"></span></h2>
+        </div>
+        <button class="modal-close" onclick="closeProfile()">&times;</button>
+      </div>
+      <div class="modal-stats">
+        <div class="modal-stat">
+          <div class="modal-stat-value" id="profile-trades">0</div>
+          <div class="modal-stat-label">Trades</div>
+        </div>
+        <div class="modal-stat">
+          <div class="modal-stat-value" id="profile-volume">$0</div>
+          <div class="modal-stat-label">Total Volume</div>
+        </div>
+        <div class="modal-stat">
+          <div class="modal-stat-value" id="profile-pnl">$0</div>
+          <div class="modal-stat-label">Realized PnL</div>
+        </div>
+        <div class="modal-stat">
+          <div class="modal-stat-value" id="profile-deposits">0</div>
+          <div class="modal-stat-label">LP Deposits</div>
+        </div>
+      </div>
+      <div class="modal-tabs">
+        <button class="tab active" onclick="showProfileTab('trades')">Trades</button>
+        <button class="tab" onclick="showProfileTab('deposits')">LP Deposits</button>
+        <button class="tab" onclick="showProfileTab('withdraws')">Withdrawals</button>
+      </div>
+      <div class="modal-content">
+        <div id="profile-trades-table" class="table-wrapper"></div>
+        <div id="profile-deposits-table" class="table-wrapper hidden"></div>
+        <div id="profile-withdraws-table" class="table-wrapper hidden"></div>
+      </div>
+    </div>
+  </div>
+
+    <script>
+    // Network configuration (testnet = Nibiru testnet-2)
+    const NETWORK_CONFIG = {
+      mainnet: {
+        api: "https://sai-keeper.nibiru.fi/query",
+        explorerTx: "https://nibiru.explorers.guru/transaction/"
+      },
+      testnet: {
+        api: "https://sai-keeper.testnet-2.nibiru.fi/query",
+        explorerTx: "https://testnet-2.nibiru.explorers.guru/transaction/"
+      }
+    };
+
+    function getSavedNetwork() {
+      return localStorage.getItem('network') || 'mainnet';
+    }
+
+    let NETWORK = getSavedNetwork();
+    let API_URL = NETWORK_CONFIG[NETWORK].api;
+    let EXPLORER_TX_BASE = NETWORK_CONFIG[NETWORK].explorerTx;
+
+    function onNetworkChange(value) {
+      setNetwork(value);
+      // If data already loaded, update message to user
+      if (document.querySelector('.fetch-btn')) {
+        document.querySelector('.fetch-btn').textContent = 'Fetch Transactions';
+      }
+    }
+
+    function setNetwork(value) {
+      NETWORK = value;
+      localStorage.setItem('network', value);
+      API_URL = NETWORK_CONFIG[NETWORK].api;
+      EXPLORER_TX_BASE = NETWORK_CONFIG[NETWORK].explorerTx;
+      // update select UI
+      const sel = document.getElementById('network-select');
+      if (sel) sel.value = NETWORK;
+    }
+
+    // initialize select value on load
+    document.addEventListener('DOMContentLoaded', () => {
+      const sel = document.getElementById('network-select');
+      if (sel) sel.value = NETWORK;
+    });
+
+    // Bech32 to 0x address conversion
+    const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    function nibiToHex(addr) {
+      if (!addr || !addr.startsWith('nibi')) return addr;
+      try {
+        const data = [];
+        for (let i = addr.indexOf('1') + 1; i < addr.length - 6; i++) {
+          data.push(CHARSET.indexOf(addr[i]));
+        }
+        let acc = 0, bits = 0;
+        const bytes = [];
+        for (const val of data) {
+          acc = (acc << 5) | val;
+          bits += 5;
+          if (bits >= 8) {
+            bits -= 8;
+            bytes.push((acc >> bits) & 0xff);
+          }
+        }
+        return '0x' + bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch { return addr; }
+    }
+
+    let currentTab = 'trades';
+
+    // Sort state for each table
+    const sortState = {
+      trades: { column: 'time', direction: 'desc' },
+      deposits: { column: 'time', direction: 'desc' },
+      withdraws: { column: null, direction: 'desc' },
+      volume: { column: 'totalVolume', direction: 'desc' }
+    };
+
+    // Token prices from oracle (current market prices)
+    let tokenPrices = {};
+
+    // Vault data from API
+    let vaultsData = [];
+
+    // Markets data from API
+    let marketsData = [];
+
+    // Collateral indices data
+    let collateralData = [];
+
+    let data = { trades: [], deposits: [], withdraws: [], volume: [] };
+
+
+
+    async function fetchGraphQL(query) {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      return response.json();
+    }
+
+    // Paginated fetch helpers (API caps at 100 per request)
+    async function fetchAllTrades() {
+      const PAGE_SIZE = 100;
+      let allTrades = [];
+      let offset = 0;
+      const MAX_PAGES = 200; // safety guard for endpoints that ignore offset
+      let iterations = 0;
+      const seen = new Set();
+      while (true) {
+        if (++iterations > MAX_PAGES) {
+          console.warn('fetchAllTrades: reached max pages', MAX_PAGES);
+          break;
+        }
+        const res = await fetchGraphQL(`{
+          perp {
+            tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+              id tradeChangeType realizedPnlPct realizedPnlCollateral
+              txHash evmTxHash collateralPrice
+              block { block block_ts }
+              trade { id trader tradeType isLong isOpen leverage openPrice closePrice collateralAmount openCollateralAmount tp sl }
+            }
+          }
+        }`);
+        const trades = res.data?.perp?.tradeHistory || [];
+        if (trades.length === 0) break;
+        for (const t of trades) {
+          const key = t.id || t.txHash || JSON.stringify(t);
+          if (!seen.has(key)) {
+            seen.add(key);
+            allTrades.push(t);
+          }
+        }
+        if (trades.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allTrades;
+    }
+
+    async function fetchAllDeposits() {
+      const PAGE_SIZE = 100;
+      let allDeposits = [];
+      let offset = 0;
+      const MAX_PAGES = 200;
+      let iterations = 0;
+      const seen = new Set();
+      while (true) {
+        if (++iterations > MAX_PAGES) {
+          console.warn('fetchAllDeposits: reached max pages', MAX_PAGES);
+          break;
+        }
+        const res = await fetchGraphQL(`{
+          lp {
+            depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+              depositor amount collateralPrice
+              block { block block_ts }
+              vault { address collateralToken { symbol } tvl }
+            }
+          }
+        }`);
+        const deposits = res.data?.lp?.depositHistory || [];
+        if (deposits.length === 0) break;
+        for (const d of deposits) {
+          const key = (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '');
+          if (!seen.has(key)) {
+            seen.add(key);
+            allDeposits.push(d);
+          }
+        }
+        if (deposits.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allDeposits;
+    }
+
+    async function fetchAllWithdraws() {
+      const PAGE_SIZE = 100;
+      let allWithdraws = [];
+      let offset = 0;
+      const MAX_PAGES = 200;
+      let iterations = 0;
+      const seen = new Set();
+      while (true) {
+        if (++iterations > MAX_PAGES) {
+          console.warn('fetchAllWithdraws: reached max pages', MAX_PAGES);
+          break;
+        }
+        const res = await fetchGraphQL(`{
+          lp {
+            withdrawRequests(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+              depositor shares unlockEpoch autoRedeem
+              vault { address collateralToken { symbol } }
+            }
+          }
+        }`);
+        const withdraws = res.data?.lp?.withdrawRequests || [];
+        if (withdraws.length === 0) break;
+        for (const w of withdraws) {
+          const key = (w.depositor || '') + '|' + (w.vault?.address || '') + '|' + (w.shares || '');
+          if (!seen.has(key)) {
+            seen.add(key);
+            allWithdraws.push(w);
+          }
+        }
+        if (withdraws.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allWithdraws;
+    }
+
+    async function fetchTokenPrices() {
+      const res = await fetchGraphQL(`{
+        oracle {
+          tokenPricesUsd {
+            token { symbol name }
+            priceUsd
+          }
+        }
+      }`);
+      const prices = res.data?.oracle?.tokenPricesUsd || [];
+      const priceMap = {};
+      for (const p of prices) {
+        const symbol = p.token?.symbol || p.token?.name;
+        if (symbol) {
+          priceMap[symbol.toUpperCase()] = p.priceUsd;
+        }
+      }
+      return priceMap;
+    }
+
+    async function fetchVaults() {
+      const res = await fetchGraphQL(`{
+        lp {
+          vaults {
+            address
+            sharesERC20
+            tvl
+            availableAssets
+            collateralToken { id symbol }
+          }
+        }
+      }`);
+      return res.data?.lp?.vaults || [];
+    }
+
+    async function fetchMarkets() {
+      const res = await fetchGraphQL(`{
+        perp {
+          borrowings {
+            marketId
+            collateralToken { id symbol }
+            baseToken { symbol }
+            feesPerHourLong
+            feesPerHourShort
+            oiLong
+            oiShort
+            oiMax
+            price
+            price24HrsAgo
+            priceChangePct24Hrs
+            minLeverage
+            maxLeverage
+            openFeePct
+            closeFeePct
+            minPositionSizeUSD
+            visible
+          }
+        }
+      }`);
+      return res.data?.perp?.borrowings || [];
+    }
+
+    async function fetchCollateralIndices() {
+      // Fetch all tokens from oracle with prices
+      const res = await fetchGraphQL(`{
+        oracle {
+          tokenPricesUsd {
+            token { id symbol name logoUrl }
+            priceUsd
+          }
+        }
+      }`);
+      return res.data?.oracle?.tokenPricesUsd || [];
+    }
+
+    function computeVolumeByUser() {
+      const volumeByUser = {};
+
+      for (const t of data.trades) {
+        const trader = t.trade?.trader;
+        if (!trader) continue;
+
+        if (!volumeByUser[trader]) {
+          volumeByUser[trader] = {
+            trader,
+            totalVolume: 0,
+            tradeCount: 0,
+            realizedPnl: 0,
+            openPositions: 0,
+            closedPositions: 0,
+            liquidations: 0
+          };
+        }
+
+        const collateral = t.trade?.collateralAmount || 0;
+        const leverage = t.trade?.leverage || 1;
+        const notionalVolume = collateral * leverage;
+
+        // Only count volume for position opens
+        if (t.tradeChangeType === 'position_opened') {
+          volumeByUser[trader].totalVolume += notionalVolume;
+          volumeByUser[trader].openPositions += 1;
+        } else if (t.tradeChangeType?.startsWith('position_closed')) {
+          volumeByUser[trader].closedPositions += 1;
+        } else if (t.tradeChangeType === 'position_liquidated') {
+          volumeByUser[trader].liquidations += 1;
+        }
+
+        volumeByUser[trader].tradeCount += 1;
+
+        if (t.realizedPnlCollateral) {
+          volumeByUser[trader].realizedPnl += t.realizedPnlCollateral;
+        }
+      }
+
+      data.volume = Object.values(volumeByUser)
+        .map(u => ({
+          ...u,
+          address: nibiToHex(u.trader)
+        }))
+        .sort((a, b) => b.totalVolume - a.totalVolume);
+    }
+
+    async function fetchAllData() {
+      const btn = document.querySelector('.fetch-btn');
+      btn.disabled = true;
+      btn.textContent = 'Fetching...';
+
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('empty').classList.add('hidden');
+      document.getElementById('trades-table').classList.add('hidden');
+      document.getElementById('deposits-table').classList.add('hidden');
+      document.getElementById('withdraws-table').classList.add('hidden');
+      document.getElementById('volume-table').classList.add('hidden');
+      document.getElementById('markets-table').classList.add('hidden');
+      document.getElementById('collateral-table').classList.add('hidden');
+
+      try {
+        const [trades, deposits, withdraws, prices, vaults, markets, collaterals] = await Promise.all([
+          fetchAllTrades(),
+          fetchAllDeposits(),
+          fetchAllWithdraws(),
+          fetchTokenPrices(),
+          fetchVaults(),
+          fetchMarkets(),
+          fetchCollateralIndices()
+        ]);
+
+        data.trades = trades.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        data.deposits = deposits.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        data.withdraws = withdraws;
+        tokenPrices = prices;
+        vaultsData = vaults;
+        marketsData = markets;
+        collateralData = collaterals;
+
+        // Compute volume stats by user from trades
+        computeVolumeByUser();
+
+        updateStats();
+        renderTables();
+        renderVolumeTable();
+        renderMarketsTable();
+        renderCollateralTable();
+        showTab(currentTab);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('Failed to fetch data. Check console for details.');
+      }
+
+      document.getElementById('loading').classList.add('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Fetch Transactions';
+    }
+
+    function updateStats() {
+      document.getElementById('stat-trades').textContent = data.trades.length;
+      document.getElementById('stat-deposits').textContent = data.deposits.length;
+      document.getElementById('stat-withdraws').textContent = data.withdraws.length;
+
+      const uniqueTraders = new Set(data.trades.map(t => t.trade?.trader).filter(Boolean));
+      document.getElementById('stat-traders').textContent = uniqueTraders.size;
+
+      // Calculate total trading volume (only count position opens to avoid double-counting)
+      let totalVolume = 0;
+      for (const t of data.trades) {
+        if (t.tradeChangeType === 'position_opened') {
+          const collateral = t.trade?.collateralAmount || 0;
+          const leverage = t.trade?.leverage || 1;
+          totalVolume += collateral * leverage;
+        }
+      }
+      document.getElementById('stat-volume').textContent = formatUsd(totalVolume);
+
+      // Calculate total TVL from vaults (active vaults only) using availableAssets
+      // Active vault ERC20 addresses
+      const activeVaults = new Set([
+        '0xE96397b6135240956413031c0B26507eeCCD4B39', // USDC vault 1
+        '0x7275AfFf575aD79da8b245784cE54a203Df954e6'  // stNIBI vault 1
+      ]);
+
+      let totalTvl = 0;
+      for (const v of vaultsData) {
+        if (activeVaults.has(v.sharesERC20)) {
+          const token = v.collateralToken?.symbol || '';
+          const rawTokens = v.availableAssets / 1e6;
+          const price = tokenPrices[token.toUpperCase()] || 1;
+          totalTvl += rawTokens * price;
+        }
+      }
+      document.getElementById('stat-tvl').textContent = '$' + formatNumber(totalTvl);
+    }
+
+    function formatAddress(addr) {
+      if (!addr) return '-';
+      return addr.slice(0, 12) + '...' + addr.slice(-6);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleString();
+    }
+
+    function formatNumber(num, decimals = 2) {
+      if (num === null || num === undefined) return '-';
+      return Number(num).toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function formatUsd(num) {
+      if (num === null || num === undefined) return '-';
+      const value = num / 1e6;
+      return '$' + formatNumber(value);
+    }
+
+    function formatDepositAmount(amount, collateralPrice) {
+      if (amount === null || amount === undefined) return '-';
+      const tokenAmount = amount / 1e6;
+      if (collateralPrice) {
+        const usdValue = tokenAmount * collateralPrice;
+        return '$' + formatNumber(usdValue);
+      }
+      return formatNumber(tokenAmount);
+    }
+
+    function formatTvl(tvl, tokenSymbol) {
+      if (tvl === null || tvl === undefined) return '-';
+      const tokenAmount = tvl / 1e6;
+      // Use oracle price for conversion
+      const price = tokenPrices[(tokenSymbol || '').toUpperCase()] || 1;
+      const usdValue = tokenAmount * price;
+      return '$' + formatNumber(usdValue);
+    }
+
+    function getTradeTypeBadge(type) {
+      const badges = {
+        'position_opened': '<span class="badge badge-blue">Opened</span>',
+        'position_closed_user': '<span class="badge badge-purple">Closed</span>',
+        'position_closed_tp': '<span class="badge badge-green">Take Profit</span>',
+        'position_closed_sl': '<span class="badge badge-yellow">Stop Loss</span>',
+        'position_liquidated': '<span class="badge badge-red">Liquidated</span>',
+      };
+      return badges[type] || `<span class="badge">${type}</span>`;
+    }
+
+    function getDirectionBadge(isLong) {
+      return isLong
+        ? '<span class="badge badge-green">Long</span>'
+        : '<span class="badge badge-red">Short</span>';
+    }
+
+    function formatPnl(pnl) {
+      if (pnl === null || pnl === undefined) return '-';
+      const value = pnl / 1e6;
+      const className = value >= 0 ? 'pnl-positive' : 'pnl-negative';
+      const sign = value >= 0 ? '+' : '';
+      return `<span class="${className}">${sign}$${formatNumber(value)}</span>`;
+    }
+
+    // Sorting functions
+    function sortData(tableType, column) {
+      const state = sortState[tableType];
+      if (state.column === column) {
+        state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.column = column;
+        state.direction = 'desc';
+      }
+
+      const dir = state.direction === 'asc' ? 1 : -1;
+
+      if (tableType === 'trades') {
+        data.trades.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'time': valA = new Date(a.block?.block_ts || 0); valB = new Date(b.block?.block_ts || 0); break;
+            case 'type': valA = a.tradeChangeType || ''; valB = b.tradeChangeType || ''; break;
+            case 'trader': valA = a.trade?.trader || ''; valB = b.trade?.trader || ''; break;
+            case 'direction': valA = a.trade?.isLong ? 1 : 0; valB = b.trade?.isLong ? 1 : 0; break;
+            case 'leverage': valA = a.trade?.leverage || 0; valB = b.trade?.leverage || 0; break;
+            case 'openPrice': valA = a.trade?.openPrice || 0; valB = b.trade?.openPrice || 0; break;
+            case 'closePrice': valA = a.trade?.closePrice || 0; valB = b.trade?.closePrice || 0; break;
+            case 'collateral': valA = a.trade?.collateralAmount || 0; valB = b.trade?.collateralAmount || 0; break;
+            case 'pnl': valA = a.realizedPnlCollateral || 0; valB = b.realizedPnlCollateral || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderTables();
+      } else if (tableType === 'deposits') {
+        data.deposits.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'time': valA = new Date(a.block?.block_ts || 0); valB = new Date(b.block?.block_ts || 0); break;
+            case 'depositor': valA = a.depositor || ''; valB = b.depositor || ''; break;
+            case 'amount':
+              valA = (a.amount || 0) * (a.collateralPrice || 1);
+              valB = (b.amount || 0) * (b.collateralPrice || 1);
+              break;
+            case 'token': valA = a.vault?.collateralToken?.symbol || ''; valB = b.vault?.collateralToken?.symbol || ''; break;
+            case 'tvl':
+              const tokenA = a.vault?.collateralToken?.symbol || '';
+              const tokenB = b.vault?.collateralToken?.symbol || '';
+              const tvlA = (a.vault?.tvl || 0) / 1e6;
+              const tvlB = (b.vault?.tvl || 0) / 1e6;
+              const priceA = tokenPrices[tokenA.toUpperCase()] || 1;
+              const priceB = tokenPrices[tokenB.toUpperCase()] || 1;
+              valA = tvlA * priceA;
+              valB = tvlB * priceB;
+              break;
+            case 'vault': valA = a.vault?.address || ''; valB = b.vault?.address || ''; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderTables();
+      } else if (tableType === 'withdraws') {
+        data.withdraws.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'depositor': valA = a.depositor || ''; valB = b.depositor || ''; break;
+            case 'shares': valA = a.shares || 0; valB = b.shares || 0; break;
+            case 'unlockEpoch': valA = a.unlockEpoch || 0; valB = b.unlockEpoch || 0; break;
+            case 'autoRedeem': valA = a.autoRedeem ? 1 : 0; valB = b.autoRedeem ? 1 : 0; break;
+            case 'token': valA = a.vault?.collateralToken?.symbol || ''; valB = b.vault?.collateralToken?.symbol || ''; break;
+            case 'vault': valA = a.vault?.address || ''; valB = b.vault?.address || ''; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderTables();
+      } else if (tableType === 'volume') {
+        data.volume.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'trader': valA = a.trader || ''; valB = b.trader || ''; break;
+            case 'totalVolume': valA = a.totalVolume || 0; valB = b.totalVolume || 0; break;
+            case 'tradeCount': valA = a.tradeCount || 0; valB = b.tradeCount || 0; break;
+            case 'realizedPnl': valA = a.realizedPnl || 0; valB = b.realizedPnl || 0; break;
+            case 'openPositions': valA = a.openPositions || 0; valB = b.openPositions || 0; break;
+            case 'closedPositions': valA = a.closedPositions || 0; valB = b.closedPositions || 0; break;
+            case 'liquidations': valA = a.liquidations || 0; valB = b.liquidations || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderVolumeTable();
+      }
+    }
+
+    function getSortIcon(tableType, column) {
+      const state = sortState[tableType];
+      if (state.column !== column) return '<span class="sort-icon">▼</span>';
+      return state.direction === 'asc'
+        ? '<span class="sort-icon">▲</span>'
+        : '<span class="sort-icon">▼</span>';
+    }
+
+    function getSortedClass(tableType, column) {
+      return sortState[tableType].column === column ? 'sortable sorted' : 'sortable';
+    }
+
+    function renderTables() {
+      // Trades table
+      let tradesHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th class="${getSortedClass('trades', 'time')}" onclick="sortData('trades', 'time')">Time${getSortIcon('trades', 'time')}</th>
+              <th class="${getSortedClass('trades', 'type')}" onclick="sortData('trades', 'type')">Type${getSortIcon('trades', 'type')}</th>
+              <th class="${getSortedClass('trades', 'trader')}" onclick="sortData('trades', 'trader')">Trader${getSortIcon('trades', 'trader')}</th>
+              <th class="${getSortedClass('trades', 'direction')}" onclick="sortData('trades', 'direction')">Direction${getSortIcon('trades', 'direction')}</th>
+              <th class="${getSortedClass('trades', 'leverage')}" onclick="sortData('trades', 'leverage')">Leverage${getSortIcon('trades', 'leverage')}</th>
+              <th class="${getSortedClass('trades', 'openPrice')}" onclick="sortData('trades', 'openPrice')">Open Price${getSortIcon('trades', 'openPrice')}</th>
+              <th class="${getSortedClass('trades', 'closePrice')}" onclick="sortData('trades', 'closePrice')">Close Price${getSortIcon('trades', 'closePrice')}</th>
+              <th class="${getSortedClass('trades', 'collateral')}" onclick="sortData('trades', 'collateral')">Collateral${getSortIcon('trades', 'collateral')}</th>
+              <th class="${getSortedClass('trades', 'pnl')}" onclick="sortData('trades', 'pnl')">PnL${getSortIcon('trades', 'pnl')}</th>
+              <th>TX Hash</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const t of data.trades) {
+        const trade = t.trade || {};
+        const txHash = t.evmTxHash || t.txHash || '';
+        const txDisplay = txHash.slice(0, 10) + '...';
+
+        const traderHex = nibiToHex(trade.trader);
+        tradesHtml += `
+          <tr>
+            <td>${formatDate(t.block?.block_ts)}</td>
+            <td>${getTradeTypeBadge(t.tradeChangeType)}</td>
+            <td class="address"><span class="address-link" title="${traderHex}" onclick="openProfile('${traderHex}', '${trade.trader}')">${formatAddress(traderHex)}</span></td>
+            <td>${getDirectionBadge(trade.isLong)}</td>
+            <td>${trade.leverage}x</td>
+            <td>$${formatNumber(trade.openPrice)}</td>
+            <td>$${formatNumber(trade.closePrice)}</td>
+            <td>${formatUsd(trade.collateralAmount)}</td>
+            <td>${formatPnl(t.realizedPnlCollateral)}</td>
+            <td><a class="tx-hash" href="${EXPLORER_TX_BASE}${t.txHash}" target="_blank" title="${txHash}">${txDisplay}</a></td>
+          </tr>
+        `;
+      }
+
+      tradesHtml += '</tbody></table>';
+      document.getElementById('trades-table').innerHTML = tradesHtml;
+
+      // Deposits table
+      let depositsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th class="${getSortedClass('deposits', 'time')}" onclick="sortData('deposits', 'time')">Time${getSortIcon('deposits', 'time')}</th>
+              <th class="${getSortedClass('deposits', 'depositor')}" onclick="sortData('deposits', 'depositor')">Depositor${getSortIcon('deposits', 'depositor')}</th>
+              <th class="${getSortedClass('deposits', 'amount')}" onclick="sortData('deposits', 'amount')">Amount${getSortIcon('deposits', 'amount')}</th>
+              <th class="${getSortedClass('deposits', 'token')}" onclick="sortData('deposits', 'token')">Token${getSortIcon('deposits', 'token')}</th>
+              <th class="${getSortedClass('deposits', 'tvl')}" onclick="sortData('deposits', 'tvl')">Vault TVL${getSortIcon('deposits', 'tvl')}</th>
+              <th class="${getSortedClass('deposits', 'vault')}" onclick="sortData('deposits', 'vault')">Vault Address${getSortIcon('deposits', 'vault')}</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const d of data.deposits) {
+        const depositorHex = nibiToHex(d.depositor);
+        const vaultHex = nibiToHex(d.vault?.address);
+        depositsHtml += `
+          <tr>
+            <td>${formatDate(d.block?.block_ts)}</td>
+            <td class="address"><span class="address-link" title="${depositorHex}" onclick="openProfile('${depositorHex}', '${d.depositor}')">${formatAddress(depositorHex)}</span></td>
+            <td>${formatDepositAmount(d.amount, d.collateralPrice)}</td>
+            <td>${d.vault?.collateralToken?.symbol || '-'}</td>
+            <td>${formatTvl(d.vault?.tvl, d.vault?.collateralToken?.symbol)}</td>
+            <td class="address" title="${vaultHex}">${formatAddress(vaultHex)}</td>
+          </tr>
+        `;
+      }
+
+      depositsHtml += '</tbody></table>';
+      document.getElementById('deposits-table').innerHTML = depositsHtml;
+
+      // Withdraws table
+      let withdrawsHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th class="${getSortedClass('withdraws', 'depositor')}" onclick="sortData('withdraws', 'depositor')">Depositor${getSortIcon('withdraws', 'depositor')}</th>
+              <th class="${getSortedClass('withdraws', 'shares')}" onclick="sortData('withdraws', 'shares')">Shares${getSortIcon('withdraws', 'shares')}</th>
+              <th class="${getSortedClass('withdraws', 'unlockEpoch')}" onclick="sortData('withdraws', 'unlockEpoch')">Unlock Epoch${getSortIcon('withdraws', 'unlockEpoch')}</th>
+              <th class="${getSortedClass('withdraws', 'autoRedeem')}" onclick="sortData('withdraws', 'autoRedeem')">Auto Redeem${getSortIcon('withdraws', 'autoRedeem')}</th>
+              <th class="${getSortedClass('withdraws', 'token')}" onclick="sortData('withdraws', 'token')">Token${getSortIcon('withdraws', 'token')}</th>
+              <th class="${getSortedClass('withdraws', 'vault')}" onclick="sortData('withdraws', 'vault')">Vault Address${getSortIcon('withdraws', 'vault')}</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      if (data.withdraws.length === 0) {
+        withdrawsHtml += '<tr><td colspan="6" style="text-align: center; padding: 40px;">No withdraw requests found</td></tr>';
+      }
+
+      for (const w of data.withdraws) {
+        const wDepositorHex = nibiToHex(w.depositor);
+        const wVaultHex = nibiToHex(w.vault?.address);
+        withdrawsHtml += `
+          <tr>
+            <td class="address"><span class="address-link" title="${wDepositorHex}" onclick="openProfile('${wDepositorHex}', '${w.depositor}')">${formatAddress(wDepositorHex)}</span></td>
+            <td>${formatNumber(w.shares, 0)}</td>
+            <td>${w.unlockEpoch || '-'}</td>
+            <td>${w.autoRedeem ? 'Yes' : 'No'}</td>
+            <td>${w.vault?.collateralToken?.symbol || '-'}</td>
+            <td class="address" title="${wVaultHex}">${formatAddress(wVaultHex)}</td>
+          </tr>
+        `;
+      }
+
+      withdrawsHtml += '</tbody></table>';
+      document.getElementById('withdraws-table').innerHTML = withdrawsHtml;
+    }
+
+    function renderVolumeTable() {
+      let volumeHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="${getSortedClass('volume', 'trader')}" onclick="sortData('volume', 'trader')">Trader${getSortIcon('volume', 'trader')}</th>
+              <th class="${getSortedClass('volume', 'totalVolume')}" onclick="sortData('volume', 'totalVolume')">Total Volume${getSortIcon('volume', 'totalVolume')}</th>
+              <th class="${getSortedClass('volume', 'tradeCount')}" onclick="sortData('volume', 'tradeCount')">Trades${getSortIcon('volume', 'tradeCount')}</th>
+              <th class="${getSortedClass('volume', 'realizedPnl')}" onclick="sortData('volume', 'realizedPnl')">Realized PnL${getSortIcon('volume', 'realizedPnl')}</th>
+              <th class="${getSortedClass('volume', 'openPositions')}" onclick="sortData('volume', 'openPositions')">Opens${getSortIcon('volume', 'openPositions')}</th>
+              <th class="${getSortedClass('volume', 'closedPositions')}" onclick="sortData('volume', 'closedPositions')">Closes${getSortIcon('volume', 'closedPositions')}</th>
+              <th class="${getSortedClass('volume', 'liquidations')}" onclick="sortData('volume', 'liquidations')">Liquidations${getSortIcon('volume', 'liquidations')}</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.volume.forEach((u, i) => {
+        const pnlClass = u.realizedPnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const pnlSign = u.realizedPnl >= 0 ? '+' : '';
+        const displayAddr = u.address || u.trader;
+        volumeHtml += `
+          <tr>
+            <td>${i + 1}</td>
+            <td class="address"><span class="address-link" title="${displayAddr}" onclick="openProfile('${displayAddr}', '${u.trader}')">${formatAddress(displayAddr)}</span></td>
+            <td>${formatUsd(u.totalVolume)}</td>
+            <td>${u.tradeCount}</td>
+            <td class="${pnlClass}">${pnlSign}${formatUsd(u.realizedPnl)}</td>
+            <td>${u.openPositions}</td>
+            <td>${u.closedPositions}</td>
+            <td>${u.liquidations}</td>
+          </tr>
+        `;
+      });
+
+      volumeHtml += '</tbody></table>';
+      document.getElementById('volume-table').innerHTML = volumeHtml;
+    }
+
+    function renderMarketsTable() {
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Market</th>
+              <th>Price</th>
+              <th>24h Change</th>
+              <th>OI Long</th>
+              <th>OI Short</th>
+              <th>Max OI</th>
+              <th>Leverage</th>
+              <th>Open Fee</th>
+              <th>Close Fee</th>
+              <th>Funding Long</th>
+              <th>Funding Short</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Filter to visible markets and sort by OI
+      const visibleMarkets = marketsData
+        .filter(m => m.visible !== false)
+        .sort((a, b) => (b.oiLong + b.oiShort) - (a.oiLong + a.oiShort));
+
+      if (visibleMarkets.length === 0) {
+        html += '<tr><td colspan="11" style="text-align: center; padding: 40px;">No markets found</td></tr>';
+      }
+
+      for (const m of visibleMarkets) {
+        const symbol = m.baseToken?.symbol || m.marketId || '-';
+        const price = m.price || 0;
+        const priceChange = m.priceChangePct24Hrs || 0;
+        const changeClass = priceChange >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const changeSign = priceChange >= 0 ? '+' : '';
+
+        // OI values are in micro-units
+        const oiLong = (m.oiLong || 0) / 1e6;
+        const oiShort = (m.oiShort || 0) / 1e6;
+        const oiMax = (m.oiMax || 0) / 1e6;
+
+        // Fees are in percentage form (multiply by 100 for display)
+        const openFee = (m.openFeePct || 0) * 100;
+        const closeFee = (m.closeFeePct || 0) * 100;
+
+        // Funding rates per hour (multiply by 100 for percentage display)
+        const fundingLong = (m.feesPerHourLong || 0) * 100;
+        const fundingShort = (m.feesPerHourShort || 0) * 100;
+
+        html += `
+          <tr>
+            <td><strong>${symbol}</strong></td>
+            <td>$${formatNumber(price)}</td>
+            <td class="${changeClass}">${changeSign}${formatNumber(priceChange)}%</td>
+            <td>$${formatNumber(oiLong)}</td>
+            <td>$${formatNumber(oiShort)}</td>
+            <td>$${formatNumber(oiMax)}</td>
+            <td>${m.minLeverage || 1}x - ${m.maxLeverage || 100}x</td>
+            <td>${formatNumber(openFee, 3)}%</td>
+            <td>${formatNumber(closeFee, 3)}%</td>
+            <td>${formatNumber(fundingLong, 4)}%/hr</td>
+            <td>${formatNumber(fundingShort, 4)}%/hr</td>
+          </tr>
+        `;
+      }
+
+      html += '</tbody></table>';
+      document.getElementById('markets-table').innerHTML = html;
+    }
+
+    function renderCollateralTable() {
+      // Filter to only collateral tokens (IDs 1 and 2 are used as collateral)
+      // Also check for any token IDs that appear in vaults
+      const vaultCollateralIds = new Set(vaultsData.map(v => v.collateralToken?.id));
+
+      // Get unique collateral indices from markets
+      const marketCollateralIds = new Set(marketsData.map(m => m.collateralToken?.id));
+
+      // Combine all collateral IDs
+      const collateralIds = new Set([...vaultCollateralIds, ...marketCollateralIds]);
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Index</th>
+              <th>Symbol</th>
+              <th>Name</th>
+              <th>Price (USD)</th>
+              <th>Vaults</th>
+              <th>Vault TVL</th>
+              <th>Markets</th>
+              <th>Total OI</th>
+              <th>Logo</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Filter collateral data to only show actual collateral tokens
+      const collateralTokens = collateralData
+        .filter(c => collateralIds.has(c.token?.id))
+        .sort((a, b) => (a.token?.id || 0) - (b.token?.id || 0));
+
+      if (collateralTokens.length === 0) {
+        html += '<tr><td colspan="9" style="text-align: center; padding: 40px;">No collateral indices found</td></tr>';
+      }
+
+      for (const c of collateralTokens) {
+        const token = c.token || {};
+        const tokenId = token.id;
+        const symbol = token.symbol || '-';
+        const name = token.name || '-';
+        const price = c.priceUsd || 0;
+        const logoUrl = token.logoUrl;
+
+        // Count vaults using this collateral
+        const relatedVaults = vaultsData.filter(v => v.collateralToken?.id === tokenId);
+        const vaultCount = relatedVaults.length;
+
+        // Calculate total TVL for this collateral
+        let totalVaultTvl = 0;
+        for (const v of relatedVaults) {
+          const rawTokens = (v.availableAssets || 0) / 1e6;
+          totalVaultTvl += rawTokens * price;
+        }
+
+        // Count markets using this collateral
+        const relatedMarkets = marketsData.filter(m => m.collateralToken?.id === tokenId && m.visible !== false);
+        const marketCount = relatedMarkets.length;
+
+        // Calculate total OI for markets using this collateral
+        let totalOi = 0;
+        for (const m of relatedMarkets) {
+          totalOi += ((m.oiLong || 0) + (m.oiShort || 0)) / 1e6;
+        }
+
+        const logoHtml = logoUrl
+          ? `<img src="${logoUrl}" alt="${symbol}" style="width: 24px; height: 24px; border-radius: 50%;">`
+          : '-';
+
+        html += `
+          <tr>
+            <td><strong>${tokenId}</strong></td>
+            <td><strong>${symbol}</strong></td>
+            <td>${name}</td>
+            <td>$${formatNumber(price, 6)}</td>
+            <td>${vaultCount}</td>
+            <td>$${formatNumber(totalVaultTvl)}</td>
+            <td>${marketCount}</td>
+            <td>$${formatNumber(totalOi)}</td>
+            <td>${logoHtml}</td>
+          </tr>
+        `;
+      }
+
+      html += '</tbody></table>';
+
+      // Add a summary of all available indices for discovery
+      html += `
+        <div style="padding: 16px; border-top: 1px solid #2a2a3a; margin-top: 0;">
+          <h4 style="margin-bottom: 12px; color: #888;">Discovered Collateral Indices</h4>
+          <p style="font-size: 13px; color: #666;">
+            Active indices: ${[...collateralIds].sort((a, b) => a - b).join(', ')}<br>
+            <span style="color: #888;">These indices were found by querying vaults and markets on the current network.</span>
+          </p>
+        </div>
+      `;
+
+      document.getElementById('collateral-table').innerHTML = html;
+    }
+
+    function showTab(tab) {
+      currentTab = tab;
+
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      const tabIndex = { trades: 1, deposits: 2, withdraws: 3, volume: 4, markets: 5, collateral: 6 }[tab];
+      document.querySelector(`.tab:nth-child(${tabIndex})`).classList.add('active');
+
+      document.getElementById('trades-table').classList.add('hidden');
+      document.getElementById('deposits-table').classList.add('hidden');
+      document.getElementById('withdraws-table').classList.add('hidden');
+      document.getElementById('volume-table').classList.add('hidden');
+      document.getElementById('markets-table').classList.add('hidden');
+      document.getElementById('collateral-table').classList.add('hidden');
+
+      if (data.trades.length > 0 || data.deposits.length > 0 || data.volume.length > 0 || marketsData.length > 0 || collateralData.length > 0) {
+        document.getElementById('empty').classList.add('hidden');
+        document.getElementById(`${tab}-table`).classList.remove('hidden');
+      }
+    }
+
+    // Profile Modal Functions
+    let currentProfileTab = 'trades';
+    let currentProfileAddress = null;
+
+    function openProfile(hexAddress, nibiAddress) {
+      currentProfileAddress = { hex: hexAddress, nibi: nibiAddress };
+      document.getElementById('profile-address').textContent = hexAddress;
+
+      // Filter data for this user
+      const userTrades = data.trades.filter(t => {
+        const traderHex = nibiToHex(t.trade?.trader);
+        return traderHex === hexAddress;
+      });
+
+      const userDeposits = data.deposits.filter(d => {
+        const depositorHex = nibiToHex(d.depositor);
+        return depositorHex === hexAddress;
+      });
+
+      const userWithdraws = data.withdraws.filter(w => {
+        const wDepositorHex = nibiToHex(w.depositor);
+        return wDepositorHex === hexAddress;
+      });
+
+      // Calculate stats (only count volume for position opens)
+      let totalVolume = 0;
+      let totalPnl = 0;
+      userTrades.forEach(t => {
+        if (t.tradeChangeType === 'position_opened') {
+          const collateral = t.trade?.collateralAmount || 0;
+          const leverage = t.trade?.leverage || 1;
+          totalVolume += collateral * leverage;
+        }
+        if (t.realizedPnlCollateral) totalPnl += t.realizedPnlCollateral;
+      });
+
+      document.getElementById('profile-trades').textContent = userTrades.length;
+      document.getElementById('profile-volume').textContent = formatUsd(totalVolume);
+      const pnlEl = document.getElementById('profile-pnl');
+      pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + formatUsd(totalPnl);
+      pnlEl.className = 'modal-stat-value ' + (totalPnl >= 0 ? 'pnl-positive' : 'pnl-negative');
+      document.getElementById('profile-deposits').textContent = userDeposits.length;
+
+      // Render profile tables
+      renderProfileTrades(userTrades);
+      renderProfileDeposits(userDeposits);
+      renderProfileWithdraws(userWithdraws);
+
+      // Show modal
+      document.getElementById('profile-modal').classList.remove('hidden');
+      showProfileTab('trades');
+    }
+
+    function closeProfile() {
+      document.getElementById('profile-modal').classList.add('hidden');
+      currentProfileAddress = null;
+    }
+
+    function showProfileTab(tab) {
+      currentProfileTab = tab;
+      document.querySelectorAll('.modal-tabs .tab').forEach(t => t.classList.remove('active'));
+      const tabIndex = { trades: 1, deposits: 2, withdraws: 3 }[tab];
+      document.querySelector(`.modal-tabs .tab:nth-child(${tabIndex})`).classList.add('active');
+
+      document.getElementById('profile-trades-table').classList.add('hidden');
+      document.getElementById('profile-deposits-table').classList.add('hidden');
+      document.getElementById('profile-withdraws-table').classList.add('hidden');
+      document.getElementById(`profile-${tab}-table`).classList.remove('hidden');
+    }
+
+    function renderProfileTrades(trades) {
+      let html = `<table><thead><tr>
+        <th>Time</th><th>Type</th><th>Direction</th><th>Leverage</th>
+        <th>Open Price</th><th>Close Price</th><th>Collateral</th><th>PnL</th>
+      </tr></thead><tbody>`;
+
+      if (trades.length === 0) {
+        html += '<tr><td colspan="8" style="text-align:center;padding:40px;">No trades found</td></tr>';
+      }
+
+      for (const t of trades) {
+        const trade = t.trade || {};
+        html += `<tr>
+          <td>${formatDate(t.block?.block_ts)}</td>
+          <td>${getTradeTypeBadge(t.tradeChangeType)}</td>
+          <td>${getDirectionBadge(trade.isLong)}</td>
+          <td>${trade.leverage}x</td>
+          <td>$${formatNumber(trade.openPrice)}</td>
+          <td>$${formatNumber(trade.closePrice)}</td>
+          <td>${formatUsd(trade.collateralAmount)}</td>
+          <td>${formatPnl(t.realizedPnlCollateral)}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('profile-trades-table').innerHTML = html;
+    }
+
+    function renderProfileDeposits(deposits) {
+      let html = `<table><thead><tr>
+        <th>Time</th><th>Amount</th><th>Token</th><th>Vault TVL</th>
+      </tr></thead><tbody>`;
+
+      if (deposits.length === 0) {
+        html += '<tr><td colspan="4" style="text-align:center;padding:40px;">No deposits found</td></tr>';
+      }
+
+      for (const d of deposits) {
+        html += `<tr>
+          <td>${formatDate(d.block?.block_ts)}</td>
+          <td>${formatDepositAmount(d.amount, d.collateralPrice)}</td>
+          <td>${d.vault?.collateralToken?.symbol || '-'}</td>
+          <td>${formatTvl(d.vault?.tvl, d.vault?.collateralToken?.symbol)}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('profile-deposits-table').innerHTML = html;
+    }
+
+    function renderProfileWithdraws(withdraws) {
+      let html = `<table><thead><tr>
+        <th>Shares</th><th>Unlock Epoch</th><th>Auto Redeem</th><th>Token</th>
+      </tr></thead><tbody>`;
+
+      if (withdraws.length === 0) {
+        html += '<tr><td colspan="4" style="text-align:center;padding:40px;">No withdrawal requests found</td></tr>';
+      }
+
+      for (const w of withdraws) {
+        html += `<tr>
+          <td>${formatNumber(w.shares, 0)}</td>
+          <td>${w.unlockEpoch || '-'}</td>
+          <td>${w.autoRedeem ? 'Yes' : 'No'}</td>
+          <td>${w.vault?.collateralToken?.symbol || '-'}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('profile-withdraws-table').innerHTML = html;
+    }
+
+    // TVL Breakdown Modal Functions
+    function showTvlBreakdown() {
+      if (vaultsData.length === 0) {
+        alert('Please fetch transactions first to see TVL breakdown.');
+        return;
+      }
+
+      // Active vault ERC20 addresses (vaults 1 and 2)
+      const activeVaults = new Set([
+        '0xE96397b6135240956413031c0B26507eeCCD4B39', // USDC vault 1
+        '0x7275AfFf575aD79da8b245784cE54a203Df954e6'  // stNIBI vault 1
+      ]);
+
+      // Process vault data - use availableAssets for raw token display, oracle prices for USD
+      const vaults = vaultsData.map(v => {
+        const token = v.collateralToken?.symbol || '-';
+        const rawTokens = v.availableAssets / 1e6;
+        const price = tokenPrices[token.toUpperCase()] || 1;
+        const tvlUsd = rawTokens * price;
+        const isDeprecated = !activeVaults.has(v.sharesERC20);
+        return {
+          address: v.sharesERC20,
+          rawTokens,
+          tvlUsd,
+          token,
+          isDeprecated
+        };
+      }).sort((a, b) => b.tvlUsd - a.tvlUsd);
+
+      // Calculate total (only active vaults)
+      const totalTvl = vaults.filter(v => !v.isDeprecated).reduce((sum, v) => sum + v.tvlUsd, 0);
+      const totalAllTvl = vaults.reduce((sum, v) => sum + v.tvlUsd, 0);
+
+      // Render table
+      let html = `<table><thead><tr>
+        <th>#</th><th>SLP Token Address</th><th>Token</th><th>Tokens</th><th>TVL (USD)</th><th>%</th>
+      </tr></thead><tbody>`;
+
+      if (vaults.length === 0) {
+        html += '<tr><td colspan="6" style="text-align:center;padding:40px;">No vault data available</td></tr>';
+      }
+
+      vaults.forEach((v, i) => {
+        const pct = totalAllTvl > 0 ? (v.tvlUsd / totalAllTvl * 100).toFixed(1) : '0';
+        const deprecatedStyle = v.isDeprecated ? 'opacity: 0.5;' : '';
+        const deprecatedLabel = v.isDeprecated ? ' <span style="color:#f59e0b;font-size:11px;">(deprecated)</span>' : '';
+        html += `<tr style="${deprecatedStyle}">
+          <td>${i + 1}</td>
+          <td class="address" title="${v.address}">${formatAddress(v.address)}${deprecatedLabel}</td>
+          <td>${v.token}</td>
+          <td>${formatNumber(v.rawTokens)}</td>
+          <td>$${formatNumber(v.tvlUsd)}</td>
+          <td>${pct}%</td>
+        </tr>`;
+      });
+
+      html += `</tbody><tfoot><tr style="font-weight:bold;background:#1a1a25;">
+        <td colspan="4">Total (Active)</td>
+        <td>$${formatNumber(totalTvl)}</td>
+        <td>100%</td>
+      </tr></tfoot></table>`;
+
+      html += `<p style="padding:12px;margin:0;font-size:12px;color:#888;">Note: Vaults marked as deprecated are no longer active and should not receive new deposits.</p>`;
+
+      document.getElementById('tvl-breakdown-table').innerHTML = html;
+      document.getElementById('tvl-modal').classList.remove('hidden');
+    }
+
+    function closeTvlBreakdown() {
+      document.getElementById('tvl-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
