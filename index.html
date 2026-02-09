@@ -402,10 +402,13 @@
           <label style="color:#888;font-size:13px;">Network</label>
           <select id="network-select" onchange="onNetworkChange(this.value)" style="background:#0a0a0f;color:#e1e1e6;border:1px solid #2a2a3a;padding:8px;border-radius:8px;font-size:13px;">
             <option value="mainnet">Mainnet</option>
-            <option value="testnet">Testnet (Nibiru testnet-2)</option>
+            <option value="testnet">Testnet</option>
           </select>
-          <button class="fetch-btn" onclick="fetchAllData()">
-            Fetch Transactions
+          <button id="fetch-new-btn" class="fetch-btn" onclick="fetchNewTransactions()" style="background:linear-gradient(135deg, #22c55e, #16a34a);">
+            Fetch New Transactions
+          </button>
+          <button id="fetch-all-btn" class="fetch-btn" onclick="fetchAllData()" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+            Re-Fetch All Transactions
           </button>
         </div>
     </header>
@@ -453,7 +456,7 @@
       </div>
 
       <div id="empty" class="empty-state">
-        Click "Fetch Transactions" to load data from Sai Keeper
+        Click "Fetch New Transactions" or "Re-Fetch All Transactions" to load data from Sai Keeper
       </div>
 
       <div id="trades-table" class="table-wrapper hidden"></div>
@@ -541,10 +544,10 @@
 
     function onNetworkChange(value) {
       setNetwork(value);
-      // If data already loaded, update message to user
-      if (document.querySelector('.fetch-btn')) {
-        document.querySelector('.fetch-btn').textContent = 'Fetch Transactions';
-      }
+      // Clear saved data when network changes since it's network-specific
+      clearSavedData();
+      // Reload page data if available
+      loadSavedData();
     }
 
     function setNetwork(value) {
@@ -557,10 +560,16 @@
       if (sel) sel.value = NETWORK;
     }
 
-    // initialize select value on load
+    // initialize select value on load and load saved data
     document.addEventListener('DOMContentLoaded', () => {
       const sel = document.getElementById('network-select');
       if (sel) sel.value = NETWORK;
+      
+      // Try to load saved data automatically
+      const loaded = loadSavedData();
+      if (loaded) {
+        console.log('Loaded saved data from localStorage');
+      }
     });
 
     // Bech32 to 0x address conversion
@@ -588,6 +597,10 @@
 
     let currentTab = 'trades';
 
+    // Pagination for trades table
+    const TRADES_PER_PAGE = 100;
+    let tradesPage = 1;
+
     // Sort state for each table
     const sortState = {
       trades: { column: 'time', direction: 'desc' },
@@ -610,6 +623,133 @@
 
     let data = { trades: [], deposits: [], withdraws: [], volume: [] };
 
+    // localStorage keys
+    const STORAGE_KEYS = {
+      trades: 'sai_explorer_trades',
+      deposits: 'sai_explorer_deposits',
+      withdraws: 'sai_explorer_withdraws',
+      tokenPrices: 'sai_explorer_tokenPrices',
+      vaults: 'sai_explorer_vaults',
+      markets: 'sai_explorer_markets',
+      collaterals: 'sai_explorer_collaterals',
+      lastFetch: 'sai_explorer_lastFetch',
+      network: 'sai_explorer_network'
+    };
+
+    // Save data to localStorage
+    function saveDataToStorage() {
+      try {
+        const storageKey = (key) => `${key}_${NETWORK}`;
+        localStorage.setItem(storageKey(STORAGE_KEYS.trades), JSON.stringify(data.trades));
+        localStorage.setItem(storageKey(STORAGE_KEYS.deposits), JSON.stringify(data.deposits));
+        localStorage.setItem(storageKey(STORAGE_KEYS.withdraws), JSON.stringify(data.withdraws));
+        localStorage.setItem(storageKey(STORAGE_KEYS.tokenPrices), JSON.stringify(tokenPrices));
+        localStorage.setItem(storageKey(STORAGE_KEYS.vaults), JSON.stringify(vaultsData));
+        localStorage.setItem(storageKey(STORAGE_KEYS.markets), JSON.stringify(marketsData));
+        localStorage.setItem(storageKey(STORAGE_KEYS.collaterals), JSON.stringify(collateralData));
+        localStorage.setItem(storageKey(STORAGE_KEYS.lastFetch), new Date().toISOString());
+        localStorage.setItem(storageKey(STORAGE_KEYS.network), NETWORK);
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+      }
+    }
+
+    // Load data from localStorage
+    function loadSavedData() {
+      try {
+        const storageKey = (key) => `${key}_${NETWORK}`;
+        const savedTrades = localStorage.getItem(storageKey(STORAGE_KEYS.trades));
+        const savedDeposits = localStorage.getItem(storageKey(STORAGE_KEYS.deposits));
+        const savedWithdraws = localStorage.getItem(storageKey(STORAGE_KEYS.withdraws));
+        const savedTokenPrices = localStorage.getItem(storageKey(STORAGE_KEYS.tokenPrices));
+        const savedVaults = localStorage.getItem(storageKey(STORAGE_KEYS.vaults));
+        const savedMarkets = localStorage.getItem(storageKey(STORAGE_KEYS.markets));
+        const savedCollaterals = localStorage.getItem(storageKey(STORAGE_KEYS.collaterals));
+        const savedNetwork = localStorage.getItem(storageKey(STORAGE_KEYS.network));
+
+        // Only load if network matches
+        if (savedNetwork !== NETWORK) {
+          return false;
+        }
+
+        if (savedTrades) {
+          data.trades = JSON.parse(savedTrades);
+          data.trades.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        }
+        if (savedDeposits) {
+          data.deposits = JSON.parse(savedDeposits);
+          data.deposits.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        }
+        if (savedWithdraws) {
+          data.withdraws = JSON.parse(savedWithdraws);
+        }
+        if (savedTokenPrices) {
+          tokenPrices = JSON.parse(savedTokenPrices);
+        }
+        if (savedVaults) {
+          vaultsData = JSON.parse(savedVaults);
+        }
+        if (savedMarkets) {
+          marketsData = JSON.parse(savedMarkets);
+        }
+        if (savedCollaterals) {
+          collateralData = JSON.parse(savedCollaterals);
+        }
+
+        // If we loaded any data, update the UI
+        if (savedTrades || savedDeposits || savedWithdraws) {
+          tradesPage = 1;
+          computeVolumeByUser();
+          updateStats();
+          renderTables();
+          renderVolumeTable();
+          renderMarketsTable();
+          renderCollateralTable();
+          showTab(currentTab);
+          document.getElementById('empty').classList.add('hidden');
+          return true;
+        }
+      } catch (error) {
+        console.error('Error loading from localStorage:', error);
+      }
+      return false;
+    }
+
+    // Clear saved data
+    function clearSavedData() {
+      try {
+        const storageKey = (key) => `${key}_${NETWORK}`;
+        localStorage.removeItem(storageKey(STORAGE_KEYS.trades));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.deposits));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.withdraws));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.tokenPrices));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.vaults));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.markets));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.collaterals));
+        localStorage.removeItem(storageKey(STORAGE_KEYS.lastFetch));
+      } catch (error) {
+        console.error('Error clearing localStorage:', error);
+      }
+    }
+
+    // Merge new data with existing, avoiding duplicates
+    function mergeTransactions(existing, newItems, getKey) {
+      const existingMap = new Map();
+      existing.forEach(item => {
+        const key = getKey(item);
+        if (key) existingMap.set(key, item);
+      });
+
+      newItems.forEach(item => {
+        const key = getKey(item);
+        if (key && !existingMap.has(key)) {
+          existingMap.set(key, item);
+        }
+      });
+
+      return Array.from(existingMap.values());
+    }
+
 
 
     async function fetchGraphQL(query) {
@@ -622,13 +762,17 @@
     }
 
     // Paginated fetch helpers (API caps at 100 per request)
-    async function fetchAllTrades() {
+    async function fetchAllTrades(sinceTimestamp = null) {
       const PAGE_SIZE = 100;
       let allTrades = [];
       let offset = 0;
       const MAX_PAGES = 200; // safety guard for endpoints that ignore offset
       let iterations = 0;
       const seen = new Set();
+      
+      // If sinceTimestamp is provided, we'll stop fetching when we hit older transactions
+      const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+      
       while (true) {
         if (++iterations > MAX_PAGES) {
           console.warn('fetchAllTrades: reached max pages', MAX_PAGES);
@@ -646,26 +790,45 @@
         }`);
         const trades = res.data?.perp?.tradeHistory || [];
         if (trades.length === 0) break;
+        
+        let foundOldTransaction = false;
         for (const t of trades) {
+          // If we're fetching only new transactions and hit an old one, stop
+          if (sinceDate && t.block?.block_ts) {
+            const txDate = new Date(t.block.block_ts);
+            if (txDate <= sinceDate) {
+              foundOldTransaction = true;
+              break;
+            }
+          }
+          
           const key = t.id || t.txHash || JSON.stringify(t);
           if (!seen.has(key)) {
             seen.add(key);
             allTrades.push(t);
           }
         }
+        
+        // If we found an old transaction, we're done
+        if (foundOldTransaction) break;
+        
         if (trades.length < PAGE_SIZE) break;
         offset += PAGE_SIZE;
       }
       return allTrades;
     }
 
-    async function fetchAllDeposits() {
+    async function fetchAllDeposits(sinceTimestamp = null) {
       const PAGE_SIZE = 100;
       let allDeposits = [];
       let offset = 0;
       const MAX_PAGES = 200;
       let iterations = 0;
       const seen = new Set();
+      
+      // If sinceTimestamp is provided, we'll stop fetching when we hit older transactions
+      const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+      
       while (true) {
         if (++iterations > MAX_PAGES) {
           console.warn('fetchAllDeposits: reached max pages', MAX_PAGES);
@@ -682,20 +845,37 @@
         }`);
         const deposits = res.data?.lp?.depositHistory || [];
         if (deposits.length === 0) break;
+        
+        let foundOldTransaction = false;
         for (const d of deposits) {
+          // If we're fetching only new transactions and hit an old one, stop
+          if (sinceDate && d.block?.block_ts) {
+            const txDate = new Date(d.block.block_ts);
+            if (txDate <= sinceDate) {
+              foundOldTransaction = true;
+              break;
+            }
+          }
+          
           const key = (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '');
           if (!seen.has(key)) {
             seen.add(key);
             allDeposits.push(d);
           }
         }
+        
+        // If we found an old transaction, we're done
+        if (foundOldTransaction) break;
+        
         if (deposits.length < PAGE_SIZE) break;
         offset += PAGE_SIZE;
       }
       return allDeposits;
     }
 
-    async function fetchAllWithdraws() {
+    async function fetchAllWithdraws(sinceTimestamp = null) {
+      // Note: withdraws don't have timestamps, so we fetch all and merge
+      // But we can still optimize by checking if we already have all of them
       const PAGE_SIZE = 100;
       let allWithdraws = [];
       let offset = 0;
@@ -854,9 +1034,20 @@
     }
 
     async function fetchAllData() {
-      const btn = document.querySelector('.fetch-btn');
-      btn.disabled = true;
-      btn.textContent = 'Fetching...';
+      const fetchNewBtn = document.getElementById('fetch-new-btn');
+      const fetchAllBtn = document.getElementById('fetch-all-btn');
+      
+      // Store original text
+      const fetchNewOriginalText = fetchNewBtn ? fetchNewBtn.textContent : 'Fetch New Transactions';
+      const fetchAllOriginalText = fetchAllBtn ? fetchAllBtn.textContent : 'Re-Fetch All Transactions';
+      
+      if (fetchAllBtn) {
+        fetchAllBtn.disabled = true;
+        fetchAllBtn.textContent = 'Re-Fetching...';
+      }
+      if (fetchNewBtn) {
+        fetchNewBtn.disabled = true;
+      }
 
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('empty').classList.add('hidden');
@@ -866,6 +1057,12 @@
       document.getElementById('volume-table').classList.add('hidden');
       document.getElementById('markets-table').classList.add('hidden');
       document.getElementById('collateral-table').classList.add('hidden');
+
+      // Clear existing data for full refresh
+      clearSavedData();
+      data.trades = [];
+      data.deposits = [];
+      data.withdraws = [];
 
       try {
         const [trades, deposits, withdraws, prices, vaults, markets, collaterals] = await Promise.all([
@@ -879,6 +1076,8 @@
         ]);
 
         data.trades = trades.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        // reset pagination when new data arrives
+        tradesPage = 1;
         data.deposits = deposits.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
         data.withdraws = withdraws;
         tokenPrices = prices;
@@ -888,6 +1087,9 @@
 
         // Compute volume stats by user from trades
         computeVolumeByUser();
+
+        // Save to localStorage
+        saveDataToStorage();
 
         updateStats();
         renderTables();
@@ -902,8 +1104,142 @@
       }
 
       document.getElementById('loading').classList.add('hidden');
-      btn.disabled = false;
-      btn.textContent = 'Fetch Transactions';
+      
+      // Reset button text
+      if (fetchAllBtn) {
+        fetchAllBtn.disabled = false;
+        fetchAllBtn.textContent = fetchAllOriginalText;
+      }
+      if (fetchNewBtn) {
+        fetchNewBtn.disabled = false;
+        fetchNewBtn.textContent = fetchNewOriginalText;
+      }
+    }
+
+    async function fetchNewTransactions() {
+      const fetchNewBtn = document.getElementById('fetch-new-btn');
+      const fetchAllBtn = document.getElementById('fetch-all-btn');
+      
+      // Store original text
+      const fetchNewOriginalText = fetchNewBtn ? fetchNewBtn.textContent : 'Fetch New Transactions';
+      const fetchAllOriginalText = fetchAllBtn ? fetchAllBtn.textContent : 'Re-Fetch All Transactions';
+      
+      if (fetchNewBtn) {
+        fetchNewBtn.disabled = true;
+        fetchNewBtn.textContent = 'Fetching New...';
+      }
+      if (fetchAllBtn) {
+        fetchAllBtn.disabled = true;
+      }
+
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('empty').classList.add('hidden');
+
+      // Load existing data first
+      const hadExistingData = loadSavedData();
+
+      // Get the most recent timestamp from existing data
+      let mostRecentTimestamp = null;
+      if (data.trades && data.trades.length > 0) {
+        const mostRecentTrade = data.trades[0]; // Already sorted newest first
+        if (mostRecentTrade.block?.block_ts) {
+          mostRecentTimestamp = mostRecentTrade.block.block_ts;
+        }
+      }
+      if (data.deposits && data.deposits.length > 0) {
+        const mostRecentDeposit = data.deposits[0]; // Already sorted newest first
+        if (mostRecentDeposit.block?.block_ts) {
+          const depositTime = mostRecentDeposit.block.block_ts;
+          if (!mostRecentTimestamp || new Date(depositTime) > new Date(mostRecentTimestamp)) {
+            mostRecentTimestamp = depositTime;
+          }
+        }
+      }
+
+      try {
+        // Fetch only new data (transactions newer than mostRecentTimestamp)
+        const [newTrades, newDeposits, newWithdraws, prices, vaults, markets, collaterals] = await Promise.all([
+          fetchAllTrades(mostRecentTimestamp),
+          fetchAllDeposits(mostRecentTimestamp),
+          fetchAllWithdraws(), // Withdraws don't have timestamps, so fetch all and merge
+          fetchTokenPrices(),
+          fetchVaults(),
+          fetchMarkets(),
+          fetchCollateralIndices()
+        ]);
+
+        // Merge trades (use id as unique key)
+        const existingTrades = data.trades || [];
+        data.trades = mergeTransactions(
+          existingTrades,
+          newTrades,
+          (t) => t.id || t.txHash || JSON.stringify(t)
+        );
+
+        // Merge deposits (use depositor + timestamp + amount as key)
+        const existingDeposits = data.deposits || [];
+        data.deposits = mergeTransactions(
+          existingDeposits,
+          newDeposits,
+          (d) => (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '')
+        );
+
+        // Merge withdraws (use depositor + vault + shares as key)
+        const existingWithdraws = data.withdraws || [];
+        data.withdraws = mergeTransactions(
+          existingWithdraws,
+          newWithdraws,
+          (w) => (w.depositor || '') + '|' + (w.vault?.address || '') + '|' + (w.shares || '')
+        );
+
+        // Sort merged data
+        data.trades.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        data.deposits.sort((a, b) => new Date(b.block?.block_ts) - new Date(a.block?.block_ts));
+        tradesPage = 1;
+
+        // Update other data (always use latest)
+        tokenPrices = prices;
+        vaultsData = vaults;
+        marketsData = markets;
+        collateralData = collaterals;
+
+        // Compute volume stats by user from trades
+        computeVolumeByUser();
+
+        // Save to localStorage
+        saveDataToStorage();
+
+        updateStats();
+        renderTables();
+        renderVolumeTable();
+        renderMarketsTable();
+        renderCollateralTable();
+        showTab(currentTab);
+
+        // Show message if new data was added
+        const newTradesCount = data.trades.length - existingTrades.length;
+        const newDepositsCount = data.deposits.length - existingDeposits.length;
+        const newWithdrawsCount = data.withdraws.length - existingWithdraws.length;
+        if (newTradesCount > 0 || newDepositsCount > 0 || newWithdrawsCount > 0) {
+          console.log(`Added: ${newTradesCount} trades, ${newDepositsCount} deposits, ${newWithdrawsCount} withdraws`);
+        }
+
+      } catch (error) {
+        console.error('Error fetching new data:', error);
+        alert('Failed to fetch new data. Check console for details.');
+      }
+
+      document.getElementById('loading').classList.add('hidden');
+      
+      // Reset button text
+      if (fetchNewBtn) {
+        fetchNewBtn.disabled = false;
+        fetchNewBtn.textContent = fetchNewOriginalText;
+      }
+      if (fetchAllBtn) {
+        fetchAllBtn.disabled = false;
+        fetchAllBtn.textContent = fetchAllOriginalText;
+      }
     }
 
     function updateStats() {
@@ -1126,6 +1462,14 @@
 
     function renderTables() {
       // Trades table
+      // pagination calculations for trades
+      const totalTrades = data.trades.length;
+      const totalTradePages = Math.max(1, Math.ceil(totalTrades / TRADES_PER_PAGE));
+      if (tradesPage > totalTradePages) tradesPage = totalTradePages;
+      const startIdx = (tradesPage - 1) * TRADES_PER_PAGE;
+      const endIdx = Math.min(startIdx + TRADES_PER_PAGE, totalTrades);
+      const pageTrades = data.trades.slice(startIdx, endIdx);
+
       let tradesHtml = `
         <table>
           <thead>
@@ -1145,7 +1489,7 @@
           <tbody>
       `;
 
-      for (const t of data.trades) {
+      for (const t of pageTrades) {
         const trade = t.trade || {};
         const txHash = t.evmTxHash || t.txHash || '';
         const txDisplay = txHash.slice(0, 10) + '...';
@@ -1168,6 +1512,17 @@
       }
 
       tradesHtml += '</tbody></table>';
+
+      // Pagination controls
+      let paginationControls = '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;color:#888;">';
+      paginationControls += `<div>Showing ${startIdx + 1} - ${endIdx} of ${totalTrades}</div>`;
+      paginationControls += '<div style="display:flex;gap:8px;align-items:center;">';
+      paginationControls += `<button onclick="prevTradesPage()" class="tab" style="padding:6px 10px;">Prev</button>`;
+      paginationControls += `<div style="min-width:80px;text-align:center;">Page ${tradesPage} / ${totalTradePages}</div>`;
+      paginationControls += `<button onclick="nextTradesPage()" class="tab" style="padding:6px 10px;">Next</button>`;
+      paginationControls += '</div></div>';
+
+      tradesHtml = paginationControls + tradesHtml;
       document.getElementById('trades-table').innerHTML = tradesHtml;
 
       // Deposits table
@@ -1454,6 +1809,22 @@
       `;
 
       document.getElementById('collateral-table').innerHTML = html;
+    }
+
+    function prevTradesPage() {
+      if (tradesPage > 1) {
+        tradesPage -= 1;
+        renderTables();
+      }
+    }
+
+    function nextTradesPage() {
+      const totalTrades = data.trades.length;
+      const totalTradePages = Math.max(1, Math.ceil(totalTrades / TRADES_PER_PAGE));
+      if (tradesPage < totalTradePages) {
+        tradesPage += 1;
+        renderTables();
+      }
     }
 
     function showTab(tab) {
