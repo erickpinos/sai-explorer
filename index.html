@@ -784,7 +784,7 @@
               id tradeChangeType realizedPnlPct realizedPnlCollateral
               txHash evmTxHash collateralPrice
               block { block block_ts }
-              trade { id trader tradeType isLong isOpen leverage openPrice closePrice collateralAmount openCollateralAmount tp sl }
+              trade { id trader tradeType isLong isOpen leverage openPrice closePrice collateralAmount openCollateralAmount tp sl perpBorrowing { marketId baseToken { symbol } } }
             }
           }
         }`);
@@ -819,58 +819,48 @@
     }
 
     async function fetchAllDeposits(sinceTimestamp = null) {
-      const PAGE_SIZE = 100;
-      let allDeposits = [];
-      let offset = 0;
-      const MAX_PAGES = 200;
-      let iterations = 0;
-      const seen = new Set();
-      
-      // If sinceTimestamp is provided, we'll stop fetching when we hit older transactions
-      const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
-      
-      while (true) {
-        if (++iterations > MAX_PAGES) {
-          console.warn('fetchAllDeposits: reached max pages', MAX_PAGES);
-          break;
-        }
-        const res = await fetchGraphQL(`{
-          lp {
-            depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-              depositor amount collateralPrice
-              block { block block_ts }
-              vault { address collateralToken { symbol } tvl }
+      try {
+        const PAGE_SIZE = 100;
+        let allDeposits = [];
+        let offset = 0;
+        const MAX_PAGES = 200;
+        const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+        const seen = new Set();
+        while (true) {
+          if (offset >= MAX_PAGES * PAGE_SIZE) break;
+          const res = await fetchGraphQL(`{
+            lp {
+              depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+                id depositor amount shares
+                block { block block_ts }
+                vault { address collateralToken { symbol } tvl }
+              }
             }
+          }`);
+          if (res.errors && res.errors.length) {
+            res.errors.forEach(function (e) {
+              console.warn('depositHistory API error:', e.message, e.path, e.extensions);
+            });
+            break;
           }
-        }`);
-        const deposits = res.data?.lp?.depositHistory || [];
-        if (deposits.length === 0) break;
-        
-        let foundOldTransaction = false;
-        for (const d of deposits) {
-          // If we're fetching only new transactions and hit an old one, stop
-          if (sinceDate && d.block?.block_ts) {
-            const txDate = new Date(d.block.block_ts);
-            if (txDate <= sinceDate) {
-              foundOldTransaction = true;
-              break;
-            }
-          }
-          
-          const key = (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '');
-          if (!seen.has(key)) {
+          if (!res.data?.lp) break;
+          const deposits = res.data.lp.depositHistory || [];
+          if (deposits.length === 0) break;
+          for (const d of deposits) {
+            if (sinceDate && d.block?.block_ts && new Date(d.block.block_ts) <= sinceDate) break;
+            const key = d.id != null ? String(d.id) : (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '');
+            if (seen.has(key)) continue;
             seen.add(key);
             allDeposits.push(d);
           }
+          if (deposits.length < PAGE_SIZE) break;
+          offset += PAGE_SIZE;
         }
-        
-        // If we found an old transaction, we're done
-        if (foundOldTransaction) break;
-        
-        if (deposits.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
+        return allDeposits.sort((a, b) => new Date(b.block?.block_ts || 0) - new Date(a.block?.block_ts || 0));
+      } catch (err) {
+        console.warn('fetchAllDeposits failed:', err);
+        return [];
       }
-      return allDeposits;
     }
 
     async function fetchAllWithdraws(sinceTimestamp = null) {
@@ -1058,6 +1048,9 @@
       document.getElementById('markets-table').classList.add('hidden');
       document.getElementById('collateral-table').classList.add('hidden');
 
+      // Clear stats until fetch completes
+      clearStats();
+
       // Clear existing data for full refresh
       clearSavedData();
       data.trades = [];
@@ -1242,13 +1235,22 @@
       }
     }
 
+    function clearStats() {
+      document.getElementById('stat-volume').textContent = '-';
+      document.getElementById('stat-tvl').textContent = '-';
+      document.getElementById('stat-trades').textContent = '-';
+      document.getElementById('stat-deposits').textContent = '-';
+      document.getElementById('stat-withdraws').textContent = '-';
+      document.getElementById('stat-traders').textContent = '-';
+    }
+
     function updateStats() {
-      document.getElementById('stat-trades').textContent = data.trades.length;
-      document.getElementById('stat-deposits').textContent = data.deposits.length;
-      document.getElementById('stat-withdraws').textContent = data.withdraws.length;
+      document.getElementById('stat-trades').textContent = data.trades.length > 0 ? data.trades.length : '-';
+      document.getElementById('stat-deposits').textContent = data.deposits.length > 0 ? data.deposits.length : '-';
+      document.getElementById('stat-withdraws').textContent = data.withdraws.length > 0 ? data.withdraws.length : '-';
 
       const uniqueTraders = new Set(data.trades.map(t => t.trade?.trader).filter(Boolean));
-      document.getElementById('stat-traders').textContent = uniqueTraders.size;
+      document.getElementById('stat-traders').textContent = uniqueTraders.size > 0 ? uniqueTraders.size : '-';
 
       // Calculate total trading volume (only count position opens to avoid double-counting)
       let totalVolume = 0;
@@ -1259,7 +1261,7 @@
           totalVolume += collateral * leverage;
         }
       }
-      document.getElementById('stat-volume').textContent = formatUsd(totalVolume);
+      document.getElementById('stat-volume').textContent = totalVolume > 0 ? formatUsd(totalVolume) : '-';
 
       // Calculate total TVL from vaults (active vaults only) using availableAssets
       // Active vault ERC20 addresses
@@ -1277,12 +1279,23 @@
           totalTvl += rawTokens * price;
         }
       }
-      document.getElementById('stat-tvl').textContent = '$' + formatNumber(totalTvl);
+      document.getElementById('stat-tvl').textContent = totalTvl > 0 ? '$' + formatNumber(totalTvl) : '-';
     }
 
     function formatAddress(addr) {
       if (!addr) return '-';
       return addr.slice(0, 12) + '...' + addr.slice(-6);
+    }
+
+    // Nibiscan token page: known vault collateral -> ERC20 token address
+    const VAULT_TOKEN_ADDRESSES = {
+      'USDC': '0xE96397b6135240956413031c0B26507eeCCD4B39',
+      'stNIBI': '0x7275AfFf575aD79da8b245784cE54a203Df954e6'
+    };
+    function getVaultTokenAddress(vault) {
+      if (!vault) return null;
+      const symbol = vault.collateralToken?.symbol || '';
+      return VAULT_TOKEN_ADDRESSES[symbol] || nibiToHex(vault.address);
     }
 
     function formatDate(dateStr) {
@@ -1305,9 +1318,10 @@
       return '$' + formatNumber(value);
     }
 
-    function formatDepositAmount(amount, collateralPrice) {
+    function formatDepositAmount(amount, collateralPrice, decimals) {
       if (amount === null || amount === undefined) return '-';
-      const tokenAmount = amount / 1e6;
+      const exp = decimals != null ? Number(decimals) : 6;
+      const tokenAmount = amount / Math.pow(10, exp);
       if (collateralPrice) {
         const usdValue = tokenAmount * collateralPrice;
         return '$' + formatNumber(usdValue);
@@ -1341,6 +1355,13 @@
         : '<span class="badge badge-red">Short</span>';
     }
 
+    function getMarketName(t) {
+      const trade = t.trade || {};
+      const symbol = trade.market?.symbol ?? trade.perpBorrowing?.baseToken?.symbol;
+      const marketId = trade.market?.marketId ?? trade.perpBorrowing?.marketId;
+      return symbol || (marketId != null ? String(marketId) : '-');
+    }
+
     function formatPnl(pnl) {
       if (pnl === null || pnl === undefined) return '-';
       const value = pnl / 1e6;
@@ -1367,6 +1388,7 @@
           switch (column) {
             case 'time': valA = new Date(a.block?.block_ts || 0); valB = new Date(b.block?.block_ts || 0); break;
             case 'type': valA = a.tradeChangeType || ''; valB = b.tradeChangeType || ''; break;
+            case 'market': valA = getMarketName(a); valB = getMarketName(b); break;
             case 'trader': valA = a.trade?.trader || ''; valB = b.trade?.trader || ''; break;
             case 'direction': valA = a.trade?.isLong ? 1 : 0; valB = b.trade?.isLong ? 1 : 0; break;
             case 'leverage': valA = a.trade?.leverage || 0; valB = b.trade?.leverage || 0; break;
@@ -1386,22 +1408,15 @@
           let valA, valB;
           switch (column) {
             case 'time': valA = new Date(a.block?.block_ts || 0); valB = new Date(b.block?.block_ts || 0); break;
+            case 'action': valA = a.isWithdraw ? 1 : 0; valB = b.isWithdraw ? 1 : 0; break;
             case 'depositor': valA = a.depositor || ''; valB = b.depositor || ''; break;
             case 'amount':
               valA = (a.amount || 0) * (a.collateralPrice || 1);
               valB = (b.amount || 0) * (b.collateralPrice || 1);
               break;
             case 'token': valA = a.vault?.collateralToken?.symbol || ''; valB = b.vault?.collateralToken?.symbol || ''; break;
-            case 'tvl':
-              const tokenA = a.vault?.collateralToken?.symbol || '';
-              const tokenB = b.vault?.collateralToken?.symbol || '';
-              const tvlA = (a.vault?.tvl || 0) / 1e6;
-              const tvlB = (b.vault?.tvl || 0) / 1e6;
-              const priceA = tokenPrices[tokenA.toUpperCase()] || 1;
-              const priceB = tokenPrices[tokenB.toUpperCase()] || 1;
-              valA = tvlA * priceA;
-              valB = tvlB * priceB;
-              break;
+            case 'shares': valA = a.shares ?? 0; valB = b.shares ?? 0; break;
+            case 'block': valA = a.block?.block ?? 0; valB = b.block?.block ?? 0; break;
             case 'vault': valA = a.vault?.address || ''; valB = b.vault?.address || ''; break;
             default: return 0;
           }
@@ -1476,6 +1491,7 @@
             <tr>
               <th class="${getSortedClass('trades', 'time')}" onclick="sortData('trades', 'time')">Time${getSortIcon('trades', 'time')}</th>
               <th class="${getSortedClass('trades', 'type')}" onclick="sortData('trades', 'type')">Type${getSortIcon('trades', 'type')}</th>
+              <th class="${getSortedClass('trades', 'market')}" onclick="sortData('trades', 'market')">Market${getSortIcon('trades', 'market')}</th>
               <th class="${getSortedClass('trades', 'trader')}" onclick="sortData('trades', 'trader')">Trader${getSortIcon('trades', 'trader')}</th>
               <th class="${getSortedClass('trades', 'direction')}" onclick="sortData('trades', 'direction')">Direction${getSortIcon('trades', 'direction')}</th>
               <th class="${getSortedClass('trades', 'leverage')}" onclick="sortData('trades', 'leverage')">Leverage${getSortIcon('trades', 'leverage')}</th>
@@ -1499,6 +1515,7 @@
           <tr>
             <td>${formatDate(t.block?.block_ts)}</td>
             <td>${getTradeTypeBadge(t.tradeChangeType)}</td>
+            <td>${getMarketName(t)}</td>
             <td class="address"><span class="address-link" title="${traderHex}" onclick="openProfile('${traderHex}', '${trade.trader}')">${formatAddress(traderHex)}</span></td>
             <td>${getDirectionBadge(trade.isLong)}</td>
             <td>${trade.leverage}x</td>
@@ -1531,11 +1548,14 @@
           <thead>
             <tr>
               <th class="${getSortedClass('deposits', 'time')}" onclick="sortData('deposits', 'time')">Time${getSortIcon('deposits', 'time')}</th>
+              <th class="${getSortedClass('deposits', 'action')}" onclick="sortData('deposits', 'action')">Action${getSortIcon('deposits', 'action')}</th>
               <th class="${getSortedClass('deposits', 'depositor')}" onclick="sortData('deposits', 'depositor')">Depositor${getSortIcon('deposits', 'depositor')}</th>
               <th class="${getSortedClass('deposits', 'amount')}" onclick="sortData('deposits', 'amount')">Amount${getSortIcon('deposits', 'amount')}</th>
               <th class="${getSortedClass('deposits', 'token')}" onclick="sortData('deposits', 'token')">Token${getSortIcon('deposits', 'token')}</th>
-              <th class="${getSortedClass('deposits', 'tvl')}" onclick="sortData('deposits', 'tvl')">Vault TVL${getSortIcon('deposits', 'tvl')}</th>
-              <th class="${getSortedClass('deposits', 'vault')}" onclick="sortData('deposits', 'vault')">Vault Address${getSortIcon('deposits', 'vault')}</th>
+              <th class="${getSortedClass('deposits', 'shares')}" onclick="sortData('deposits', 'shares')">Shares${getSortIcon('deposits', 'shares')}</th>
+              <th class="${getSortedClass('deposits', 'block')}" onclick="sortData('deposits', 'block')">Block${getSortIcon('deposits', 'block')}</th>
+              <th>Vault (nibi)</th>
+              <th class="${getSortedClass('deposits', 'vault')}" onclick="sortData('deposits', 'vault')">Vault Shares (hardcoded)${getSortIcon('deposits', 'vault')}</th>
             </tr>
           </thead>
           <tbody>
@@ -1543,15 +1563,20 @@
 
       for (const d of data.deposits) {
         const depositorHex = nibiToHex(d.depositor);
-        const vaultHex = nibiToHex(d.vault?.address);
+        const vaultBech32 = d.vault?.address || '';
+        const vaultTokenAddr = getVaultTokenAddress(d.vault);
+        const actionBadge = d.isWithdraw ? '<span class="badge badge-yellow">Withdrawal</span>' : '<span class="badge badge-green">Deposit</span>';
         depositsHtml += `
           <tr>
             <td>${formatDate(d.block?.block_ts)}</td>
+            <td>${actionBadge}</td>
             <td class="address"><span class="address-link" title="${depositorHex}" onclick="openProfile('${depositorHex}', '${d.depositor}')">${formatAddress(depositorHex)}</span></td>
-            <td>${formatDepositAmount(d.amount, d.collateralPrice)}</td>
+            <td>${formatDepositAmount(d.amount, d.collateralPrice, d.vault?.collateralToken?.decimals)}</td>
             <td>${d.vault?.collateralToken?.symbol || '-'}</td>
-            <td>${formatTvl(d.vault?.tvl, d.vault?.collateralToken?.symbol)}</td>
-            <td class="address" title="${vaultHex}">${formatAddress(vaultHex)}</td>
+            <td>${d.shares != null ? formatNumber(d.shares, 0) : '-'}</td>
+            <td>${d.block?.block != null ? d.block.block : '-'}</td>
+            <td class="address" title="${vaultBech32}">${vaultBech32 ? formatAddress(vaultBech32) : '-'}</td>
+            <td class="address" title="${vaultTokenAddr || ''}">${vaultTokenAddr ? `<a href="https://nibiscan.io/token/${encodeURIComponent(vaultTokenAddr)}" target="_blank" rel="noopener" class="address-link">${formatAddress(vaultTokenAddr)}</a>` : '-'}</td>
           </tr>
         `;
       }
@@ -1569,19 +1594,21 @@
               <th class="${getSortedClass('withdraws', 'unlockEpoch')}" onclick="sortData('withdraws', 'unlockEpoch')">Unlock Epoch${getSortIcon('withdraws', 'unlockEpoch')}</th>
               <th class="${getSortedClass('withdraws', 'autoRedeem')}" onclick="sortData('withdraws', 'autoRedeem')">Auto Redeem${getSortIcon('withdraws', 'autoRedeem')}</th>
               <th class="${getSortedClass('withdraws', 'token')}" onclick="sortData('withdraws', 'token')">Token${getSortIcon('withdraws', 'token')}</th>
-              <th class="${getSortedClass('withdraws', 'vault')}" onclick="sortData('withdraws', 'vault')">Vault Address${getSortIcon('withdraws', 'vault')}</th>
+              <th>Vault (nibi)</th>
+              <th class="${getSortedClass('withdraws', 'vault')}" onclick="sortData('withdraws', 'vault')">Vault Shares (hardcoded)${getSortIcon('withdraws', 'vault')}</th>
             </tr>
           </thead>
           <tbody>
       `;
 
       if (data.withdraws.length === 0) {
-        withdrawsHtml += '<tr><td colspan="6" style="text-align: center; padding: 40px;">No withdraw requests found</td></tr>';
+        withdrawsHtml += '<tr><td colspan="7" style="text-align: center; padding: 40px;">No withdraw requests found</td></tr>';
       }
 
       for (const w of data.withdraws) {
         const wDepositorHex = nibiToHex(w.depositor);
-        const wVaultHex = nibiToHex(w.vault?.address);
+        const wVaultBech32 = w.vault?.address || '';
+        const wVaultTokenAddr = getVaultTokenAddress(w.vault);
         withdrawsHtml += `
           <tr>
             <td class="address"><span class="address-link" title="${wDepositorHex}" onclick="openProfile('${wDepositorHex}', '${w.depositor}')">${formatAddress(wDepositorHex)}</span></td>
@@ -1589,7 +1616,8 @@
             <td>${w.unlockEpoch || '-'}</td>
             <td>${w.autoRedeem ? 'Yes' : 'No'}</td>
             <td>${w.vault?.collateralToken?.symbol || '-'}</td>
-            <td class="address" title="${wVaultHex}">${formatAddress(wVaultHex)}</td>
+            <td class="address" title="${wVaultBech32}">${wVaultBech32 ? formatAddress(wVaultBech32) : '-'}</td>
+            <td class="address" title="${wVaultTokenAddr || ''}">${wVaultTokenAddr ? `<a href="https://nibiscan.io/token/${encodeURIComponent(wVaultTokenAddr)}" target="_blank" rel="noopener" class="address-link">${formatAddress(wVaultTokenAddr)}</a>` : '-'}</td>
           </tr>
         `;
       }
@@ -1643,6 +1671,7 @@
         <table>
           <thead>
             <tr>
+              <th>Market ID</th>
               <th>Market</th>
               <th>Price</th>
               <th>24h Change</th>
@@ -1665,7 +1694,7 @@
         .sort((a, b) => (b.oiLong + b.oiShort) - (a.oiLong + a.oiShort));
 
       if (visibleMarkets.length === 0) {
-        html += '<tr><td colspan="11" style="text-align: center; padding: 40px;">No markets found</td></tr>';
+        html += '<tr><td colspan="12" style="text-align: center; padding: 40px;">No markets found</td></tr>';
       }
 
       for (const m of visibleMarkets) {
@@ -1690,6 +1719,7 @@
 
         html += `
           <tr>
+            <td><strong>${m.marketId || '-'}</strong></td>
             <td><strong>${symbol}</strong></td>
             <td>$${formatNumber(price)}</td>
             <td class="${changeClass}">${changeSign}${formatNumber(priceChange)}%</td>
@@ -1919,12 +1949,12 @@
 
     function renderProfileTrades(trades) {
       let html = `<table><thead><tr>
-        <th>Time</th><th>Type</th><th>Direction</th><th>Leverage</th>
+        <th>Time</th><th>Type</th><th>Market</th><th>Direction</th><th>Leverage</th>
         <th>Open Price</th><th>Close Price</th><th>Collateral</th><th>PnL</th>
       </tr></thead><tbody>`;
 
       if (trades.length === 0) {
-        html += '<tr><td colspan="8" style="text-align:center;padding:40px;">No trades found</td></tr>';
+        html += '<tr><td colspan="9" style="text-align:center;padding:40px;">No trades found</td></tr>';
       }
 
       for (const t of trades) {
@@ -1932,6 +1962,7 @@
         html += `<tr>
           <td>${formatDate(t.block?.block_ts)}</td>
           <td>${getTradeTypeBadge(t.tradeChangeType)}</td>
+          <td>${getMarketName(t)}</td>
           <td>${getDirectionBadge(trade.isLong)}</td>
           <td>${trade.leverage}x</td>
           <td>$${formatNumber(trade.openPrice)}</td>
@@ -1946,19 +1977,22 @@
 
     function renderProfileDeposits(deposits) {
       let html = `<table><thead><tr>
-        <th>Time</th><th>Amount</th><th>Token</th><th>Vault TVL</th>
+        <th>Time</th><th>Action</th><th>Amount</th><th>Token</th><th>Shares</th><th>Block</th>
       </tr></thead><tbody>`;
 
       if (deposits.length === 0) {
-        html += '<tr><td colspan="4" style="text-align:center;padding:40px;">No deposits found</td></tr>';
+        html += '<tr><td colspan="6" style="text-align:center;padding:40px;">No deposits found</td></tr>';
       }
 
       for (const d of deposits) {
+        const actionBadge = d.isWithdraw ? '<span class="badge badge-yellow">Withdrawal</span>' : '<span class="badge badge-green">Deposit</span>';
         html += `<tr>
           <td>${formatDate(d.block?.block_ts)}</td>
-          <td>${formatDepositAmount(d.amount, d.collateralPrice)}</td>
+          <td>${actionBadge}</td>
+          <td>${formatDepositAmount(d.amount, d.collateralPrice, d.vault?.collateralToken?.decimals)}</td>
           <td>${d.vault?.collateralToken?.symbol || '-'}</td>
-          <td>${formatTvl(d.vault?.tvl, d.vault?.collateralToken?.symbol)}</td>
+          <td>${d.shares != null ? formatNumber(d.shares, 0) : '-'}</td>
+          <td>${d.block?.block != null ? d.block.block : '-'}</td>
         </tr>`;
       }
       html += '</tbody></table>';
