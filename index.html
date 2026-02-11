@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sai.fun Transaction Explorer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -447,6 +448,7 @@
       <button class="tab" onclick="showTab('volume')">Stats by User</button>
       <button class="tab" onclick="showTab('markets')">Markets</button>
       <button class="tab" onclick="showTab('collateral')">Collateral Indices</button>
+      <button class="tab" onclick="showTab('chart')">Activity Chart</button>
     </div>
 
     <div class="table-container">
@@ -465,6 +467,9 @@
       <div id="markets-table" class="table-wrapper hidden"></div>
       <div id="volume-table" class="table-wrapper hidden"></div>
       <div id="collateral-table" class="table-wrapper hidden"></div>
+      <div id="chart-container" class="hidden" style="padding: 24px;">
+        <canvas id="activity-chart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -606,7 +611,9 @@
       trades: { column: 'time', direction: 'desc' },
       deposits: { column: 'time', direction: 'desc' },
       withdraws: { column: null, direction: 'desc' },
-      volume: { column: 'totalVolume', direction: 'desc' }
+      volume: { column: 'totalVolume', direction: 'desc' },
+      markets: { column: null, direction: 'desc' },
+      collateral: { column: null, direction: 'desc' }
     };
 
     // Token prices from oracle (current market prices)
@@ -622,6 +629,9 @@
     let collateralData = [];
 
     let data = { trades: [], deposits: [], withdraws: [], volume: [] };
+
+    // Chart instance
+    let activityChart = null;
 
     // localStorage keys
     const STORAGE_KEYS = {
@@ -1460,6 +1470,43 @@
           return 0;
         });
         renderVolumeTable();
+      } else if (tableType === 'markets') {
+        marketsData.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'marketId': valA = a.marketId || 0; valB = b.marketId || 0; break;
+            case 'symbol': valA = a.baseToken?.symbol || ''; valB = b.baseToken?.symbol || ''; break;
+            case 'price': valA = a.price || 0; valB = b.price || 0; break;
+            case 'priceChange': valA = a.priceChangePct24Hrs || 0; valB = b.priceChangePct24Hrs || 0; break;
+            case 'oiLong': valA = a.oiLong || 0; valB = b.oiLong || 0; break;
+            case 'oiShort': valA = a.oiShort || 0; valB = b.oiShort || 0; break;
+            case 'oiMax': valA = a.oiMax || 0; valB = b.oiMax || 0; break;
+            case 'openFee': valA = a.openFeePct || 0; valB = b.openFeePct || 0; break;
+            case 'closeFee': valA = a.closeFeePct || 0; valB = b.closeFeePct || 0; break;
+            case 'fundingLong': valA = a.feesPerHourLong || 0; valB = b.feesPerHourLong || 0; break;
+            case 'fundingShort': valA = a.feesPerHourShort || 0; valB = b.feesPerHourShort || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderMarketsTable();
+      } else if (tableType === 'collateral') {
+        collateralData.sort((a, b) => {
+          let valA, valB;
+          switch (column) {
+            case 'index': valA = a.token?.id || 0; valB = b.token?.id || 0; break;
+            case 'symbol': valA = a.token?.symbol || ''; valB = b.token?.symbol || ''; break;
+            case 'name': valA = a.token?.name || ''; valB = b.token?.name || ''; break;
+            case 'price': valA = a.priceUsd || 0; valB = b.priceUsd || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+        renderCollateralTable();
       }
     }
 
@@ -1671,27 +1718,54 @@
         <table>
           <thead>
             <tr>
-              <th>Market ID</th>
-              <th>Market</th>
-              <th>Price</th>
-              <th>24h Change</th>
-              <th>OI Long</th>
-              <th>OI Short</th>
-              <th>Max OI</th>
+              <th class="${getSortedClass('markets', 'marketId')}" onclick="sortData('markets', 'marketId')">Market ID${getSortIcon('markets', 'marketId')}</th>
+              <th class="${getSortedClass('markets', 'symbol')}" onclick="sortData('markets', 'symbol')">Market${getSortIcon('markets', 'symbol')}</th>
+              <th class="${getSortedClass('markets', 'price')}" onclick="sortData('markets', 'price')">Price${getSortIcon('markets', 'price')}</th>
+              <th class="${getSortedClass('markets', 'priceChange')}" onclick="sortData('markets', 'priceChange')">24h Change${getSortIcon('markets', 'priceChange')}</th>
+              <th class="${getSortedClass('markets', 'oiLong')}" onclick="sortData('markets', 'oiLong')">OI Long${getSortIcon('markets', 'oiLong')}</th>
+              <th class="${getSortedClass('markets', 'oiShort')}" onclick="sortData('markets', 'oiShort')">OI Short${getSortIcon('markets', 'oiShort')}</th>
+              <th class="${getSortedClass('markets', 'oiMax')}" onclick="sortData('markets', 'oiMax')">Max OI${getSortIcon('markets', 'oiMax')}</th>
               <th>Leverage</th>
-              <th>Open Fee</th>
-              <th>Close Fee</th>
-              <th>Funding Long</th>
-              <th>Funding Short</th>
+              <th class="${getSortedClass('markets', 'openFee')}" onclick="sortData('markets', 'openFee')">Open Fee${getSortIcon('markets', 'openFee')}</th>
+              <th class="${getSortedClass('markets', 'closeFee')}" onclick="sortData('markets', 'closeFee')">Close Fee${getSortIcon('markets', 'closeFee')}</th>
+              <th class="${getSortedClass('markets', 'fundingLong')}" onclick="sortData('markets', 'fundingLong')">Funding Long${getSortIcon('markets', 'fundingLong')}</th>
+              <th class="${getSortedClass('markets', 'fundingShort')}" onclick="sortData('markets', 'fundingShort')">Funding Short${getSortIcon('markets', 'fundingShort')}</th>
             </tr>
           </thead>
           <tbody>
       `;
 
-      // Filter to visible markets and sort by OI
-      const visibleMarkets = marketsData
-        .filter(m => m.visible !== false)
-        .sort((a, b) => (b.oiLong + b.oiShort) - (a.oiLong + a.oiShort));
+      // Filter to visible markets
+      let visibleMarkets = marketsData
+        .filter(m => m.visible !== false);
+
+      // Apply sorting if a column is selected, otherwise sort by total OI
+      const marketState = sortState.markets;
+      if (marketState.column) {
+        const dir = marketState.direction === 'asc' ? 1 : -1;
+        visibleMarkets.sort((a, b) => {
+          let valA, valB;
+          switch (marketState.column) {
+            case 'marketId': valA = a.marketId || 0; valB = b.marketId || 0; break;
+            case 'symbol': valA = a.baseToken?.symbol || ''; valB = b.baseToken?.symbol || ''; break;
+            case 'price': valA = a.price || 0; valB = b.price || 0; break;
+            case 'priceChange': valA = a.priceChangePct24Hrs || 0; valB = b.priceChangePct24Hrs || 0; break;
+            case 'oiLong': valA = a.oiLong || 0; valB = b.oiLong || 0; break;
+            case 'oiShort': valA = a.oiShort || 0; valB = b.oiShort || 0; break;
+            case 'oiMax': valA = a.oiMax || 0; valB = b.oiMax || 0; break;
+            case 'openFee': valA = a.openFeePct || 0; valB = b.openFeePct || 0; break;
+            case 'closeFee': valA = a.closeFeePct || 0; valB = b.closeFeePct || 0; break;
+            case 'fundingLong': valA = a.feesPerHourLong || 0; valB = b.feesPerHourLong || 0; break;
+            case 'fundingShort': valA = a.feesPerHourShort || 0; valB = b.feesPerHourShort || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+      } else {
+        visibleMarkets.sort((a, b) => (b.oiLong + b.oiShort) - (a.oiLong + a.oiShort));
+      }
 
       if (visibleMarkets.length === 0) {
         html += '<tr><td colspan="12" style="text-align: center; padding: 40px;">No markets found</td></tr>';
@@ -1754,10 +1828,10 @@
         <table>
           <thead>
             <tr>
-              <th>Index</th>
-              <th>Symbol</th>
-              <th>Name</th>
-              <th>Price (USD)</th>
+              <th class="${getSortedClass('collateral', 'index')}" onclick="sortData('collateral', 'index')">Index${getSortIcon('collateral', 'index')}</th>
+              <th class="${getSortedClass('collateral', 'symbol')}" onclick="sortData('collateral', 'symbol')">Symbol${getSortIcon('collateral', 'symbol')}</th>
+              <th class="${getSortedClass('collateral', 'name')}" onclick="sortData('collateral', 'name')">Name${getSortIcon('collateral', 'name')}</th>
+              <th class="${getSortedClass('collateral', 'price')}" onclick="sortData('collateral', 'price')">Price (USD)${getSortIcon('collateral', 'price')}</th>
               <th>Vaults</th>
               <th>Vault TVL</th>
               <th>Markets</th>
@@ -1769,9 +1843,29 @@
       `;
 
       // Filter collateral data to only show actual collateral tokens
-      const collateralTokens = collateralData
-        .filter(c => collateralIds.has(c.token?.id))
-        .sort((a, b) => (a.token?.id || 0) - (b.token?.id || 0));
+      let collateralTokens = collateralData
+        .filter(c => collateralIds.has(c.token?.id));
+
+      // Apply sorting if a column is selected, otherwise sort by ID
+      const state = sortState.collateral;
+      if (state.column) {
+        const dir = state.direction === 'asc' ? 1 : -1;
+        collateralTokens.sort((a, b) => {
+          let valA, valB;
+          switch (state.column) {
+            case 'index': valA = a.token?.id || 0; valB = b.token?.id || 0; break;
+            case 'symbol': valA = a.token?.symbol || ''; valB = b.token?.symbol || ''; break;
+            case 'name': valA = a.token?.name || ''; valB = b.token?.name || ''; break;
+            case 'price': valA = a.priceUsd || 0; valB = b.priceUsd || 0; break;
+            default: return 0;
+          }
+          if (valA < valB) return -dir;
+          if (valA > valB) return dir;
+          return 0;
+        });
+      } else {
+        collateralTokens.sort((a, b) => (a.token?.id || 0) - (b.token?.id || 0));
+      }
 
       if (collateralTokens.length === 0) {
         html += '<tr><td colspan="9" style="text-align: center; padding: 40px;">No collateral indices found</td></tr>';
@@ -1861,7 +1955,7 @@
       currentTab = tab;
 
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      const tabIndex = { trades: 1, deposits: 2, withdraws: 3, volume: 4, markets: 5, collateral: 6 }[tab];
+      const tabIndex = { trades: 1, deposits: 2, withdraws: 3, volume: 4, markets: 5, collateral: 6, chart: 7 }[tab];
       document.querySelector(`.tab:nth-child(${tabIndex})`).classList.add('active');
 
       document.getElementById('trades-table').classList.add('hidden');
@@ -1870,8 +1964,15 @@
       document.getElementById('volume-table').classList.add('hidden');
       document.getElementById('markets-table').classList.add('hidden');
       document.getElementById('collateral-table').classList.add('hidden');
+      document.getElementById('chart-container').classList.add('hidden');
 
-      if (data.trades.length > 0 || data.deposits.length > 0 || data.volume.length > 0 || marketsData.length > 0 || collateralData.length > 0) {
+      if (tab === 'chart') {
+        if (data.trades.length > 0 || data.deposits.length > 0) {
+          document.getElementById('empty').classList.add('hidden');
+          document.getElementById('chart-container').classList.remove('hidden');
+          renderActivityChart();
+        }
+      } else if (data.trades.length > 0 || data.deposits.length > 0 || data.volume.length > 0 || marketsData.length > 0 || collateralData.length > 0) {
         document.getElementById('empty').classList.add('hidden');
         document.getElementById(`${tab}-table`).classList.remove('hidden');
       }
@@ -2090,6 +2191,113 @@
 
     function closeTvlBreakdown() {
       document.getElementById('tvl-modal').classList.add('hidden');
+    }
+
+    function renderActivityChart() {
+      // Aggregate trades and deposits by day
+      const dailyData = {};
+
+      // Process trades
+      for (const t of data.trades) {
+        if (t.block?.block_ts) {
+          const date = new Date(t.block.block_ts);
+          const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          if (!dailyData[dateKey]) {
+            dailyData[dateKey] = { trades: 0, deposits: 0 };
+          }
+          dailyData[dateKey].trades += 1;
+        }
+      }
+
+      // Process deposits
+      for (const d of data.deposits) {
+        if (d.block?.block_ts) {
+          const date = new Date(d.block.block_ts);
+          const dateKey = date.toISOString().split('T')[0];
+          if (!dailyData[dateKey]) {
+            dailyData[dateKey] = { trades: 0, deposits: 0 };
+          }
+          dailyData[dateKey].deposits += 1;
+        }
+      }
+
+      // Sort dates and prepare chart data
+      const sortedDates = Object.keys(dailyData).sort();
+      const tradeData = sortedDates.map(date => dailyData[date].trades);
+      const depositData = sortedDates.map(date => dailyData[date].deposits);
+
+      // Destroy existing chart if it exists
+      if (activityChart) {
+        activityChart.destroy();
+      }
+
+      // Create new chart
+      const ctx = document.getElementById('activity-chart').getContext('2d');
+      activityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedDates,
+          datasets: [
+            {
+              label: 'Perpetual Trades',
+              data: tradeData,
+              backgroundColor: 'rgba(99, 102, 241, 0.8)',
+              borderColor: 'rgba(99, 102, 241, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'LP Deposits',
+              data: depositData,
+              backgroundColor: 'rgba(34, 197, 94, 0.8)',
+              borderColor: 'rgba(34, 197, 94, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2.5,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Daily Activity',
+              color: '#e1e1e6',
+              font: {
+                size: 18,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              labels: {
+                color: '#e1e1e6'
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              ticks: {
+                color: '#888'
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            },
+            y: {
+              stacked: false,
+              beginAtZero: true,
+              ticks: {
+                color: '#888',
+                precision: 0
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            }
+          }
+        }
+      });
     }
   </script>
 </body>
