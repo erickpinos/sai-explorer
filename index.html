@@ -426,6 +426,45 @@
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
     }
 
+    .chart-section {
+      margin-bottom: 32px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e1e1e6;
+      margin: 0;
+    }
+
+    .chart-period-select {
+      background: #15151f;
+      border: 1px solid #2a2a3a;
+      color: #e1e1e6;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .chart-period-select:hover {
+      border-color: #6366f1;
+    }
+
+    .chart-period-select:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+
     /* Mobile Responsive Styles */
     @media (max-width: 768px) {
       body {
@@ -598,8 +637,26 @@
         padding: 16px !important;
       }
 
-      canvas {
-        max-height: 250px !important;
+      .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .chart-title {
+        font-size: 16px;
+      }
+
+      .chart-period-select {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      #chart-container .chart-section {
+        min-height: 300px;
+        max-height: 400px;
       }
     }
 
@@ -637,6 +694,24 @@
 
       .modal-stats {
         grid-template-columns: 1fr;
+      }
+
+      #chart-container {
+        padding: 12px !important;
+      }
+
+      .chart-title {
+        font-size: 14px;
+      }
+
+      .chart-period-select {
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+
+      #chart-container .chart-section {
+        min-height: 250px;
+        max-height: 350px;
       }
     }
   </style>
@@ -714,8 +789,31 @@
       <div id="volume-table" class="table-wrapper hidden"></div>
       <div id="collateral-table" class="table-wrapper hidden"></div>
       <div id="chart-container" class="hidden" style="padding: 24px;">
-        <canvas id="activity-chart" style="margin-bottom: 48px;"></canvas>
-        <canvas id="volume-chart"></canvas>
+        <div class="chart-section">
+          <div class="chart-header">
+            <h3 class="chart-title">Daily Activity</h3>
+            <select class="chart-period-select" id="activity-period" onchange="setActivityPeriod(this.value)">
+              <option value="7">Last 7 Days</option>
+              <option value="28" selected>Last 28 Days</option>
+              <option value="90">Last 3 Months</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <canvas id="activity-chart"></canvas>
+        </div>
+
+        <div class="chart-section" style="margin-top: 48px;">
+          <div class="chart-header">
+            <h3 class="chart-title">Daily Trading Volume</h3>
+            <select class="chart-period-select" id="volume-period" onchange="setVolumePeriod(this.value)">
+              <option value="7">Last 7 Days</option>
+              <option value="28" selected>Last 28 Days</option>
+              <option value="90">Last 3 Months</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <canvas id="volume-chart"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -880,6 +978,8 @@
     // Chart instances
     let activityChart = null;
     let volumeChart = null;
+    let activityPeriod = '28'; // days, or 'all'
+    let volumePeriod = '28'; // days, or 'all'
 
     // localStorage keys
     const STORAGE_KEYS = {
@@ -2219,6 +2319,7 @@
           document.getElementById('empty').classList.add('hidden');
           document.getElementById('chart-container').classList.remove('hidden');
           renderActivityChart();
+          renderVolumeChart();
         }
       } else if (data.trades.length > 0 || data.deposits.length > 0 || data.volume.length > 0 || marketsData.length > 0 || collateralData.length > 0) {
         document.getElementById('empty').classList.add('hidden');
@@ -2441,7 +2542,24 @@
       document.getElementById('tvl-modal').classList.add('hidden');
     }
 
+    function setActivityPeriod(period) {
+      activityPeriod = period;
+      renderActivityChart();
+    }
+
+    function setVolumePeriod(period) {
+      volumePeriod = period;
+      renderVolumeChart();
+    }
+
     function renderActivityChart() {
+      // Calculate date cutoff based on selected time period
+      let cutoffDate = null;
+      if (activityPeriod !== 'all') {
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - parseInt(activityPeriod));
+      }
+
       // Aggregate trades and deposits by day
       const dailyData = {};
 
@@ -2449,6 +2567,9 @@
       for (const t of data.trades) {
         if (t.block?.block_ts) {
           const date = new Date(t.block.block_ts);
+          // Filter by time period
+          if (cutoffDate && date < cutoffDate) continue;
+
           const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
           if (!dailyData[dateKey]) {
             dailyData[dateKey] = { trades: 0, deposits: 0 };
@@ -2461,6 +2582,9 @@
       for (const d of data.deposits) {
         if (d.block?.block_ts) {
           const date = new Date(d.block.block_ts);
+          // Filter by time period
+          if (cutoffDate && date < cutoffDate) continue;
+
           const dateKey = date.toISOString().split('T')[0];
           if (!dailyData[dateKey]) {
             dailyData[dateKey] = { trades: 0, deposits: 0 };
@@ -2505,20 +2629,24 @@
         options: {
           responsive: true,
           maintainAspectRatio: true,
-          aspectRatio: 2.5,
+          aspectRatio: window.innerWidth < 768 ? 1.5 : 2.5,
+          devicePixelRatio: window.devicePixelRatio || 1,
           plugins: {
             title: {
-              display: true,
-              text: 'Daily Activity',
-              color: '#e1e1e6',
-              font: {
-                size: 18,
-                weight: 'bold'
-              }
+              display: false
             },
             legend: {
               labels: {
-                color: '#e1e1e6'
+                color: '#e1e1e6',
+                font: {
+                  size: window.innerWidth < 480 ? 10 : window.innerWidth < 768 ? 11 : 12,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                },
+                padding: 10,
+                usePointStyle: false,
+                boxWidth: 15,
+                boxHeight: 15
               }
             }
           },
@@ -2526,7 +2654,16 @@
             x: {
               stacked: false,
               ticks: {
-                color: '#888'
+                color: '#888',
+                font: {
+                  size: window.innerWidth < 480 ? 9 : window.innerWidth < 768 ? 10 : 11,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                },
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 8
               },
               grid: {
                 color: '#2a2a3a'
@@ -2537,7 +2674,12 @@
               beginAtZero: true,
               ticks: {
                 color: '#888',
-                precision: 0
+                precision: 0,
+                font: {
+                  size: window.innerWidth < 480 ? 9 : window.innerWidth < 768 ? 10 : 11,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                }
               },
               grid: {
                 color: '#2a2a3a'
@@ -2546,14 +2688,25 @@
           }
         }
       });
+    }
 
-      // Render trading volume chart
+    function renderVolumeChart() {
+      // Calculate date cutoff based on selected time period
+      let cutoffDate = null;
+      if (volumePeriod !== 'all') {
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - parseInt(volumePeriod));
+      }
+
       const dailyVolume = {};
 
       // Calculate daily trading volume (only count position opens)
       for (const t of data.trades) {
         if (t.block?.block_ts && t.tradeChangeType === 'position_opened') {
           const date = new Date(t.block.block_ts);
+          // Filter by time period
+          if (cutoffDate && date < cutoffDate) continue;
+
           const dateKey = date.toISOString().split('T')[0];
           const collateral = t.trade?.collateralAmount || 0;
           const leverage = t.trade?.leverage || 1;
@@ -2594,20 +2747,24 @@
         options: {
           responsive: true,
           maintainAspectRatio: true,
-          aspectRatio: 2.5,
+          aspectRatio: window.innerWidth < 768 ? 1.5 : 2.5,
+          devicePixelRatio: window.devicePixelRatio || 1,
           plugins: {
             title: {
-              display: true,
-              text: 'Daily Trading Volume',
-              color: '#e1e1e6',
-              font: {
-                size: 18,
-                weight: 'bold'
-              }
+              display: false
             },
             legend: {
               labels: {
-                color: '#e1e1e6'
+                color: '#e1e1e6',
+                font: {
+                  size: window.innerWidth < 480 ? 10 : window.innerWidth < 768 ? 11 : 12,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                },
+                padding: 10,
+                usePointStyle: false,
+                boxWidth: 15,
+                boxHeight: 15
               }
             },
             tooltip: {
@@ -2624,7 +2781,16 @@
           scales: {
             x: {
               ticks: {
-                color: '#888'
+                color: '#888',
+                font: {
+                  size: window.innerWidth < 480 ? 9 : window.innerWidth < 768 ? 10 : 11,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                },
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 8
               },
               grid: {
                 color: '#2a2a3a'
@@ -2634,6 +2800,11 @@
               beginAtZero: true,
               ticks: {
                 color: '#888',
+                font: {
+                  size: window.innerWidth < 480 ? 9 : window.innerWidth < 768 ? 10 : 11,
+                  family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  weight: 'normal'
+                },
                 callback: function(value) {
                   return '$' + value.toLocaleString();
                 }
@@ -2645,7 +2816,6 @@
           }
         }
       });
-
     }
   </script>
 </body>
