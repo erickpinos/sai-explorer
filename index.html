@@ -468,7 +468,8 @@
       <div id="volume-table" class="table-wrapper hidden"></div>
       <div id="collateral-table" class="table-wrapper hidden"></div>
       <div id="chart-container" class="hidden" style="padding: 24px;">
-        <canvas id="activity-chart"></canvas>
+        <canvas id="activity-chart" style="margin-bottom: 48px;"></canvas>
+        <canvas id="volume-chart"></canvas>
       </div>
     </div>
   </div>
@@ -630,8 +631,9 @@
 
     let data = { trades: [], deposits: [], withdraws: [], volume: [] };
 
-    // Chart instance
+    // Chart instances
     let activityChart = null;
+    let volumeChart = null;
 
     // localStorage keys
     const STORAGE_KEYS = {
@@ -1772,7 +1774,7 @@
       }
 
       for (const m of visibleMarkets) {
-        const symbol = m.baseToken?.symbol || m.marketId || '-';
+        const symbol = m.baseToken?.symbol || (m.marketId != null ? m.marketId : '-');
         const price = m.price || 0;
         const priceChange = m.priceChangePct24Hrs || 0;
         const changeClass = priceChange >= 0 ? 'pnl-positive' : 'pnl-negative';
@@ -1793,7 +1795,7 @@
 
         html += `
           <tr>
-            <td><strong>${m.marketId || '-'}</strong></td>
+            <td><strong>${m.marketId != null ? m.marketId : '-'}</strong></td>
             <td><strong>${symbol}</strong></td>
             <td>$${formatNumber(price)}</td>
             <td class="${changeClass}">${changeSign}${formatNumber(priceChange)}%</td>
@@ -2298,6 +2300,106 @@
           }
         }
       });
+
+      // Render trading volume chart
+      const dailyVolume = {};
+
+      // Calculate daily trading volume (only count position opens)
+      for (const t of data.trades) {
+        if (t.block?.block_ts && t.tradeChangeType === 'position_opened') {
+          const date = new Date(t.block.block_ts);
+          const dateKey = date.toISOString().split('T')[0];
+          const collateral = t.trade?.collateralAmount || 0;
+          const leverage = t.trade?.leverage || 1;
+          const notionalVolume = collateral * leverage;
+
+          if (!dailyVolume[dateKey]) {
+            dailyVolume[dateKey] = 0;
+          }
+          dailyVolume[dateKey] += notionalVolume;
+        }
+      }
+
+      // Sort dates and prepare volume chart data
+      const volumeSortedDates = Object.keys(dailyVolume).sort();
+      const volumeData = volumeSortedDates.map(date => dailyVolume[date] / 1e6); // Convert to regular USD
+
+      // Destroy existing volume chart if it exists
+      if (volumeChart) {
+        volumeChart.destroy();
+      }
+
+      // Create new volume chart
+      const volumeCtx = document.getElementById('volume-chart').getContext('2d');
+      volumeChart = new Chart(volumeCtx, {
+        type: 'bar',
+        data: {
+          labels: volumeSortedDates,
+          datasets: [
+            {
+              label: 'Trading Volume (USD)',
+              data: volumeData,
+              backgroundColor: 'rgba(139, 92, 246, 0.8)',
+              borderColor: 'rgba(139, 92, 246, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2.5,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Daily Trading Volume',
+              color: '#e1e1e6',
+              font: {
+                size: 18,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              labels: {
+                color: '#e1e1e6'
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'Volume: $' + context.parsed.y.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  });
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#888'
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#888',
+                callback: function(value) {
+                  return '$' + value.toLocaleString();
+                }
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            }
+          }
+        }
+      });
+
     }
   </script>
 </body>
