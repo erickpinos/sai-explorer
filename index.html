@@ -18,11 +18,13 @@
       color: #e1e1e6;
       min-height: 100vh;
       padding: 24px;
+      overflow-x: hidden;
     }
 
     .container {
       max-width: 1400px;
       margin: 0 auto;
+      width: 100%;
     }
 
     header {
@@ -393,22 +395,266 @@
       transform: translateY(-2px);
       border-color: #6366f1;
     }
+
+    .header-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .network-label {
+      color: #888;
+      font-size: 13px;
+    }
+
+    .network-select {
+      background: #0a0a0f;
+      color: #e1e1e6;
+      border: 1px solid #2a2a3a;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .fetch-new-btn {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .fetch-all-btn {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .container {
+        max-width: 100%;
+      }
+
+      header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+      }
+
+      h1 {
+        font-size: 22px;
+        text-align: center;
+      }
+
+      .header-controls {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .fetch-btn {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+      }
+
+      #network-select {
+        width: 100%;
+        padding: 12px !important;
+        font-size: 14px !important;
+      }
+
+      .network-label {
+        display: none;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        padding: 16px;
+      }
+
+      .stat-label {
+        font-size: 13px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+      }
+
+      .tab {
+        padding: 10px 12px;
+        font-size: 12px;
+        flex: 1 1 auto;
+        min-width: fit-content;
+        text-align: center;
+      }
+
+      .table-container {
+        border-radius: 8px;
+      }
+
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      table {
+        font-size: 12px;
+        min-width: 600px;
+      }
+
+      th, td {
+        padding: 10px 8px;
+      }
+
+      th {
+        font-size: 11px;
+      }
+
+      .address {
+        font-size: 11px;
+      }
+
+      .tx-hash {
+        font-size: 11px;
+      }
+
+      .modal {
+        width: 95%;
+        max-width: 95%;
+        max-height: 90vh;
+        border-radius: 12px;
+      }
+
+      .modal-header {
+        padding: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .modal-header h2 {
+        font-size: 16px;
+      }
+
+      .modal-header .address-full {
+        font-size: 11px;
+        margin-left: 0;
+        word-break: break-all;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+
+      .modal-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .modal-stat-value {
+        font-size: 16px;
+      }
+
+      .modal-stat-label {
+        font-size: 11px;
+      }
+
+      .modal-tabs {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px;
+      }
+
+      .modal-tabs .tab {
+        flex: 1 1 auto;
+        min-width: fit-content;
+        text-align: center;
+      }
+
+      .modal-content table {
+        font-size: 11px;
+      }
+
+      #chart-container {
+        padding: 16px !important;
+      }
+
+      canvas {
+        max-height: 250px !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+      }
+
+      .fetch-btn {
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+
+      .tab {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+
+      table {
+        font-size: 11px;
+        min-width: 500px;
+      }
+
+      th, td {
+        padding: 8px 6px;
+      }
+
+      .modal-stats {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Sai.fun Transaction Explorer</h1>
-        <div style="display:flex;gap:12px;align-items:center;">
-          <label style="color:#888;font-size:13px;">Network</label>
-          <select id="network-select" onchange="onNetworkChange(this.value)" style="background:#0a0a0f;color:#e1e1e6;border:1px solid #2a2a3a;padding:8px;border-radius:8px;font-size:13px;">
+        <div class="header-controls">
+          <label class="network-label">Network</label>
+          <select id="network-select" onchange="onNetworkChange(this.value)" class="network-select">
             <option value="mainnet">Mainnet</option>
             <option value="testnet">Testnet</option>
           </select>
-          <button id="fetch-new-btn" class="fetch-btn" onclick="fetchNewTransactions()" style="background:linear-gradient(135deg, #22c55e, #16a34a);">
+          <button id="fetch-new-btn" class="fetch-btn fetch-new-btn" onclick="fetchNewTransactions()">
             Fetch New Transactions
           </button>
-          <button id="fetch-all-btn" class="fetch-btn" onclick="fetchAllData()" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+          <button id="fetch-all-btn" class="fetch-btn fetch-all-btn" onclick="fetchAllData()">
             Re-Fetch All Transactions
           </button>
         </div>
