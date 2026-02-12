@@ -1,0 +1,32 @@
+{
+  "name": "sai-explorer",
+  "version": "1.0.0",
+  "description": "Blockchain explorer for Sai.fun transactions",
+  "type": "module",
+  "scripts": {
+    "setup-db": "node scripts/setup-db.js",
+    "index-data": "node scripts/initial-index.js",
+    "dev": "cd client && npm run dev",
+    "dev:api": "node server-local.js",
+    "dev:local": "npm run dev:api & npm run dev",
+    "dev:fullstack": "npx vercel dev",
+    "build": "cd client && npm install && npm run build",
+    "preview": "cd client && npm run preview",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f postgres"
+  },
+  "dependencies": {
+    "@vercel/postgres": "^0.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "pg": "^8.18.0"
+  },
+  "devDependencies": {
+    "vercel": "^37.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

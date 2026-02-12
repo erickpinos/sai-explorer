@@ -894,10 +894,10 @@
 
     function onNetworkChange(value) {
       setNetwork(value);
-      // Clear saved data when network changes since it's network-specific
-      clearSavedData();
+      // Clear saved data when network changes since it's network-specific (commented out - now using database API)
+      // clearSavedData();
       // Reload page data if available
-      loadSavedData();
+      // loadSavedData();
     }
 
     function setNetwork(value) {
@@ -915,11 +915,11 @@
       const sel = document.getElementById('network-select');
       if (sel) sel.value = NETWORK;
 
-      // Try to load saved data automatically
-      const loaded = loadSavedData();
-      if (loaded) {
-        console.log('Loaded saved data from localStorage');
-      }
+      // Try to load saved data automatically (commented out - now using database API)
+      // const loaded = loadSavedData();
+      // if (loaded) {
+      //   console.log('Loaded saved data from localStorage');
+      // }
 
       // Initialize the active tab UI on page load
       showTab(currentTab);
@@ -1124,100 +1124,49 @@
 
     // Paginated fetch helpers (API caps at 100 per request)
     async function fetchAllTrades(sinceTimestamp = null) {
-      const PAGE_SIZE = 100;
-      let allTrades = [];
-      let offset = 0;
-      const MAX_PAGES = 200; // safety guard for endpoints that ignore offset
-      let iterations = 0;
-      const seen = new Set();
-      
-      // If sinceTimestamp is provided, we'll stop fetching when we hit older transactions
-      const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
-      
-      while (true) {
-        if (++iterations > MAX_PAGES) {
-          console.warn('fetchAllTrades: reached max pages', MAX_PAGES);
-          break;
+      // Now fetching from our API instead of blockchain directly
+      try {
+        const limit = 5000; // Fetch more trades from our database
+        const response = await fetch(`/api/trades?network=${NETWORK}&limit=${limit}`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
         }
-        const res = await fetchGraphQL(`{
-          perp {
-            tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-              id tradeChangeType realizedPnlPct realizedPnlCollateral
-              txHash evmTxHash collateralPrice
-              block { block block_ts }
-              trade { id trader tradeType isLong isOpen leverage openPrice closePrice collateralAmount openCollateralAmount tp sl perpBorrowing { marketId baseToken { symbol } } }
-            }
-          }
-        }`);
-        const trades = res.data?.perp?.tradeHistory || [];
-        if (trades.length === 0) break;
-        
-        let foundOldTransaction = false;
-        for (const t of trades) {
-          // If we're fetching only new transactions and hit an old one, stop
-          if (sinceDate && t.block?.block_ts) {
-            const txDate = new Date(t.block.block_ts);
-            if (txDate <= sinceDate) {
-              foundOldTransaction = true;
-              break;
-            }
-          }
-          
-          const key = t.id || t.txHash || JSON.stringify(t);
-          if (!seen.has(key)) {
-            seen.add(key);
-            allTrades.push(t);
-          }
+
+        const trades = await response.json();
+
+        // If sinceTimestamp is provided, filter for newer trades
+        if (sinceTimestamp) {
+          const sinceDate = new Date(sinceTimestamp);
+          return trades.filter(t => new Date(t.block?.block_ts) > sinceDate);
         }
-        
-        // If we found an old transaction, we're done
-        if (foundOldTransaction) break;
-        
-        if (trades.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
+
+        return trades;
+      } catch (err) {
+        console.error('fetchAllTrades failed:', err);
+        return [];
       }
-      return allTrades;
     }
 
     async function fetchAllDeposits(sinceTimestamp = null) {
+      // Now fetching from our API instead of blockchain directly
       try {
-        const PAGE_SIZE = 100;
-        let allDeposits = [];
-        let offset = 0;
-        const MAX_PAGES = 200;
-        const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
-        const seen = new Set();
-        while (true) {
-          if (offset >= MAX_PAGES * PAGE_SIZE) break;
-          const res = await fetchGraphQL(`{
-            lp {
-              depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-                id depositor amount shares
-                block { block block_ts }
-                vault { address collateralToken { symbol } tvl }
-              }
-            }
-          }`);
-          if (res.errors && res.errors.length) {
-            res.errors.forEach(function (e) {
-              console.warn('depositHistory API error:', e.message, e.path, e.extensions);
-            });
-            break;
-          }
-          if (!res.data?.lp) break;
-          const deposits = res.data.lp.depositHistory || [];
-          if (deposits.length === 0) break;
-          for (const d of deposits) {
-            if (sinceDate && d.block?.block_ts && new Date(d.block.block_ts) <= sinceDate) break;
-            const key = d.id != null ? String(d.id) : (d.depositor || '') + '|' + (d.block?.block_ts || '') + '|' + (d.amount || '');
-            if (seen.has(key)) continue;
-            seen.add(key);
-            allDeposits.push(d);
-          }
-          if (deposits.length < PAGE_SIZE) break;
-          offset += PAGE_SIZE;
+        const limit = 5000;
+        const response = await fetch(`/api/deposits?network=${NETWORK}&limit=${limit}`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
         }
-        return allDeposits.sort((a, b) => new Date(b.block?.block_ts || 0) - new Date(a.block?.block_ts || 0));
+
+        const deposits = await response.json();
+
+        // If sinceTimestamp is provided, filter for newer deposits
+        if (sinceTimestamp) {
+          const sinceDate = new Date(sinceTimestamp);
+          return deposits.filter(d => new Date(d.block?.block_ts) > sinceDate);
+        }
+
+        return deposits;
       } catch (err) {
         console.warn('fetchAllDeposits failed:', err);
         return [];
@@ -1225,40 +1174,21 @@
     }
 
     async function fetchAllWithdraws(sinceTimestamp = null) {
-      // Note: withdraws don't have timestamps, so we fetch all and merge
-      // But we can still optimize by checking if we already have all of them
-      const PAGE_SIZE = 100;
-      let allWithdraws = [];
-      let offset = 0;
-      const MAX_PAGES = 200;
-      let iterations = 0;
-      const seen = new Set();
-      while (true) {
-        if (++iterations > MAX_PAGES) {
-          console.warn('fetchAllWithdraws: reached max pages', MAX_PAGES);
-          break;
+      // Now fetching from our API instead of blockchain directly
+      try {
+        const limit = 5000;
+        const response = await fetch(`/api/withdraws?network=${NETWORK}&limit=${limit}`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
         }
-        const res = await fetchGraphQL(`{
-          lp {
-            withdrawRequests(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-              depositor shares unlockEpoch autoRedeem
-              vault { address collateralToken { symbol } }
-            }
-          }
-        }`);
-        const withdraws = res.data?.lp?.withdrawRequests || [];
-        if (withdraws.length === 0) break;
-        for (const w of withdraws) {
-          const key = (w.depositor || '') + '|' + (w.vault?.address || '') + '|' + (w.shares || '');
-          if (!seen.has(key)) {
-            seen.add(key);
-            allWithdraws.push(w);
-          }
-        }
-        if (withdraws.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
+
+        const withdraws = await response.json();
+        return withdraws;
+      } catch (err) {
+        console.warn('fetchAllWithdraws failed:', err);
+        return [];
       }
-      return allWithdraws;
     }
 
     async function fetchTokenPrices() {
@@ -1413,7 +1343,7 @@
       clearStats();
 
       // Clear existing data for full refresh
-      clearSavedData();
+      // clearSavedData(); // Commented out - now using database API
       data.trades = [];
       data.deposits = [];
       data.withdraws = [];
@@ -1442,8 +1372,8 @@
         // Compute volume stats by user from trades
         computeVolumeByUser();
 
-        // Save to localStorage
-        saveDataToStorage();
+        // Save to localStorage (commented out - now using database API)
+        // saveDataToStorage();
 
         updateStats();
         renderTables();
@@ -1489,8 +1419,8 @@
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('empty').classList.add('hidden');
 
-      // Load existing data first
-      const hadExistingData = loadSavedData();
+      // Load existing data first (commented out - now using database API)
+      // const hadExistingData = loadSavedData();
 
       // Get the most recent timestamp from existing data
       let mostRecentTimestamp = null;
@@ -1560,8 +1490,8 @@
         // Compute volume stats by user from trades
         computeVolumeByUser();
 
-        // Save to localStorage
-        saveDataToStorage();
+        // Save to localStorage (commented out - now using database API)
+        // saveDataToStorage();
 
         updateStats();
         renderTables();

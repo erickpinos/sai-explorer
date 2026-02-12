@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sai-explorer-db
+    environment:
+      POSTGRES_USER: saiexplorer
+      POSTGRES_PASSWORD: localdev123
+      POSTGRES_DB: sai_explorer
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
