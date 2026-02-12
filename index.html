@@ -914,12 +914,15 @@
     document.addEventListener('DOMContentLoaded', () => {
       const sel = document.getElementById('network-select');
       if (sel) sel.value = NETWORK;
-      
+
       // Try to load saved data automatically
       const loaded = loadSavedData();
       if (loaded) {
         console.log('Loaded saved data from localStorage');
       }
+
+      // Initialize the active tab UI on page load
+      showTab(currentTab);
     });
 
     // Bech32 to 0x address conversion
@@ -945,7 +948,7 @@
       } catch { return addr; }
     }
 
-    let currentTab = 'trades';
+    let currentTab = localStorage.getItem('sai_explorer_current_tab') || 'trades';
 
     // Pagination for trades table
     const TRADES_PER_PAGE = 100;
@@ -2301,6 +2304,7 @@
 
     function showTab(tab) {
       currentTab = tab;
+      localStorage.setItem('sai_explorer_current_tab', tab);
 
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       const tabIndex = { trades: 1, deposits: 2, withdraws: 3, volume: 4, markets: 5, collateral: 6, chart: 7 }[tab];
