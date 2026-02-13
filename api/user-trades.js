@@ -1,21 +1,21 @@
 import { sql } from '@vercel/postgres';
 
 export default async function handler(req, res) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { network = 'mainnet', limit = 1000, offset = 0 } = req.query;
+    const { network = 'mainnet', address, limit = 1000, offset = 0 } = req.query;
+
+    if (!address) {
+      return res.status(400).json({ error: 'Address parameter required' });
+    }
 
     const result = await sql`
       SELECT
@@ -25,12 +25,12 @@ export default async function handler(req, res) {
         collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol
       FROM trades
       WHERE network = ${network}
+        AND (trader = ${address} OR evm_trader = ${address})
       ORDER BY block_ts DESC
       LIMIT ${parseInt(limit)}
       OFFSET ${parseInt(offset)}
     `;
 
-    // Transform to match frontend's expected format
     const trades = result.rows.map(row => ({
       id: row.id,
       tradeChangeType: row.trade_change_type,
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
 
     res.status(200).json(trades);
   } catch (error) {
-    console.error('Error fetching trades:', error);
-    res.status(500).json({ error: 'Failed to fetch trades', details: error.message });
+    console.error('Error fetching user trades:', error);
+    res.status(500).json({ error: 'Failed to fetch user trades', details: error.message });
   }
 }

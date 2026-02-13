@@ -66,6 +66,11 @@ h1 {
   flex-wrap: wrap;
 }
 
+.network-label {
+  color: #888;
+  font-size: 13px;
+}
+
 .network-select {
   background: #0a0a0f;
   color: #e1e1e6;
@@ -89,6 +94,16 @@ h1 {
   border: 1px solid #2a2a3a;
   border-radius: 12px;
   padding: 20px;
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-2px);
+  border-color: #6366f1;
 }
 
 .stat-label {
@@ -124,6 +139,27 @@ h1 {
   font-weight: 600;
   color: #e1e1e6;
   margin: 0;
+}
+
+.chart-period-select {
+  background: #15151f;
+  border: 1px solid #2a2a3a;
+  color: #e1e1e6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.chart-period-select:hover {
+  border-color: #6366f1;
+}
+
+.chart-period-select:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
 /* Tabs */
@@ -167,6 +203,13 @@ h1 {
   margin-bottom: 12px;
 }
 
+.table-container {
+  background: #15151f;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .table-wrapper {
   overflow-x: auto;
   background: #15151f;
@@ -192,6 +235,31 @@ th {
   white-space: nowrap;
 }
 
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable:hover {
+  color: #6366f1;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  opacity: 0.3;
+  font-size: 10px;
+}
+
+th.sortable:hover .sort-icon {
+  opacity: 0.6;
+}
+
+th.sorted .sort-icon {
+  opacity: 1;
+  color: #6366f1;
+}
+
 td {
   padding: 14px 16px;
   border-top: 1px solid #2a2a3a;
@@ -211,6 +279,67 @@ td a:hover {
   text-decoration: underline;
 }
 
+.address {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.address-link {
+  color: #6366f1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.address-link:hover {
+  text-decoration: underline;
+}
+
+.tx-hash {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.tx-hash:hover {
+  text-decoration: underline;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.badge-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.badge-yellow {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+}
+
+/* Trade/Position Colors */
 .long {
   color: #22c55e;
 }
@@ -224,6 +353,14 @@ td a:hover {
 }
 
 .negative {
+  color: #ef4444;
+}
+
+.pnl-positive {
+  color: #22c55e;
+}
+
+.pnl-negative {
   color: #ef4444;
 }
 
@@ -314,6 +451,16 @@ td a:hover {
   color: #888;
 }
 
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #888;
+}
+
+.hidden {
+  display: none !important;
+}
+
 /* Footer */
 .footer {
   text-align: center;
@@ -322,6 +469,139 @@ td a:hover {
   font-size: 14px;
   border-top: 1px solid #2a2a3a;
   margin-top: 48px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #15151f;
+  border: 1px solid #2a2a3a;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.modal-header .address-full {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 14px;
+  color: #6366f1;
+  margin-left: 12px;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.modal-close:hover {
+  color: #fff;
+}
+
+.modal-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.modal-stat {
+  text-align: center;
+}
+
+.modal-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.modal-stat-label {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-content table {
+  font-size: 13px;
+}
+
+/* Buttons */
+.fetch-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fetch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.fetch-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fetch-new-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.fetch-all-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
 }
 
 /* Mobile Responsive */
@@ -353,6 +633,10 @@ td a:hover {
     font-size: 14px;
   }
 
+  .network-label {
+    display: none;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -368,11 +652,26 @@ td a:hover {
 
   .tabs {
     gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
   }
 
   .tab {
     padding: 10px 12px;
     font-size: 12px;
+    flex: 1 1 auto;
+    min-width: fit-content;
+    text-align: center;
+  }
+
+  .table-container {
+    border-radius: 8px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   table {
@@ -386,6 +685,106 @@ td a:hover {
 
   th {
     font-size: 11px;
+  }
+
+  .address {
+    font-size: 11px;
+  }
+
+  .tx-hash {
+    font-size: 11px;
+  }
+
+  .fetch-btn {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+
+  .modal {
+    width: 95%;
+    max-width: 95%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .modal-header .address-full {
+    font-size: 11px;
+    margin-left: 0;
+    word-break: break-all;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
+
+  .modal-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .modal-stat-value {
+    font-size: 16px;
+  }
+
+  .modal-stat-label {
+    font-size: 11px;
+  }
+
+  .modal-tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .modal-tabs .tab {
+    flex: 1 1 auto;
+    min-width: fit-content;
+    text-align: center;
+  }
+
+  .modal-content table {
+    font-size: 11px;
+  }
+
+  #chart-container {
+    padding: 16px !important;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-size: 16px;
+  }
+
+  .chart-period-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  #chart-container .chart-section {
+    min-height: 300px;
+    max-height: 400px;
   }
 }
 
@@ -402,6 +801,11 @@ td a:hover {
     font-size: 20px;
   }
 
+  .fetch-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
   .tab {
     padding: 8px 10px;
     font-size: 11px;
@@ -414,5 +818,27 @@ td a:hover {
 
   th, td {
     padding: 8px 6px;
+  }
+
+  .modal-stats {
+    grid-template-columns: 1fr;
+  }
+
+  #chart-container {
+    padding: 12px !important;
+  }
+
+  .chart-title {
+    font-size: 14px;
+  }
+
+  .chart-period-select {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  #chart-container .chart-section {
+    min-height: 250px;
+    max-height: 350px;
   }
 }

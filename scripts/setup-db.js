@@ -18,6 +18,7 @@ async function setupDatabase() {
         block_height BIGINT,
         block_ts TIMESTAMPTZ NOT NULL,
         trader TEXT NOT NULL,
+        evm_trader TEXT,
         trade_type TEXT,
         is_long BOOLEAN,
         is_open BOOLEAN,
@@ -39,6 +40,7 @@ async function setupDatabase() {
     await query('CREATE INDEX IF NOT EXISTS idx_trades_network ON trades(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_block_ts ON trades(network, block_ts DESC)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_trader ON trades(trader)');
+    await query('CREATE INDEX IF NOT EXISTS idx_trades_evm_trader ON trades(evm_trader)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_market ON trades(market_id)');
     console.log('✓ Created trades indexes');
 

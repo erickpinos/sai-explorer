@@ -1,47 +1,70 @@
 import { useState } from 'react';
 import { useTrades } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
-import { formatNumber, formatDate, formatAddress, formatPercent } from '../../utils/formatters';
+import { formatNumber, formatDate, formatAddress } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import UserProfileModal from '../modals/UserProfileModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
 
-// Helper to get CSS class based on trade status
-const getStatusClass = (status) => {
-  if (!status) return '';
+// Helper to get badge class based on trade status
+const getBadgeClass = (status) => {
+  if (!status) return 'badge badge-purple';
 
   const statusLower = status.toLowerCase();
 
   if (statusLower.includes('liquidat') || statusLower === 'position_closed_liquidation') {
-    return 'status-liquidated';
+    return 'badge badge-red';
   }
   if (statusLower.includes('opened') || statusLower === 'position_opened') {
-    return 'status-opened';
+    return 'badge badge-blue';
   }
   if (statusLower.includes('closed') || statusLower === 'position_closed') {
-    return 'status-closed';
+    return 'badge badge-purple';
   }
   if (statusLower.includes('trigger')) {
-    return 'status-triggered';
+    return 'badge badge-yellow';
   }
 
-  return '';
+  return 'badge badge-purple';
 };
 
-// Helper to format trade type from snake_case to Title Case
-const formatTradeType = (type) => {
-  if (!type) return '-';
+// Helper to format trade type to short badge text
+const formatTradeTypeBadge = (type) => {
+  if (!type) return 'Unknown';
 
+  const statusLower = type.toLowerCase();
+
+  if (statusLower.includes('liquidat')) return 'Liquidated';
+  if (statusLower.includes('opened')) return 'Opened';
+  if (statusLower.includes('closed')) return 'Closed';
+  if (statusLower.includes('trigger')) return 'Triggered';
+
+  // Fallback to title case
   return type
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
 
+// Helper to format PnL with sign and color
+const formatPnl = (pnl) => {
+  if (!pnl || pnl === 0) return '-';
+  const sign = pnl > 0 ? '+' : '';
+  return `${sign}$${formatNumber(Math.abs(pnl), 2)}`;
+};
+
+// Helper to shorten transaction hash
+const shortenHash = (hash) => {
+  if (!hash) return '-';
+  return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
+};
+
 export default function TradesTable() {
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -62,44 +85,90 @@ export default function TradesTable() {
         <table>
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Trader</th>
-              <th>Market</th>
-              <th>Type</th>
-              <th>Side</th>
-              <th>Leverage</th>
-              <th>Collateral</th>
-              <th>PnL %</th>
-              <th>Tx</th>
+              <th className="sortable">Time ▼</th>
+              <th className="sortable">Type ▼</th>
+              <th className="sortable">Market ▼</th>
+              <th className="sortable">Trader ▼</th>
+              <th className="sortable">EVM Address ▼</th>
+              <th className="sortable">Direction ▼</th>
+              <th className="sortable">Leverage ▼</th>
+              <th className="sortable">Open Price ▼</th>
+              <th className="sortable">Close Price ▼</th>
+              <th className="sortable">Collateral ▼</th>
+              <th className="sortable">PNL ▼</th>
+              <th>TX Hash</th>
+              <th>EVM TX Hash</th>
             </tr>
           </thead>
           <tbody>
             {paginatedTrades.map((trade) => (
               <tr key={trade.id}>
                 <td>{formatDate(trade.block?.block_ts)}</td>
-                <td title={trade.trade?.trader}>
-                  {formatAddress(trade.trade?.trader)}
+                <td>
+                  <span className={getBadgeClass(trade.tradeChangeType)}>
+                    {formatTradeTypeBadge(trade.tradeChangeType)}
+                  </span>
                 </td>
                 <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
-                <td className={getStatusClass(trade.tradeChangeType)}>
-                  {formatTradeType(trade.tradeChangeType)}
+                <td>
+                  <span
+                    className="address-link"
+                    title={trade.trade?.trader}
+                    onClick={() => setSelectedUserAddress(trade.trade?.evmTrader || trade.trade?.trader)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {formatAddress(trade.trade?.trader)}
+                  </span>
                 </td>
-                <td className={trade.trade?.isLong ? 'long' : 'short'}>
-                  {trade.trade?.isLong ? 'Long' : 'Short'}
+                <td>
+                  <span
+                    className="address-link"
+                    title={trade.trade?.evmTrader}
+                    onClick={() => setSelectedUserAddress(trade.trade?.evmTrader)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {formatAddress(trade.trade?.evmTrader)}
+                  </span>
+                </td>
+                <td>
+                  <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+                    {trade.trade?.isLong ? 'Long' : 'Short'}
+                  </span>
                 </td>
                 <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
-                <td>${formatNumber(trade.trade?.collateralAmount || 0)}</td>
-                <td className={trade.realizedPnlPct > 0 ? 'positive' : 'negative'}>
-                  {formatPercent(trade.realizedPnlPct)}
+                <td>${formatNumber(trade.trade?.openPrice || 0, 2)}</td>
+                <td>
+                  {trade.trade?.closePrice
+                    ? `$${formatNumber(trade.trade.closePrice, 2)}`
+                    : '-'}
+                </td>
+                <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
+                <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
+                  {formatPnl(trade.realizedPnlCollateral / 1000000)}
+                </td>
+                <td>
+                  {trade.txHash ? (
+                    <a
+                      href={`${config.explorerTx}${trade.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tx-hash"
+                    >
+                      {shortenHash(trade.txHash)}
+                    </a>
+                  ) : (
+                    '-'
+                  )}
                 </td>
                 <td>
                   {trade.evmTxHash ? (
                     <a
-                      href={`${config.explorerTx}${trade.evmTxHash}`}
+                      href={`${config.explorerEvmTx}${trade.evmTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="tx-hash"
                     >
-                      View
+                      {shortenHash(trade.evmTxHash)}
                     </a>
                   ) : (
                     '-'
@@ -129,6 +198,13 @@ export default function TradesTable() {
             Next
           </button>
         </div>
+      )}
+
+      {selectedUserAddress && (
+        <UserProfileModal
+          address={selectedUserAddress}
+          onClose={() => setSelectedUserAddress(null)}
+        />
       )}
     </div>
   );

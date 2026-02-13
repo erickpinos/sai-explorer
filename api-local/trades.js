@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       SELECT
         id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
         tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
-        trader, trade_type, is_long, is_open, leverage, open_price, close_price,
+        trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
         collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol
       FROM trades
       WHERE network = $1
@@ -46,6 +46,7 @@ export default async function handler(req, res) {
       trade: {
         id: row.id,
         trader: row.trader,
+        evmTrader: row.evm_trader,
         tradeType: row.trade_type,
         isLong: row.is_long,
         isOpen: row.is_open,

@@ -5,6 +5,10 @@ import tradesHandler from './api-local/trades.js';
 import depositsHandler from './api-local/deposits.js';
 import withdrawsHandler from './api-local/withdraws.js';
 import statsHandler from './api-local/stats.js';
+import userStatsHandler from './api-local/user-stats.js';
+import userTradesHandler from './api-local/user-trades.js';
+import userDepositsHandler from './api-local/user-deposits.js';
+import userWithdrawsHandler from './api-local/user-withdraws.js';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -36,6 +40,12 @@ app.get('/api/deposits', wrapHandler(depositsHandler));
 app.get('/api/withdraws', wrapHandler(withdrawsHandler));
 app.get('/api/stats', wrapHandler(statsHandler));
 
+// User-specific routes
+app.get('/api/user-stats', wrapHandler(userStatsHandler));
+app.get('/api/user-trades', wrapHandler(userTradesHandler));
+app.get('/api/user-deposits', wrapHandler(userDepositsHandler));
+app.get('/api/user-withdraws', wrapHandler(userWithdrawsHandler));
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -48,6 +58,10 @@ app.listen(PORT, () => {
   console.log(`   - Deposits:  http://localhost:${PORT}/api/deposits?network=mainnet&limit=10`);
   console.log(`   - Withdraws: http://localhost:${PORT}/api/withdraws?network=mainnet`);
   console.log(`   - Stats:     http://localhost:${PORT}/api/stats?network=mainnet`);
+  console.log(`   - User Stats:     http://localhost:${PORT}/api/user-stats?network=mainnet&address=0x...`);
+  console.log(`   - User Trades:    http://localhost:${PORT}/api/user-trades?network=mainnet&address=0x...`);
+  console.log(`   - User Deposits:  http://localhost:${PORT}/api/user-deposits?network=mainnet&address=0x...`);
+  console.log(`   - User Withdraws: http://localhost:${PORT}/api/user-withdraws?network=mainnet&address=0x...`);
   console.log(`   - Health:    http://localhost:${PORT}/health`);
   console.log(`\n✨ Ready for local development!\n`);
 });

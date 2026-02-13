@@ -2,10 +2,12 @@ export const NETWORK_CONFIG = {
   mainnet: {
     api: 'https://sai-keeper.nibiru.fi/query',
     explorerTx: 'https://nibiru.explorers.guru/transaction/',
+    explorerEvmTx: 'https://nibiscan.io/tx/',
   },
   testnet: {
     api: 'https://sai-keeper.testnet-2.nibiru.fi/query',
-    explorerTx: 'https://testnet-2.nibiru.explorers.guru/transaction/',
+    explorerTx: 'https://nibiru.explorers.guru/transaction/',
+    explorerEvmTx: 'https://nibiscan.io/tx/',
   },
 };
 
