@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NetworkProvider } from './hooks/useNetwork';
+import { NetworkProvider, useNetwork } from './hooks/useNetwork';
 import Header from './components/ui/Header';
 import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
@@ -15,42 +15,77 @@ import { TABS } from './utils/constants';
 import './App.css';
 
 function AppContent() {
+  const { network } = useNetwork();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('sai_explorer_current_tab') || TABS.TRADES;
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleFetchNew = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ network })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Sync completed:', result);
+        alert(`Synced ${result.trades} trades, ${result.deposits} deposits, ${result.withdraws} withdraws`);
+        // Trigger refresh of all data
+        setRefreshKey(prev => prev + 1);
+      } else {
+        alert('Sync failed. Check console for details.');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert('Sync failed: ' + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRefetchAll = async () => {
+    // For now, just trigger the same sync
+    // In future, could call a different endpoint that does full re-index
+    await handleFetchNew();
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
       case TABS.TRADES:
-        return <TradesTable />;
+        return <TradesTable key={`trades-${refreshKey}`} />;
       case TABS.DEPOSITS:
-        return <DepositsTable />;
+        return <DepositsTable key={`deposits-${refreshKey}`} />;
       case TABS.WITHDRAWS:
-        return <WithdrawsTable />;
+        return <WithdrawsTable key={`withdraws-${refreshKey}`} />;
       case TABS.VOLUME:
-        return <VolumeTable />;
+        return <VolumeTable key={`volume-${refreshKey}`} />;
       case TABS.MARKETS:
-        return <MarketsTable />;
+        return <MarketsTable key={`markets-${refreshKey}`} />;
       case TABS.COLLATERAL:
-        return <CollateralTable />;
+        return <CollateralTable key={`collateral-${refreshKey}`} />;
       case TABS.ACTIVITY:
         return (
           <div id="chart-container">
-            <ActivityChart />
-            <VolumeChart />
+            <ActivityChart key={`activity-${refreshKey}`} />
+            <VolumeChart key={`volume-chart-${refreshKey}`} />
           </div>
         );
       default:
-        return <TradesTable />;
+        return <TradesTable key={`trades-default-${refreshKey}`} />;
     }
   };
 
   return (
     <div className="app">
-      <Header />
+      <Header onFetchNew={handleFetchNew} onRefetchAll={handleRefetchAll} syncing={syncing} />
 
       <div className="container">
-        <Stats />
+        <Stats key={`stats-${refreshKey}`} />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 

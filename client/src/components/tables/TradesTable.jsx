@@ -114,7 +114,10 @@ export default function TradesTable() {
                   <span
                     className="address-link"
                     title={trade.trade?.trader}
-                    onClick={() => setSelectedUserAddress(trade.trade?.evmTrader || trade.trade?.trader)}
+                    onClick={() => setSelectedUserAddress({
+                      bech32: trade.trade?.trader,
+                      evm: trade.trade?.evmTrader
+                    })}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(trade.trade?.trader)}
@@ -124,7 +127,10 @@ export default function TradesTable() {
                   <span
                     className="address-link"
                     title={trade.trade?.evmTrader}
-                    onClick={() => setSelectedUserAddress(trade.trade?.evmTrader)}
+                    onClick={() => setSelectedUserAddress({
+                      bech32: trade.trade?.trader,
+                      evm: trade.trade?.evmTrader
+                    })}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(trade.trade?.evmTrader)}

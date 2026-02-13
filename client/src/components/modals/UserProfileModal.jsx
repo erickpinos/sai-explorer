@@ -34,12 +34,17 @@ export default function UserProfileModal({ address, onClose }) {
   const { network } = useNetwork();
   const [activeTab, setActiveTab] = useState('trades');
 
-  const { data: stats, loading: statsLoading } = useUserStats(address, network);
-  const { data: trades, loading: tradesLoading } = useUserTrades(address, network);
-  const { data: deposits, loading: depositsLoading } = useUserDeposits(address, network);
-  const { data: withdraws, loading: withdrawsLoading } = useUserWithdraws(address, network);
-
   if (!address) return null;
+
+  // Extract addresses - address can be either a string or an object with bech32 and evm
+  const bech32Address = typeof address === 'string' ? address : address.bech32;
+  const evmAddress = typeof address === 'string' ? address : address.evm;
+  const apiAddress = evmAddress || bech32Address; // Use EVM address for API calls
+
+  const { data: stats, loading: statsLoading } = useUserStats(apiAddress, network);
+  const { data: trades, loading: tradesLoading } = useUserTrades(apiAddress, network);
+  const { data: deposits, loading: depositsLoading } = useUserDeposits(apiAddress, network);
+  const { data: withdraws, loading: withdrawsLoading } = useUserWithdraws(apiAddress, network);
 
   const renderStats = () => (
     <div className="modal-stats">
@@ -204,7 +209,30 @@ export default function UserProfileModal({ address, onClose }) {
         <div className="modal-header">
           <div>
             <h2>User Profile</h2>
-            <span className="address">{address}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+              {bech32Address && (
+                <a
+                  href={`https://nibiru.explorers.guru/account/${bech32Address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="address"
+                  style={{ color: '#6366f1', textDecoration: 'none' }}
+                >
+                  {bech32Address}
+                </a>
+              )}
+              {evmAddress && (
+                <a
+                  href={`https://nibiscan.io/address/${evmAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="address"
+                  style={{ color: '#6366f1', textDecoration: 'none' }}
+                >
+                  {evmAddress}
+                </a>
+              )}
+            </div>
           </div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>

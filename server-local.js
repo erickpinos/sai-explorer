@@ -5,6 +5,7 @@ import tradesHandler from './api-local/trades.js';
 import depositsHandler from './api-local/deposits.js';
 import withdrawsHandler from './api-local/withdraws.js';
 import statsHandler from './api-local/stats.js';
+import syncHandler from './api-local/sync.js';
 import userStatsHandler from './api-local/user-stats.js';
 import userTradesHandler from './api-local/user-trades.js';
 import userDepositsHandler from './api-local/user-deposits.js';
@@ -39,6 +40,7 @@ app.get('/api/trades', wrapHandler(tradesHandler));
 app.get('/api/deposits', wrapHandler(depositsHandler));
 app.get('/api/withdraws', wrapHandler(withdrawsHandler));
 app.get('/api/stats', wrapHandler(statsHandler));
+app.post('/api/sync', wrapHandler(syncHandler));
 
 // User-specific routes
 app.get('/api/user-stats', wrapHandler(userStatsHandler));
@@ -58,6 +60,7 @@ app.listen(PORT, () => {
   console.log(`   - Deposits:  http://localhost:${PORT}/api/deposits?network=mainnet&limit=10`);
   console.log(`   - Withdraws: http://localhost:${PORT}/api/withdraws?network=mainnet`);
   console.log(`   - Stats:     http://localhost:${PORT}/api/stats?network=mainnet`);
+  console.log(`   - Sync:      POST http://localhost:${PORT}/api/sync`);
   console.log(`   - User Stats:     http://localhost:${PORT}/api/user-stats?network=mainnet&address=0x...`);
   console.log(`   - User Trades:    http://localhost:${PORT}/api/user-trades?network=mainnet&address=0x...`);
   console.log(`   - User Deposits:  http://localhost:${PORT}/api/user-deposits?network=mainnet&address=0x...`);

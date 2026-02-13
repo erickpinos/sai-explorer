@@ -23,7 +23,9 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT
           COUNT(*) as total_trades,
-          SUM(CASE WHEN collateral_amount IS NOT NULL THEN ABS(collateral_amount) ELSE 0 END) as total_volume
+          SUM(CASE WHEN collateral_amount IS NOT NULL AND leverage IS NOT NULL
+              THEN ABS(collateral_amount * leverage / 1000000)
+              ELSE 0 END) as total_volume
         FROM trades
         WHERE network = $1
       `, [network]),
