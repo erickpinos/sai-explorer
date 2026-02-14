@@ -102,7 +102,7 @@ async function indexAllDeposits(network) {
     const res = await fetchGraphQL(`{
       lp {
         depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-          id depositor amount shares
+          id depositor amount shares txHash evmTxHash
           block { block block_ts }
           vault { address collateralToken { symbol } tvl }
         }
@@ -120,15 +120,15 @@ async function indexAllDeposits(network) {
         await query(`
           INSERT INTO deposits (
             network, depositor, amount, shares,
-            block_height, block_ts,
+            block_height, block_ts, tx_hash, evm_tx_hash,
             vault_address, collateral_token_symbol, vault_tvl
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
           )
           ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
         `, [
           network, d.depositor, d.amount, d.shares,
-          d.block.block, d.block.block_ts,
+          d.block.block, d.block.block_ts, d.txHash, d.evmTxHash,
           d.vault.address, d.vault.collateralToken.symbol, d.vault.tvl
         ]);
         totalIndexed++;

@@ -147,7 +147,7 @@ async function syncDeposits(network) {
     const res = await fetchGraphQL(`{
       lp {
         depositHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
-          id depositor amount shares
+          id depositor amount shares txHash evmTxHash
           block { block block_ts }
           vault { address collateralToken { symbol } tvl }
         }
@@ -167,11 +167,11 @@ async function syncDeposits(network) {
         await sql`
           INSERT INTO deposits (
             network, depositor, amount, shares,
-            block_height, block_ts,
+            block_height, block_ts, tx_hash, evm_tx_hash,
             vault_address, collateral_token_symbol, vault_tvl
           ) VALUES (
             ${network}, ${d.depositor}, ${d.amount}, ${d.shares},
-            ${d.block.block}, ${d.block.block_ts},
+            ${d.block.block}, ${d.block.block_ts}, ${d.txHash}, ${d.evmTxHash},
             ${d.vault.address}, ${d.vault.collateralToken.symbol}, ${d.vault.tvl}
           )
           ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING

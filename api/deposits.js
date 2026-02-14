@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const result = await sql`
       SELECT
         id, network, depositor, amount, shares,
-        block_height, block_ts,
+        block_height, block_ts, tx_hash, evm_tx_hash,
         vault_address, collateral_token_symbol, vault_tvl
       FROM deposits
       WHERE network = ${network}
@@ -35,6 +35,8 @@ export default async function handler(req, res) {
       depositor: row.depositor,
       amount: row.amount,
       shares: row.shares,
+      txHash: row.tx_hash,
+      evmTxHash: row.evm_tx_hash,
       block: {
         block: row.block_height,
         block_ts: row.block_ts
