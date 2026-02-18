@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import tradesHandler from './api-local/trades.js';
 import depositsHandler from './api-local/deposits.js';
 import withdrawsHandler from './api-local/withdraws.js';
@@ -12,11 +14,15 @@ import userStatsHandler from './api-local/user-stats.js';
 import userTradesHandler from './api-local/user-trades.js';
 import userDepositsHandler from './api-local/user-deposits.js';
 import userWithdrawsHandler from './api-local/user-withdraws.js';
-// Load environment variables
+
 dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -54,6 +60,12 @@ app.get('/api/user-withdraws', wrapHandler(userWithdrawsHandler));
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+const clientDist = path.join(__dirname, 'client', 'dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDist, 'index.html'));
 });
 
 app.listen(PORT, () => {

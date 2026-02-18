@@ -2,12 +2,10 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config({ path: '.env.local' });
 
-// Create a pool for local Postgres
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL
 });
 
 // Helper function to execute SQL queries
