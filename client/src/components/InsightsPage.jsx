@@ -26,10 +26,14 @@ export default function InsightsPage() {
     );
   }
 
-  if (error || !insights) {
+  const hasData = insights &&
+    insights.longVsShort &&
+    (parseInt(insights.longVsShort.longCount) > 0 || parseInt(insights.longVsShort.shortCount) > 0);
+
+  if (error || !insights || !hasData) {
     return (
       <div className="empty">
-        <p>Could not load insights.</p>
+        <p>No insights available yet. Fetch some transactions first!</p>
       </div>
     );
   }

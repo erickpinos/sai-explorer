@@ -60,6 +60,10 @@ export default function FunFacts({ onNavigateToInsights }) {
 
   if (loading || !insights) return null;
 
+  const hasData = insights.longVsShort &&
+    (parseInt(insights.longVsShort.longCount) > 0 || parseInt(insights.longVsShort.shortCount) > 0);
+  if (!hasData) return null;
+
   const facts = generateFunFacts(insights);
   if (facts.length === 0) return null;
 
