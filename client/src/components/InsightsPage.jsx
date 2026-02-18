@@ -53,14 +53,26 @@ export default function InsightsPage() {
         <p className="insights-subtitle">Interesting patterns and stats from the trading data</p>
       </div>
 
-      <div style={{ marginBottom: '2rem' }}>
+      <div className="chart-nav">
+        <span className="chart-nav-label">Sections:</span>
+        <a href="#daily-activity" className="chart-nav-link">Daily Activity</a>
+        <a href="#daily-volume" className="chart-nav-link">Daily Volume</a>
+        <a href="#platform-stats" className="chart-nav-link">Platform Stats</a>
+        <a href="#pnl-summary" className="chart-nav-link">PnL Summary</a>
+        <a href="#biggest-wins" className="chart-nav-link">Biggest Wins</a>
+        <a href="#biggest-losses" className="chart-nav-link">Biggest Losses</a>
+        <a href="#biggest-pct-wins" className="chart-nav-link">Top % Wins</a>
+        <a href="#biggest-pct-losses" className="chart-nav-link">Top % Losses</a>
+      </div>
+
+      <div id="daily-activity" style={{ marginBottom: '2rem' }}>
         <ActivityChart />
       </div>
-      <div style={{ marginBottom: '2rem' }}>
+      <div id="daily-volume" style={{ marginBottom: '2rem' }}>
         <VolumeChart />
       </div>
 
-      <div className="insights-grid">
+      <div id="platform-stats" className="insights-grid">
         {insights.mostTradedMarket && (
           <InsightCard
             icon="&#x1f525;"
@@ -162,7 +174,7 @@ export default function InsightsPage() {
       </div>
 
       {insights.pnlSummary && (
-        <div className="insights-summary" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div id="pnl-summary" className="insights-summary" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <div className="insight-card" style={{ flex: 1, minWidth: '200px' }}>
             <div className="insight-title">Total Wins</div>
             <div className="insight-value pnl-positive">+${formatNumber(insights.pnlSummary.totalWins, 2)}</div>
@@ -184,7 +196,7 @@ export default function InsightsPage() {
       )}
 
       {insights.topWins?.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
+        <div id="biggest-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Wins</h3>
           <div className="table-wrapper">
             <table>
@@ -222,7 +234,7 @@ export default function InsightsPage() {
       )}
 
       {insights.topLosses?.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
+        <div id="biggest-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Losses</h3>
           <div className="table-wrapper">
             <table>
@@ -260,7 +272,7 @@ export default function InsightsPage() {
       )}
 
       {insights.topPctWins?.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
+        <div id="biggest-pct-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Wins</h3>
           <div className="table-wrapper">
             <table>
@@ -300,7 +312,7 @@ export default function InsightsPage() {
       )}
 
       {insights.topPctLosses?.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
+        <div id="biggest-pct-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Losses</h3>
           <div className="table-wrapper">
             <table>

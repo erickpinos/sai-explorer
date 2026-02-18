@@ -331,7 +331,8 @@ h1 {
 .chart-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin-bottom: 24px;
   padding: 12px 16px;
   background: #15151f;
