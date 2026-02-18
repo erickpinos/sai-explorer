@@ -14,7 +14,6 @@ export default function Tabs({ activeTab, onTabChange }) {
     { id: TABS.VOLUME, label: 'User Stats' },
     { id: TABS.MARKETS, label: 'Markets' },
     { id: TABS.COLLATERAL, label: 'Collateral Indices' },
-    { id: TABS.ACTIVITY, label: 'Activity Chart' },
     { id: TABS.INSIGHTS, label: 'Insights' },
   ];
 

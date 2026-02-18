@@ -9,8 +9,6 @@ import WithdrawsTable from './components/tables/WithdrawsTable';
 import VolumeTable from './components/tables/VolumeTable';
 import MarketsTable from './components/tables/MarketsTable';
 import CollateralTable from './components/tables/CollateralTable';
-import ActivityChart from './components/charts/ActivityChart';
-import VolumeChart from './components/charts/VolumeChart';
 import FunFacts from './components/ui/FunFacts';
 import InsightsPage from './components/InsightsPage';
 import { TABS } from './utils/constants';
@@ -70,22 +68,6 @@ function AppContent() {
         return <MarketsTable key={`markets-${refreshKey}`} />;
       case TABS.COLLATERAL:
         return <CollateralTable key={`collateral-${refreshKey}`} />;
-      case TABS.ACTIVITY:
-        return (
-          <div id="chart-container">
-            <div className="chart-nav">
-              <span className="chart-nav-label">Charts:</span>
-              <a href="#daily-activity" className="chart-nav-link">Daily Activity</a>
-              <a href="#daily-volume" className="chart-nav-link">Daily Volume</a>
-            </div>
-            <div id="daily-activity">
-              <ActivityChart key={`activity-${refreshKey}`} />
-            </div>
-            <div id="daily-volume">
-              <VolumeChart key={`volume-chart-${refreshKey}`} />
-            </div>
-          </div>
-        );
       case TABS.INSIGHTS:
         return <InsightsPage key={`insights-${refreshKey}`} />;
       default:

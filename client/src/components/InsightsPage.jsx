@@ -1,6 +1,8 @@
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
 import { formatNumber, formatAddress, formatDate } from '../utils/formatters';
+import ActivityChart from './charts/ActivityChart';
+import VolumeChart from './charts/VolumeChart';
 
 function InsightCard({ icon, title, value, detail }) {
   return (
@@ -49,6 +51,13 @@ export default function InsightsPage() {
       <div className="insights-header">
         <h2 className="insights-title">Platform Insights</h2>
         <p className="insights-subtitle">Interesting patterns and stats from the trading data</p>
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <ActivityChart />
+      </div>
+      <div style={{ marginBottom: '2rem' }}>
+        <VolumeChart />
       </div>
 
       <div className="insights-grid">
