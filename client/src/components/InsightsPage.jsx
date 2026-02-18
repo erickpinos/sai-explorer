@@ -1,6 +1,6 @@
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
-import { formatNumber, formatAddress } from '../utils/formatters';
+import { formatNumber, formatAddress, formatDate } from '../utils/formatters';
 
 function InsightCard({ icon, title, value, detail }) {
   return (
@@ -151,6 +151,104 @@ export default function InsightsPage() {
           />
         )}
       </div>
+
+      {insights.pnlSummary && (
+        <div className="insights-summary" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="insight-card" style={{ flex: 1, minWidth: '200px' }}>
+            <div className="insight-title">Total Wins</div>
+            <div className="insight-value pnl-positive">+${formatNumber(insights.pnlSummary.totalWins, 2)}</div>
+            <div className="insight-detail">{insights.pnlSummary.winCount} winning trades</div>
+          </div>
+          <div className="insight-card" style={{ flex: 1, minWidth: '200px' }}>
+            <div className="insight-title">Total Losses</div>
+            <div className="insight-value pnl-negative">-${formatNumber(Math.abs(insights.pnlSummary.totalLosses), 2)}</div>
+            <div className="insight-detail">{insights.pnlSummary.lossCount} losing trades</div>
+          </div>
+          <div className="insight-card" style={{ flex: 1, minWidth: '200px' }}>
+            <div className="insight-title">Net PnL</div>
+            <div className={`insight-value ${(insights.pnlSummary.totalWins + insights.pnlSummary.totalLosses) >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
+              {(insights.pnlSummary.totalWins + insights.pnlSummary.totalLosses) >= 0 ? '+' : '-'}${formatNumber(Math.abs(insights.pnlSummary.totalWins + insights.pnlSummary.totalLosses), 2)}
+            </div>
+            <div className="insight-detail">{insights.pnlSummary.winCount + insights.pnlSummary.lossCount} total trades</div>
+          </div>
+        </div>
+      )}
+
+      {insights.topWins?.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Wins</h3>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Trader</th>
+                  <th>Market</th>
+                  <th>Direction</th>
+                  <th>Leverage</th>
+                  <th>PnL</th>
+                  <th>Position Size</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insights.topWins.map((t, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td>{t.symbol}</td>
+                    <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
+                    <td>{t.leverage}x</td>
+                    <td className="pnl-positive">+${formatNumber(t.pnlUsd, 2)}</td>
+                    <td>${formatNumber(t.positionSize, 2)}</td>
+                    <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
+                    <td>{formatDate(t.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {insights.topLosses?.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Losses</h3>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Trader</th>
+                  <th>Market</th>
+                  <th>Direction</th>
+                  <th>Leverage</th>
+                  <th>PnL</th>
+                  <th>Position Size</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insights.topLosses.map((t, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td>{t.symbol}</td>
+                    <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
+                    <td>{t.leverage}x</td>
+                    <td className="pnl-negative">-${formatNumber(Math.abs(t.pnlUsd), 2)}</td>
+                    <td>${formatNumber(t.positionSize, 2)}</td>
+                    <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
+                    <td>{formatDate(t.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

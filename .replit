@@ -1,4 +1,4 @@
-modules = ["web", "bash", "nodejs-20", "postgresql-16"]
+modules = ["web", "bash", "nodejs-20"]
 [agent]
 expertMode = true
 

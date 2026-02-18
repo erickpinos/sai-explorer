@@ -27,6 +27,9 @@ export default async function handler(req, res) {
       profitByDirection,
       mostProfitableMarket,
       busiestHour,
+      topWins,
+      topLosses,
+      pnlSummary,
     ] = await Promise.all([
       pool.query(`
         SELECT base_token_symbol, COUNT(*) as trade_count
@@ -122,6 +125,38 @@ export default async function handler(req, res) {
         ORDER BY trade_count DESC
         LIMIT 1
       `, [network]),
+
+      pool.query(`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
+        ORDER BY realized_pnl_collateral DESC
+        LIMIT 10
+      `, [network]),
+
+      pool.query(`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
+        ORDER BY realized_pnl_collateral ASC
+        LIMIT 10
+      `, [network]),
+
+      pool.query(`
+        SELECT
+          SUM(CASE WHEN realized_pnl_collateral > 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_wins,
+          SUM(CASE WHEN realized_pnl_collateral < 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_losses,
+          COUNT(CASE WHEN realized_pnl_collateral > 0 THEN 1 END) as win_count,
+          COUNT(CASE WHEN realized_pnl_collateral < 0 THEN 1 END) as loss_count
+        FROM trades
+        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral != 0
+      `, [network]),
     ]);
 
     const longCount = parseInt(longVsShort.rows[0]?.long_count || 0);
@@ -193,6 +228,34 @@ export default async function handler(req, res) {
       busiestHour: busiestHour.rows[0] ? {
         hour: parseInt(busiestHour.rows[0].hour),
         tradeCount: parseInt(busiestHour.rows[0].trade_count),
+      } : null,
+      topWins: topWins.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      topLosses: topLosses.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      pnlSummary: pnlSummary.rows[0] ? {
+        totalWins: parseFloat(pnlSummary.rows[0].total_wins || 0),
+        totalLosses: parseFloat(pnlSummary.rows[0].total_losses || 0),
+        winCount: parseInt(pnlSummary.rows[0].win_count || 0),
+        lossCount: parseInt(pnlSummary.rows[0].loss_count || 0),
       } : null,
     };
 
