@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import tradesHandler from './api-local/trades.js';
 import depositsHandler from './api-local/deposits.js';
@@ -71,10 +72,12 @@ app.get('/health', (req, res) => {
 });
 
 const clientDist = path.join(__dirname, 'client', 'dist');
-app.use(express.static(clientDist));
-app.get('{*path}', (req, res) => {
-  res.sendFile(path.join(clientDist, 'index.html'));
-});
+if (fs.existsSync(path.join(clientDist, 'index.html'))) {
+  app.use(express.static(clientDist));
+  app.get('{*path}', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Local API server running on http://localhost:${PORT}`);
