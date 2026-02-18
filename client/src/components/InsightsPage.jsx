@@ -249,6 +249,86 @@ export default function InsightsPage() {
           </div>
         </div>
       )}
+
+      {insights.topPctWins?.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Wins</h3>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Trader</th>
+                  <th>Market</th>
+                  <th>Direction</th>
+                  <th>Leverage</th>
+                  <th>PnL %</th>
+                  <th>PnL $</th>
+                  <th>Position Size</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insights.topPctWins.map((t, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td>{t.symbol}</td>
+                    <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
+                    <td>{t.leverage}x</td>
+                    <td className="pnl-positive">+{formatNumber(t.pnlPct, 2)}%</td>
+                    <td className="pnl-positive">+${formatNumber(t.pnlUsd, 2)}</td>
+                    <td>${formatNumber(t.positionSize, 2)}</td>
+                    <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
+                    <td>{formatDate(t.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {insights.topPctLosses?.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Losses</h3>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Trader</th>
+                  <th>Market</th>
+                  <th>Direction</th>
+                  <th>Leverage</th>
+                  <th>PnL %</th>
+                  <th>PnL $</th>
+                  <th>Position Size</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insights.topPctLosses.map((t, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td>{t.symbol}</td>
+                    <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
+                    <td>{t.leverage}x</td>
+                    <td className="pnl-negative">{formatNumber(t.pnlPct, 2)}%</td>
+                    <td className="pnl-negative">-${formatNumber(Math.abs(t.pnlUsd), 2)}</td>
+                    <td>${formatNumber(t.positionSize, 2)}</td>
+                    <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
+                    <td>{formatDate(t.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
