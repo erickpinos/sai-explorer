@@ -8,21 +8,19 @@ export default function Header({ onFetchNew, onRefetchAll, syncing = false }) {
       <div className="header-content">
         <div className="logo">
           <span className="logo-icon">📊</span>
-          <h1>Sai Explorer</h1>
+          <h1>Sai Transaction Explorer</h1>
         </div>
         <div className="header-controls">
           <button
             onClick={onFetchNew}
-            className="btn btn-primary"
-            style={{ marginRight: '10px' }}
+            className="fetch-btn fetch-new-btn"
             disabled={syncing}
           >
             {syncing ? 'Syncing...' : 'Fetch New Transactions'}
           </button>
           <button
             onClick={onRefetchAll}
-            className="btn btn-secondary"
-            style={{ marginRight: '10px' }}
+            className="fetch-btn fetch-all-btn"
             disabled={syncing}
           >
             {syncing ? 'Syncing...' : 'Re-Fetch All Transactions'}

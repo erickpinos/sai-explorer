@@ -1,5 +1,32 @@
 import { pool } from '../scripts/db.js';
 
+const GRAPHQL_ENDPOINTS = {
+  mainnet: 'https://sai-keeper.nibiru.fi/query',
+  testnet: 'https://testnet-sai-keeper.nibiru.fi/query'
+};
+const ACTIVE_VAULTS = new Set([
+  '0xE96397b6135240956413031c0B26507eeCCD4B39',
+  '0x7275AfFf575aD79da8b245784cE54a203Df954e6',
+]);
+
+async function fetchLiveTvl(network) {
+  const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
+  const [vaultsRes, pricesRes] = await Promise.all([
+    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }' }) }).then(r => r.json()),
+    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }' }) }).then(r => r.json()),
+  ]);
+  const prices = {};
+  for (const p of pricesRes.data?.oracle?.tokenPricesUsd || []) {
+    if (p.token?.symbol) prices[p.token.symbol.toUpperCase()] = parseFloat(p.priceUsd);
+  }
+  return (vaultsRes.data?.lp?.vaults || [])
+    .filter(v => ACTIVE_VAULTS.has(v.sharesERC20 || ''))
+    .reduce((sum, v) => {
+      const token = (v.collateralToken?.symbol || '').toUpperCase();
+      return sum + (v.availableAssets / 1e6) * (prices[token] ?? 1);
+    }, 0);
+}
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,7 +45,7 @@ export default async function handler(req, res) {
     const { network = 'mainnet' } = req.query;
 
     // Run parallel queries for stats
-    const [tradesStats, depositsStats, uniqueTraders, recentTrades] = await Promise.all([
+    const [tradesStats, depositsStats, uniqueTraders, recentTrades, withdrawsStats, liveTvl] = await Promise.all([
       // Total trades count and volume
       pool.query(`
         SELECT
@@ -28,6 +55,7 @@ export default async function handler(req, res) {
               ELSE 0 END) as total_volume
         FROM trades
         WHERE network = $1
+          AND trade_change_type IN ('position_opened', 'order_triggered')
       `, [network]),
 
       // Total deposits
@@ -53,7 +81,16 @@ export default async function handler(req, res) {
         WHERE network = $1
         ORDER BY block_ts DESC
         LIMIT 1
-      `, [network])
+      `, [network]),
+
+      // Total withdraws count
+      pool.query(`
+        SELECT COUNT(*) as total_withdraws
+        FROM withdraws
+        WHERE network = $1
+      `, [network]),
+
+      fetchLiveTvl(network),
     ]);
 
     const stats = {
@@ -66,9 +103,13 @@ export default async function handler(req, res) {
         total: parseInt(depositsStats.rows[0]?.total_deposits || 0),
         volume: parseFloat(depositsStats.rows[0]?.total_deposited || 0)
       },
+      withdraws: {
+        total: parseInt(withdrawsStats.rows[0]?.total_withdraws || 0)
+      },
       traders: {
         unique: parseInt(uniqueTraders.rows[0]?.unique_traders || 0)
       },
+      tvl: liveTvl,
       lastUpdated: recentTrades.rows[0]?.block_ts || null
     };
 

@@ -11,6 +11,8 @@ import MarketsTable from './components/tables/MarketsTable';
 import CollateralTable from './components/tables/CollateralTable';
 import ActivityChart from './components/charts/ActivityChart';
 import VolumeChart from './components/charts/VolumeChart';
+import FunFacts from './components/ui/FunFacts';
+import InsightsPage from './components/InsightsPage';
 import { TABS } from './utils/constants';
 import './App.css';
 
@@ -71,10 +73,21 @@ function AppContent() {
       case TABS.ACTIVITY:
         return (
           <div id="chart-container">
-            <ActivityChart key={`activity-${refreshKey}`} />
-            <VolumeChart key={`volume-chart-${refreshKey}`} />
+            <div className="chart-nav">
+              <span className="chart-nav-label">Charts:</span>
+              <a href="#daily-activity" className="chart-nav-link">Daily Activity</a>
+              <a href="#daily-volume" className="chart-nav-link">Daily Volume</a>
+            </div>
+            <div id="daily-activity">
+              <ActivityChart key={`activity-${refreshKey}`} />
+            </div>
+            <div id="daily-volume">
+              <VolumeChart key={`volume-chart-${refreshKey}`} />
+            </div>
           </div>
         );
+      case TABS.INSIGHTS:
+        return <InsightsPage key={`insights-${refreshKey}`} />;
       default:
         return <TradesTable key={`trades-default-${refreshKey}`} />;
     }
@@ -87,6 +100,8 @@ function AppContent() {
       <div className="container">
         <Stats key={`stats-${refreshKey}`} />
 
+        <FunFacts key={`funfacts-${refreshKey}`} onNavigateToInsights={setActiveTab} />
+
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="content">
@@ -95,7 +110,7 @@ function AppContent() {
       </div>
 
       <footer className="footer">
-        <p>Sai Explorer - Blockchain transaction viewer</p>
+        <p>Sai Transaction Explorer - Blockchain transaction viewer</p>
       </footer>
     </div>
   );

@@ -54,6 +54,14 @@ export function useStats(network) {
   return useApi('stats', network);
 }
 
+export function useInsights(network) {
+  return useApi('insights', network);
+}
+
+export function useTvlBreakdown(network) {
+  return useApi('tvl-breakdown', network);
+}
+
 // User-specific hooks
 export function useUserStats(address, network = 'mainnet') {
   const [data, setData] = useState(null);

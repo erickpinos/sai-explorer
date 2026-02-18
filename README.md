@@ -1,4 +1,4 @@
-# Sai Explorer
+# Sai Transaction Explorer
 
 A blockchain explorer for Sai.fun transactions with real-time data syncing and analytics.
 

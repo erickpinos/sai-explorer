@@ -6,11 +6,12 @@ import depositsHandler from './api-local/deposits.js';
 import withdrawsHandler from './api-local/withdraws.js';
 import statsHandler from './api-local/stats.js';
 import syncHandler from './api-local/sync.js';
+import insightsHandler from './api-local/insights.js';
+import tvlBreakdownHandler from './api-local/tvl-breakdown.js';
 import userStatsHandler from './api-local/user-stats.js';
 import userTradesHandler from './api-local/user-trades.js';
 import userDepositsHandler from './api-local/user-deposits.js';
 import userWithdrawsHandler from './api-local/user-withdraws.js';
-
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
@@ -40,6 +41,8 @@ app.get('/api/trades', wrapHandler(tradesHandler));
 app.get('/api/deposits', wrapHandler(depositsHandler));
 app.get('/api/withdraws', wrapHandler(withdrawsHandler));
 app.get('/api/stats', wrapHandler(statsHandler));
+app.get('/api/insights', wrapHandler(insightsHandler));
+app.get('/api/tvl-breakdown', wrapHandler(tvlBreakdownHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
 
 // User-specific routes
