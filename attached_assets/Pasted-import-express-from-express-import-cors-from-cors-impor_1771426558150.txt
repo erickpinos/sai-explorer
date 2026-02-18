@@ -14,11 +14,15 @@ import userStatsHandler from './api-local/user-stats.js';
 import userTradesHandler from './api-local/user-trades.js';
 import userDepositsHandler from './api-local/user-deposits.js';
 import userWithdrawsHandler from './api-local/user-withdraws.js';
+<<<<<<< HEAD
+
+=======
 import volumeHandler from './api-local/volume.js';
 import marketsHandler from './api-local/markets.js';
 import collateralHandler from './api-local/collateral.js';
 import chartDataHandler from './api-local/chart-data.js';
-
+// Load environment variables
+>>>>>>> e5ece3c0a8e916b1e08d63c6cf0bb81330f392a0
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 

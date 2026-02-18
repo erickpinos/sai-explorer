@@ -22,10 +22,20 @@ export default async function handler(req, res) {
         perp {
           borrowings {
             marketId
+            collateralToken { id symbol }
             baseToken { symbol }
-            collateralToken { symbol }
+            feesPerHourLong
+            feesPerHourShort
+            oiLong
+            oiShort
+            oiMax
+            price
+            priceChangePct24Hrs
+            minLeverage
+            maxLeverage
             openFeePct
             closeFeePct
+            visible
           }
         }
       }` }),

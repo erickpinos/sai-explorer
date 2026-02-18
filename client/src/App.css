@@ -113,7 +113,7 @@ h1 {
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: clamp(14px, 1.6vw, 24px);
   font-weight: 700;
   color: #fff;
 }
@@ -402,6 +402,18 @@ h1 {
 .chart-period-select:focus {
   outline: none;
   border-color: #6366f1;
+}
+
+.chart-loading,
+.chart-error,
+.chart-empty {
+  padding: 40px;
+  text-align: center;
+  color: #888;
+}
+
+.chart-error {
+  color: #ef4444;
 }
 
 /* Tabs */
@@ -701,6 +713,39 @@ td a:hover {
 
 .hidden {
   display: none !important;
+}
+
+/* Collateral Table */
+.collateral-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.collateral-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #2a2a3a;
+  margin-top: 0;
+  background: #15151f;
+  border-radius: 0 0 12px 12px;
+}
+
+.collateral-footer h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 8px 0;
+}
+
+.collateral-footer p {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 4px 0;
+}
+
+.collateral-footer-note {
+  color: #888 !important;
 }
 
 /* Footer */

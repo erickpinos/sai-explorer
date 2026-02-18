@@ -62,6 +62,36 @@ export function useTvlBreakdown(network) {
   return useApi('tvl-breakdown', network);
 }
 
+export function useVolume(network) {
+  return useApi('volume', network);
+}
+
+export function useMarkets(network) {
+  return useApi('markets', network);
+}
+
+export function useCollateral(network) {
+  return useApi('collateral', network);
+}
+
+export function useChartData(network, days = '28') {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(`/api/chart-data?network=${network}&days=${days}`)
+      .then(r => { if (!r.ok) throw new Error(`API error: ${r.status}`); return r.json(); })
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [network, days]);
+
+  return { data, loading, error };
+}
+
 // User-specific hooks
 export function useUserStats(address, network = 'mainnet') {
   const [data, setData] = useState(null);
