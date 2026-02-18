@@ -94,7 +94,7 @@ export default function InsightsPage() {
         {insights.biggestWin && (
           <InsightCard
             icon="&#x1f3c6;"
-            title="Biggest Win"
+            title="Biggest % Win"
             value={`+${insights.biggestWin.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestWin.isLong ? 'Long' : 'Short'} ${insights.biggestWin.symbol} @ ${insights.biggestWin.leverage}x`}
           />
@@ -103,9 +103,27 @@ export default function InsightsPage() {
         {insights.biggestLoss && (
           <InsightCard
             icon="&#x1f4a5;"
-            title="Biggest Loss"
+            title="Biggest % Loss"
             value={`${insights.biggestLoss.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestLoss.isLong ? 'Long' : 'Short'} ${insights.biggestLoss.symbol} @ ${insights.biggestLoss.leverage}x`}
+          />
+        )}
+
+        {insights.topWins?.[0] && (
+          <InsightCard
+            icon="&#x1f4b5;"
+            title="Biggest $ Win"
+            value={`+$${formatNumber(insights.topWins[0].pnlUsd, 2)}`}
+            detail={`${insights.topWins[0].isLong ? 'Long' : 'Short'} ${insights.topWins[0].symbol} @ ${insights.topWins[0].leverage}x`}
+          />
+        )}
+
+        {insights.topLosses?.[0] && (
+          <InsightCard
+            icon="&#x1f4b8;"
+            title="Biggest $ Loss"
+            value={`-$${formatNumber(Math.abs(insights.topLosses[0].pnlUsd), 2)}`}
+            detail={`${insights.topLosses[0].isLong ? 'Long' : 'Short'} ${insights.topLosses[0].symbol} @ ${insights.topLosses[0].leverage}x`}
           />
         )}
 

@@ -33,7 +33,16 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - Database connection: `scripts/db.js` uses `POSTGRES_URL` or `DATABASE_URL`
 - Deployment: Express serves built client from `client/dist/` on port 5000
 
+## Data Notes
+- `realized_pnl_pct` in the database is stored as a ratio (e.g., -1 = -100%, 9 = 900%)
+- Backend multiplies by 100 before sending to frontend, so frontend displays values directly as percentages
+- `realized_pnl_collateral` is stored in micro-units (divide by 1,000,000 for USD)
+
 ## Recent Changes
+- Fixed percentage display: multiplied realized_pnl_pct by 100 across all insights (Feb 2026)
+- Added "Biggest $ Win" and "Biggest $ Loss" insight cards using topWins/topLosses data
+- Renamed existing cards to "Biggest % Win" and "Biggest % Loss" for clarity
+- Fixed trade_change_type filter consistency (position_opened vs open)
 - Configured for Replit environment (Feb 2026)
 - Updated Vite to port 5000 with allowedHosts: true
 - Database connection updated to use Replit's DATABASE_URL

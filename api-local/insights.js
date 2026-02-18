@@ -51,21 +51,23 @@ export default async function handler(req, res) {
       `, [network]),
 
       pool.query(`
-        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage
+        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
+               realized_pnl_collateral / 1000000.0 as pnl_usd
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct DESC
         LIMIT 1
       `, [network]),
 
       pool.query(`
-        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage
+        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
+               realized_pnl_collateral / 1000000.0 as pnl_usd
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct ASC
         LIMIT 1
       `, [network]),
@@ -210,13 +212,15 @@ export default async function handler(req, res) {
         shortPct: totalDirectional > 0 ? ((shortCount / totalDirectional) * 100).toFixed(1) : 0,
       },
       biggestWin: biggestWin.rows[0] ? {
-        pnlPct: parseFloat(biggestWin.rows[0].realized_pnl_pct),
+        pnlPct: parseFloat(biggestWin.rows[0].realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(biggestWin.rows[0].pnl_usd),
         symbol: biggestWin.rows[0].base_token_symbol,
         isLong: biggestWin.rows[0].is_long,
         leverage: parseFloat(biggestWin.rows[0].leverage),
       } : null,
       biggestLoss: biggestLoss.rows[0] ? {
-        pnlPct: parseFloat(biggestLoss.rows[0].realized_pnl_pct),
+        pnlPct: parseFloat(biggestLoss.rows[0].realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(biggestLoss.rows[0].pnl_usd),
         symbol: biggestLoss.rows[0].base_token_symbol,
         isLong: biggestLoss.rows[0].is_long,
         leverage: parseFloat(biggestLoss.rows[0].leverage),
@@ -236,13 +240,13 @@ export default async function handler(req, res) {
       } : null,
       profitByDirection: {
         long: longStats ? {
-          avgPnlPct: parseFloat(parseFloat(longStats.avg_pnl_pct).toFixed(2)),
+          avgPnlPct: parseFloat((parseFloat(longStats.avg_pnl_pct) * 100).toFixed(2)),
           winRate: (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades)) > 0
             ? ((parseInt(longStats.winning_trades) / (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades))) * 100).toFixed(1)
             : 0,
         } : null,
         short: shortStats ? {
-          avgPnlPct: parseFloat(parseFloat(shortStats.avg_pnl_pct).toFixed(2)),
+          avgPnlPct: parseFloat((parseFloat(shortStats.avg_pnl_pct) * 100).toFixed(2)),
           winRate: (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades)) > 0
             ? ((parseInt(shortStats.winning_trades) / (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades))) * 100).toFixed(1)
             : 0,
@@ -250,7 +254,7 @@ export default async function handler(req, res) {
       },
       mostProfitableMarket: mostProfitableMarket.rows[0] ? {
         symbol: mostProfitableMarket.rows[0].base_token_symbol,
-        avgPnlPct: parseFloat(parseFloat(mostProfitableMarket.rows[0].avg_pnl_pct).toFixed(2)),
+        avgPnlPct: parseFloat((parseFloat(mostProfitableMarket.rows[0].avg_pnl_pct) * 100).toFixed(2)),
         tradeCount: parseInt(mostProfitableMarket.rows[0].trade_count),
       } : null,
       busiestHour: busiestHour.rows[0] ? {
@@ -284,7 +288,7 @@ export default async function handler(req, res) {
         evmTrader: r.evm_trader,
         symbol: r.base_token_symbol,
         isLong: r.is_long,
-        pnlPct: parseFloat(r.realized_pnl_pct),
+        pnlPct: parseFloat(r.realized_pnl_pct) * 100,
         pnlUsd: parseFloat(r.pnl_usd),
         positionSize: parseFloat(r.position_size),
         leverage: parseFloat(r.leverage),
@@ -296,7 +300,7 @@ export default async function handler(req, res) {
         evmTrader: r.evm_trader,
         symbol: r.base_token_symbol,
         isLong: r.is_long,
-        pnlPct: parseFloat(r.realized_pnl_pct),
+        pnlPct: parseFloat(r.realized_pnl_pct) * 100,
         pnlUsd: parseFloat(r.pnl_usd),
         positionSize: parseFloat(r.position_size),
         leverage: parseFloat(r.leverage),
