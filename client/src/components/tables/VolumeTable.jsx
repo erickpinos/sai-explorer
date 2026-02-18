@@ -13,6 +13,7 @@ const COLUMNS = [
   { key: 'opens',        label: 'Opens' },
   { key: 'closes',       label: 'Closes' },
   { key: 'liquidations', label: 'Liquidations' },
+  { key: 'firstTradeTs', label: 'First Trade' },
 ];
 
 export default function VolumeTable() {
@@ -100,6 +101,7 @@ export default function VolumeTable() {
                 <td>{u.opens}</td>
                 <td>{u.closes}</td>
                 <td>{u.liquidations}</td>
+                <td>{u.firstTradeTs ? new Date(u.firstTradeTs).toLocaleDateString() : '—'}</td>
               </tr>
             ))}
           </tbody>
