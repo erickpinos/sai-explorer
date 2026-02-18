@@ -4,12 +4,12 @@ import { formatNumber, formatAddress, formatDate } from '../utils/formatters';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
 
-function InsightCard({ icon, title, value, detail }) {
+function InsightCard({ icon, title, value, detail, valueClass }) {
   return (
     <div className="insight-card">
       <div className="insight-icon">{icon}</div>
       <div className="insight-title">{title}</div>
-      <div className="insight-value">{value}</div>
+      <div className={`insight-value ${valueClass || ''}`}>{value}</div>
       {detail && <div className="insight-detail">{detail}</div>}
     </div>
   );
@@ -97,6 +97,7 @@ export default function InsightsPage() {
             title="Biggest % Win"
             value={`+${insights.biggestWin.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestWin.isLong ? 'Long' : 'Short'} ${insights.biggestWin.symbol} @ ${insights.biggestWin.leverage}x`}
+            valueClass="pnl-positive"
           />
         )}
 
@@ -106,6 +107,7 @@ export default function InsightsPage() {
             title="Biggest % Loss"
             value={`${insights.biggestLoss.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestLoss.isLong ? 'Long' : 'Short'} ${insights.biggestLoss.symbol} @ ${insights.biggestLoss.leverage}x`}
+            valueClass="pnl-negative"
           />
         )}
 
@@ -115,6 +117,7 @@ export default function InsightsPage() {
             title="Biggest $ Win"
             value={`+$${formatNumber(insights.topWins[0].pnlUsd, 2)}`}
             detail={`${insights.topWins[0].isLong ? 'Long' : 'Short'} ${insights.topWins[0].symbol} @ ${insights.topWins[0].leverage}x`}
+            valueClass="pnl-positive"
           />
         )}
 
@@ -124,6 +127,7 @@ export default function InsightsPage() {
             title="Biggest $ Loss"
             value={`-$${formatNumber(Math.abs(insights.topLosses[0].pnlUsd), 2)}`}
             detail={`${insights.topLosses[0].isLong ? 'Long' : 'Short'} ${insights.topLosses[0].symbol} @ ${insights.topLosses[0].leverage}x`}
+            valueClass="pnl-negative"
           />
         )}
 
