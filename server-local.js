@@ -12,6 +12,10 @@ import userStatsHandler from './api-local/user-stats.js';
 import userTradesHandler from './api-local/user-trades.js';
 import userDepositsHandler from './api-local/user-deposits.js';
 import userWithdrawsHandler from './api-local/user-withdraws.js';
+import volumeHandler from './api-local/volume.js';
+import marketsHandler from './api-local/markets.js';
+import collateralHandler from './api-local/collateral.js';
+import chartDataHandler from './api-local/chart-data.js';
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
@@ -43,6 +47,10 @@ app.get('/api/withdraws', wrapHandler(withdrawsHandler));
 app.get('/api/stats', wrapHandler(statsHandler));
 app.get('/api/insights', wrapHandler(insightsHandler));
 app.get('/api/tvl-breakdown', wrapHandler(tvlBreakdownHandler));
+app.get('/api/volume', wrapHandler(volumeHandler));
+app.get('/api/markets', wrapHandler(marketsHandler));
+app.get('/api/collateral', wrapHandler(collateralHandler));
+app.get('/api/chart-data', wrapHandler(chartDataHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
 
 // User-specific routes

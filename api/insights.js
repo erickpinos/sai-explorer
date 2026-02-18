@@ -89,8 +89,8 @@ export default async function handler(req, res) {
       // Liquidation rate
       sql`
         SELECT
-          COUNT(*) FILTER (WHERE trade_change_type = 'liquidation') as liquidations,
-          COUNT(*) FILTER (WHERE trade_change_type != 'open') as closed_trades
+          COUNT(*) FILTER (WHERE trade_change_type = 'position_liquidated') as liquidations,
+          COUNT(*) FILTER (WHERE trade_change_type LIKE 'position_closed%' OR trade_change_type = 'position_liquidated') as closed_trades
         FROM trades
         WHERE network = ${network}
       `,
