@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { pool } from './scripts/db.js';
 import tradesHandler from './api-local/trades.js';
 import depositsHandler from './api-local/deposits.js';
 import withdrawsHandler from './api-local/withdraws.js';
@@ -77,6 +78,28 @@ if (fs.existsSync(path.join(clientDist, 'index.html'))) {
   app.get('{*path}', (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
+}
+
+// Preflight: verify Postgres is reachable and tables exist
+try {
+  await pool.query('SELECT 1');
+} catch (err) {
+  if (err.code === 'ECONNREFUSED') {
+    console.error('\n❌ Cannot connect to Postgres at', process.env.POSTGRES_URL || process.env.DATABASE_URL);
+    console.error('   Is Docker running? Try: npm run docker:up\n');
+  } else {
+    console.error('\n❌ Database connection failed:', err.message, '\n');
+  }
+  process.exit(1);
+}
+
+try {
+  await pool.query('SELECT 1 FROM trades LIMIT 1');
+} catch (err) {
+  if (err.code === '42P01') {
+    console.error('\n❌ Database tables not found. Run: npm run setup-db\n');
+    process.exit(1);
+  }
 }
 
 app.listen(PORT, () => {

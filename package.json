@@ -8,8 +8,7 @@
     "index-data": "node scripts/initial-index.js",
     "dev": "cd client && npm run dev",
     "dev:api": "node server-local.js",
-    "dev:local": "npm run dev:api & npm run dev",
-    "dev:fullstack": "npx vercel dev",
+    "dev:local": "sh scripts/start-docker.sh && (npm run dev:api & npx wait-on http://localhost:3001/health && npm run dev)",
     "build": "cd client && npm install && npm run build",
     "preview": "cd client && npm run preview",
     "docker:up": "docker compose up -d",
@@ -22,9 +21,6 @@
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "pg": "^8.18.0"
-  },
-  "devDependencies": {
-    "vercel": "^37.0.0"
   },
   "packageManager": "npm@11.9.0",
   "engines": {
