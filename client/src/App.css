@@ -989,21 +989,20 @@ td a:hover {
   }
 
   .header-content {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
   }
 
   h1 {
-    font-size: 22px;
-    text-align: center;
+    font-size: 18px;
   }
 
   .header-controls {
     flex-direction: row;
     gap: 8px;
     width: auto;
-    justify-content: center;
+    flex-shrink: 0;
   }
 
   .network-select {
