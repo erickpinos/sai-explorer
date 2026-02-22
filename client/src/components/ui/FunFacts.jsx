@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useInsights } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { TABS } from '../../utils/constants';
@@ -57,8 +58,15 @@ function generateFunFacts(insights) {
 export default function FunFacts({ onNavigateToInsights }) {
   const { network } = useNetwork();
   const { data: insights, loading } = useInsights(network);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('insights-dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
-  if (loading || !insights) return null;
+  if (dismissed || loading || !insights) return null;
 
   const hasData = insights.longVsShort &&
     (parseInt(insights.longVsShort.longCount) > 0 || parseInt(insights.longVsShort.shortCount) > 0);
@@ -67,8 +75,15 @@ export default function FunFacts({ onNavigateToInsights }) {
   const facts = generateFunFacts(insights);
   if (facts.length === 0) return null;
 
-  // Pick a rotating fact based on the current minute
   const featuredFact = facts[Math.floor(Date.now() / 60000) % facts.length];
+
+  const handleDismiss = (e) => {
+    e.stopPropagation();
+    setDismissed(true);
+    try {
+      sessionStorage.setItem('insights-dismissed', 'true');
+    } catch {}
+  };
 
   return (
     <div className="fun-facts">
@@ -83,6 +98,13 @@ export default function FunFacts({ onNavigateToInsights }) {
           onClick={() => onNavigateToInsights(TABS.INSIGHTS)}
         >
           More Insights &rarr;
+        </button>
+        <button
+          className="fun-fact-dismiss"
+          onClick={handleDismiss}
+          title="Dismiss"
+        >
+          ×
         </button>
       </div>
     </div>
