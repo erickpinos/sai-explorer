@@ -27,8 +27,12 @@ export default async function handler(req, res) {
       profitByDirection,
       mostProfitableMarket,
       busiestHour,
+      topWins,
+      topLosses,
+      topPctWins,
+      topPctLosses,
+      pnlSummary,
     ] = await Promise.all([
-      // Most traded market
       sql`
         SELECT base_token_symbol, COUNT(*) as trade_count
         FROM trades
@@ -38,7 +42,6 @@ export default async function handler(req, res) {
         LIMIT 1
       `,
 
-      // Long vs Short ratio
       sql`
         SELECT
           COUNT(*) FILTER (WHERE is_long = true) as long_count,
@@ -47,36 +50,34 @@ export default async function handler(req, res) {
         WHERE network = ${network}
       `,
 
-      // Biggest single win (by realized PnL %)
       sql`
-        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage
+        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
+               realized_pnl_collateral / 1000000.0 as pnl_usd
         FROM trades
         WHERE network = ${network}
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct DESC
         LIMIT 1
       `,
 
-      // Biggest single loss (by realized PnL %)
       sql`
-        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage
+        SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
+               realized_pnl_collateral / 1000000.0 as pnl_usd
         FROM trades
         WHERE network = ${network}
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct ASC
         LIMIT 1
       `,
 
-      // Average leverage used
       sql`
         SELECT AVG(leverage) as avg_leverage
         FROM trades
         WHERE network = ${network} AND leverage IS NOT NULL AND leverage > 0
       `,
 
-      // Most active trader (by trade count)
       sql`
         SELECT trader, evm_trader, COUNT(*) as trade_count
         FROM trades
@@ -86,7 +87,6 @@ export default async function handler(req, res) {
         LIMIT 1
       `,
 
-      // Liquidation rate
       sql`
         SELECT
           COUNT(*) FILTER (WHERE trade_change_type = 'position_liquidated') as liquidations,
@@ -95,7 +95,6 @@ export default async function handler(req, res) {
         WHERE network = ${network}
       `,
 
-      // Profit by direction (long vs short)
       sql`
         SELECT
           is_long,
@@ -105,17 +104,16 @@ export default async function handler(req, res) {
         FROM trades
         WHERE network = ${network}
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         GROUP BY is_long
       `,
 
-      // Most profitable market
       sql`
         SELECT base_token_symbol, AVG(realized_pnl_pct) as avg_pnl_pct, COUNT(*) as trade_count
         FROM trades
         WHERE network = ${network}
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
           AND base_token_symbol IS NOT NULL
         GROUP BY base_token_symbol
         HAVING COUNT(*) >= 5
@@ -123,7 +121,6 @@ export default async function handler(req, res) {
         LIMIT 1
       `,
 
-      // Busiest hour of the day (UTC)
       sql`
         SELECT EXTRACT(HOUR FROM block_ts) as hour, COUNT(*) as trade_count
         FROM trades
@@ -131,6 +128,64 @@ export default async function handler(req, res) {
         GROUP BY hour
         ORDER BY trade_count DESC
         LIMIT 1
+      `,
+
+      sql`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
+        ORDER BY realized_pnl_collateral DESC
+        LIMIT 10
+      `,
+
+      sql`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
+        ORDER BY realized_pnl_collateral ASC
+        LIMIT 10
+      `,
+
+      sql`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_pct,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
+          AND trade_change_type != 'position_opened'
+        ORDER BY realized_pnl_pct DESC
+        LIMIT 10
+      `,
+
+      sql`
+        SELECT trader, evm_trader, base_token_symbol, is_long,
+          realized_pnl_pct,
+          realized_pnl_collateral / 1000000.0 as pnl_usd,
+          collateral_amount * leverage / 1000000.0 as position_size,
+          leverage, trade_change_type, block_ts
+        FROM trades
+        WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
+          AND trade_change_type != 'position_opened'
+        ORDER BY realized_pnl_pct ASC
+        LIMIT 10
+      `,
+
+      sql`
+        SELECT
+          SUM(CASE WHEN realized_pnl_collateral > 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_wins,
+          SUM(CASE WHEN realized_pnl_collateral < 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_losses,
+          COUNT(CASE WHEN realized_pnl_collateral > 0 THEN 1 END) as win_count,
+          COUNT(CASE WHEN realized_pnl_collateral < 0 THEN 1 END) as loss_count
+        FROM trades
+        WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral != 0
       `,
     ]);
 
@@ -157,13 +212,15 @@ export default async function handler(req, res) {
         shortPct: totalDirectional > 0 ? ((shortCount / totalDirectional) * 100).toFixed(1) : 0,
       },
       biggestWin: biggestWin.rows[0] ? {
-        pnlPct: parseFloat(biggestWin.rows[0].realized_pnl_pct),
+        pnlPct: parseFloat(biggestWin.rows[0].realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(biggestWin.rows[0].pnl_usd),
         symbol: biggestWin.rows[0].base_token_symbol,
         isLong: biggestWin.rows[0].is_long,
         leverage: parseFloat(biggestWin.rows[0].leverage),
       } : null,
       biggestLoss: biggestLoss.rows[0] ? {
-        pnlPct: parseFloat(biggestLoss.rows[0].realized_pnl_pct),
+        pnlPct: parseFloat(biggestLoss.rows[0].realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(biggestLoss.rows[0].pnl_usd),
         symbol: biggestLoss.rows[0].base_token_symbol,
         isLong: biggestLoss.rows[0].is_long,
         leverage: parseFloat(biggestLoss.rows[0].leverage),
@@ -183,13 +240,13 @@ export default async function handler(req, res) {
       } : null,
       profitByDirection: {
         long: longStats ? {
-          avgPnlPct: parseFloat(parseFloat(longStats.avg_pnl_pct).toFixed(2)),
+          avgPnlPct: parseFloat((parseFloat(longStats.avg_pnl_pct) * 100).toFixed(2)),
           winRate: (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades)) > 0
             ? ((parseInt(longStats.winning_trades) / (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades))) * 100).toFixed(1)
             : 0,
         } : null,
         short: shortStats ? {
-          avgPnlPct: parseFloat(parseFloat(shortStats.avg_pnl_pct).toFixed(2)),
+          avgPnlPct: parseFloat((parseFloat(shortStats.avg_pnl_pct) * 100).toFixed(2)),
           winRate: (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades)) > 0
             ? ((parseInt(shortStats.winning_trades) / (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades))) * 100).toFixed(1)
             : 0,
@@ -197,12 +254,64 @@ export default async function handler(req, res) {
       },
       mostProfitableMarket: mostProfitableMarket.rows[0] ? {
         symbol: mostProfitableMarket.rows[0].base_token_symbol,
-        avgPnlPct: parseFloat(parseFloat(mostProfitableMarket.rows[0].avg_pnl_pct).toFixed(2)),
+        avgPnlPct: parseFloat((parseFloat(mostProfitableMarket.rows[0].avg_pnl_pct) * 100).toFixed(2)),
         tradeCount: parseInt(mostProfitableMarket.rows[0].trade_count),
       } : null,
       busiestHour: busiestHour.rows[0] ? {
         hour: parseInt(busiestHour.rows[0].hour),
         tradeCount: parseInt(busiestHour.rows[0].trade_count),
+      } : null,
+      topWins: topWins.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      topLosses: topLosses.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      topPctWins: topPctWins.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlPct: parseFloat(r.realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      topPctLosses: topPctLosses.rows.map(r => ({
+        trader: r.trader,
+        evmTrader: r.evm_trader,
+        symbol: r.base_token_symbol,
+        isLong: r.is_long,
+        pnlPct: parseFloat(r.realized_pnl_pct) * 100,
+        pnlUsd: parseFloat(r.pnl_usd),
+        positionSize: parseFloat(r.position_size),
+        leverage: parseFloat(r.leverage),
+        type: r.trade_change_type,
+        timestamp: r.block_ts,
+      })),
+      pnlSummary: pnlSummary.rows[0] ? {
+        totalWins: parseFloat(pnlSummary.rows[0].total_wins || 0),
+        totalLosses: parseFloat(pnlSummary.rows[0].total_losses || 0),
+        winCount: parseInt(pnlSummary.rows[0].win_count || 0),
+        lossCount: parseInt(pnlSummary.rows[0].loss_count || 0),
       } : null,
     };
 

@@ -104,7 +104,7 @@ export default async function handler(req, res) {
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
         GROUP BY is_long
       `, [network]),
 
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
-          AND trade_change_type != 'open'
+          AND trade_change_type != 'position_opened'
           AND base_token_symbol IS NOT NULL
         GROUP BY base_token_symbol
         HAVING COUNT(*) >= 5
