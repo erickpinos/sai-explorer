@@ -33,6 +33,12 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - Database connection: `scripts/db.js` uses `POSTGRES_URL` or `DATABASE_URL`
 - Deployment: Express serves built client from `client/dist/` on port 5000
 
+## Auto-Sync & Deployment Behavior
+- **Auto-sync** runs once on server startup and then every 5 minutes while the server is awake
+- It does NOT sync on every page load — only on the startup + 5-minute interval
+- **Autoscale deployment**: The server goes to sleep after 15 minutes of no incoming requests (no visitors). When someone visits again, the server wakes up and immediately runs a sync. You are only billed for compute while the server is actively handling requests.
+- In practice: first visit after idle triggers a sync (server starting), then every 5 minutes while active, then the server sleeps again after 15 minutes of no traffic
+
 ## Data Notes
 - `realized_pnl_pct` in the database is stored as a ratio (e.g., -1 = -100%, 9 = 900%)
 - Backend multiplies by 100 before sending to frontend, so frontend displays values directly as percentages
