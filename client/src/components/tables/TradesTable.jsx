@@ -106,7 +106,7 @@ export default function TradesTable() {
   return (
     <div>
       <div className="table-info">
-        Showing {startIndex + 1}-{Math.min(endIndex, sorted.length)} of {sorted.length} trades
+        Showing {startIndex + 1}-{Math.min(endIndex, sorted.length)} of {sorted.length} transactions
       </div>
 
       <div className="table-wrapper">
