@@ -102,18 +102,40 @@ try {
   }
 }
 
+async function autoSync() {
+  try {
+    console.log('\n🔄 Auto-sync: fetching new data...');
+    const startTime = Date.now();
+
+    const fakeReq = { body: { network: 'mainnet' }, method: 'POST' };
+    let result;
+    const fakeRes = {
+      setHeader: () => {},
+      status: (code) => ({
+        json: (data) => { result = data; },
+        end: () => {}
+      })
+    };
+    await syncHandler(fakeReq, fakeRes);
+
+    const duration = Date.now() - startTime;
+    if (result?.success) {
+      console.log(`✅ Auto-sync complete in ${duration}ms — ${result.trades} new trades, ${result.deposits} new deposits, ${result.withdraws} new withdraws`);
+    } else {
+      console.log(`⚠️ Auto-sync finished in ${duration}ms with issues`);
+    }
+  } catch (err) {
+    console.error('❌ Auto-sync error:', err.message);
+  }
+}
+
+const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
 app.listen(PORT, () => {
-  console.log(`\n🚀 Local API server running on http://localhost:${PORT}`);
-  console.log(`\n📡 API Endpoints:`);
-  console.log(`   - Trades:    http://localhost:${PORT}/api/trades?network=mainnet&limit=10`);
-  console.log(`   - Deposits:  http://localhost:${PORT}/api/deposits?network=mainnet&limit=10`);
-  console.log(`   - Withdraws: http://localhost:${PORT}/api/withdraws?network=mainnet`);
-  console.log(`   - Stats:     http://localhost:${PORT}/api/stats?network=mainnet`);
-  console.log(`   - Sync:      POST http://localhost:${PORT}/api/sync`);
-  console.log(`   - User Stats:     http://localhost:${PORT}/api/user-stats?network=mainnet&address=0x...`);
-  console.log(`   - User Trades:    http://localhost:${PORT}/api/user-trades?network=mainnet&address=0x...`);
-  console.log(`   - User Deposits:  http://localhost:${PORT}/api/user-deposits?network=mainnet&address=0x...`);
-  console.log(`   - User Withdraws: http://localhost:${PORT}/api/user-withdraws?network=mainnet&address=0x...`);
-  console.log(`   - Health:    http://localhost:${PORT}/health`);
-  console.log(`\n✨ Ready for local development!\n`);
+  console.log(`\n🚀 API server running on http://localhost:${PORT}`);
+  console.log(`📡 Auto-sync enabled: runs on startup and every 5 minutes`);
+  console.log(`\n✨ Ready!\n`);
+
+  autoSync();
+  setInterval(autoSync, SYNC_INTERVAL_MS);
 });
