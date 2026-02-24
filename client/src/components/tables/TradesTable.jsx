@@ -12,6 +12,7 @@ const getBadgeClass = (status) => {
   const s = status.toLowerCase();
   if (s.includes('liquidat')) return 'badge badge-red';
   if (s.includes('opened')) return 'badge badge-blue';
+  if (s.includes('cancel')) return 'badge badge-orange';
   if (s.includes('closed')) return 'badge badge-purple';
   if (s.includes('trigger')) return 'badge badge-yellow';
   return 'badge badge-purple';
@@ -22,6 +23,7 @@ const formatTradeTypeBadge = (type) => {
   const s = type.toLowerCase();
   if (s.includes('liquidat')) return 'Liquidated';
   if (s.includes('opened')) return 'Opened';
+  if (s.includes('cancel')) return 'Limit Order Cancelled';
   if (s.includes('closed')) return 'Closed';
   if (s.includes('trigger')) return 'Triggered';
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -129,12 +131,19 @@ export default function TradesTable() {
             </tr>
           </thead>
           <tbody>
-            {paginatedTrades.map((trade) => (
+            {paginatedTrades.map((trade) => {
+              const displayType = (
+                trade.trade?.tradeType === 'limit' &&
+                trade.tradeChangeType?.toLowerCase().includes('closed') &&
+                !parseFloat(trade.trade?.closePrice) &&
+                !parseFloat(trade.realizedPnlCollateral)
+              ) ? 'limit_order_cancelled' : trade.tradeChangeType;
+              return (
               <tr key={trade.id}>
                 <td>{formatDate(trade.block?.block_ts)}</td>
                 <td>
-                  <span className={getBadgeClass(trade.tradeChangeType)}>
-                    {formatTradeTypeBadge(trade.tradeChangeType)}
+                  <span className={getBadgeClass(displayType)}>
+                    {formatTradeTypeBadge(displayType)}
                   </span>
                 </td>
                 <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
@@ -165,7 +174,7 @@ export default function TradesTable() {
                 </td>
                 <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
                 <td>${formatNumber(trade.trade?.openPrice || 0, 2)}</td>
-                <td>{trade.trade?.closePrice ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}</td>
+                <td>{parseFloat(trade.trade?.closePrice) > 0 ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}</td>
                 <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
                 <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
                   {formatPnl(trade.realizedPnlCollateral / 1000000)}
@@ -185,7 +194,8 @@ export default function TradesTable() {
                   ) : '-'}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

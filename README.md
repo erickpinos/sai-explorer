@@ -8,7 +8,9 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - Volume analytics and market statistics
 - PostgreSQL database for scalable data storage
 - Multi-network support (mainnet/testnet)
-- Responsive mobile design
+- Responsive mobile design with card layout on small screens
+- Cancelled limit orders detected and labelled separately from closed trades
+- Close price displayed as `-` when not recorded (e.g. keeper-executed or cancelled orders)
 
 ## Architecture
 

@@ -608,6 +608,11 @@ td a:hover {
   color: #eab308;
 }
 
+.badge-orange {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
 .badge-purple {
   background: rgba(168, 85, 247, 0.15);
   color: #a855f7;
