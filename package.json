@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup-db": "node scripts/setup-db.js",
+    "migrate": "node scripts/migrate-add-deposit-tx-hash.js",
     "index-data": "node scripts/initial-index.js",
     "dev": "cd client && npm run dev",
     "dev:api": "node server-local.js",

@@ -54,6 +54,8 @@ async function setupDatabase() {
         shares NUMERIC NOT NULL,
         block_height BIGINT,
         block_ts TIMESTAMPTZ NOT NULL,
+        tx_hash TEXT,
+        evm_tx_hash TEXT,
         vault_address TEXT,
         collateral_token_symbol TEXT,
         vault_tvl NUMERIC,
