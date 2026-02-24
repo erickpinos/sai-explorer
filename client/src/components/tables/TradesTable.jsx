@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTrades } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
-import { formatNumber, formatDate, formatAddress } from '../../utils/formatters';
+import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
@@ -173,8 +173,8 @@ export default function TradesTable() {
                   </span>
                 </td>
                 <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
-                <td>${formatNumber(trade.trade?.openPrice || 0, 2)}</td>
-                <td>{parseFloat(trade.trade?.closePrice) > 0 ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}</td>
+                <td>{formatPrice(trade.trade?.openPrice || 0)}</td>
+                <td>{parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}</td>
                 <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
                 <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
                   {formatPnl(trade.realizedPnlCollateral / 1000000)}

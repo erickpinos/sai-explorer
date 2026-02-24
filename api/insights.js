@@ -134,7 +134,7 @@ export default async function handler(req, res) {
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_collateral / 1000000.0 as pnl_usd,
           collateral_amount * leverage / 1000000.0 as position_size,
-          leverage, trade_change_type, block_ts
+          leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
         ORDER BY realized_pnl_collateral DESC
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_collateral / 1000000.0 as pnl_usd,
           collateral_amount * leverage / 1000000.0 as position_size,
-          leverage, trade_change_type, block_ts
+          leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
         ORDER BY realized_pnl_collateral ASC
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
           realized_pnl_pct,
           realized_pnl_collateral / 1000000.0 as pnl_usd,
           collateral_amount * leverage / 1000000.0 as position_size,
-          leverage, trade_change_type, block_ts
+          leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
           AND trade_change_type != 'position_opened'
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
           realized_pnl_pct,
           realized_pnl_collateral / 1000000.0 as pnl_usd,
           collateral_amount * leverage / 1000000.0 as position_size,
-          leverage, trade_change_type, block_ts
+          leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
           AND trade_change_type != 'position_opened'
@@ -271,6 +271,8 @@ export default async function handler(req, res) {
         leverage: parseFloat(r.leverage),
         type: r.trade_change_type,
         timestamp: r.block_ts,
+        txHash: r.tx_hash,
+        evmTxHash: r.evm_tx_hash,
       })),
       topLosses: topLosses.rows.map(r => ({
         trader: r.trader,
@@ -282,6 +284,8 @@ export default async function handler(req, res) {
         leverage: parseFloat(r.leverage),
         type: r.trade_change_type,
         timestamp: r.block_ts,
+        txHash: r.tx_hash,
+        evmTxHash: r.evm_tx_hash,
       })),
       topPctWins: topPctWins.rows.map(r => ({
         trader: r.trader,
@@ -294,6 +298,8 @@ export default async function handler(req, res) {
         leverage: parseFloat(r.leverage),
         type: r.trade_change_type,
         timestamp: r.block_ts,
+        txHash: r.tx_hash,
+        evmTxHash: r.evm_tx_hash,
       })),
       topPctLosses: topPctLosses.rows.map(r => ({
         trader: r.trader,
@@ -306,6 +312,8 @@ export default async function handler(req, res) {
         leverage: parseFloat(r.leverage),
         type: r.trade_change_type,
         timestamp: r.block_ts,
+        txHash: r.tx_hash,
+        evmTxHash: r.evm_tx_hash,
       })),
       pnlSummary: pnlSummary.rows[0] ? {
         totalWins: parseFloat(pnlSummary.rows[0].total_wins || 0),

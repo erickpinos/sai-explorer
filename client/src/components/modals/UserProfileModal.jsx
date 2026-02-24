@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { useUserStats, useUserTrades, useUserDeposits, useUserWithdraws } from '../../hooks/useApi';
-import { formatNumber, formatDate } from '../../utils/formatters';
+import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 
@@ -26,6 +26,11 @@ const formatTradeTypeBadge = (type) => {
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 };
 
+const shortenHash = (hash) => {
+  if (!hash) return '-';
+  return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
+};
+
 const formatPnl = (pnl) => {
   if (!pnl || pnl === 0) return '-';
   const sign = pnl > 0 ? '+' : '';
@@ -33,7 +38,7 @@ const formatPnl = (pnl) => {
 };
 
 export default function UserProfileModal({ address, onClose }) {
-  const { network } = useNetwork();
+  const { network, config } = useNetwork();
   const [activeTab, setActiveTab] = useState('trades');
 
   if (!address) return null;
@@ -98,6 +103,8 @@ export default function UserProfileModal({ address, onClose }) {
               <th>CLOSE PRICE</th>
               <th>COLLATERAL</th>
               <th>PNL</th>
+              <th>TX Hash</th>
+              <th>EVM TX Hash</th>
             </tr>
           </thead>
           <tbody>
@@ -123,13 +130,27 @@ export default function UserProfileModal({ address, onClose }) {
                   </span>
                 </td>
                 <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
-                <td>${formatNumber(trade.trade?.openPrice || 0, 2)}</td>
+                <td>{formatPrice(trade.trade?.openPrice || 0)}</td>
                 <td>
-                  {parseFloat(trade.trade?.closePrice) > 0 ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}
+                  {parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}
                 </td>
                 <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
                 <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
                   {formatPnl(trade.realizedPnlCollateral / 1000000)}
+                </td>
+                <td>
+                  {trade.txHash ? (
+                    <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                      {shortenHash(trade.txHash)}
+                    </a>
+                  ) : '-'}
+                </td>
+                <td>
+                  {trade.evmTxHash ? (
+                    <a href={`${config.explorerEvmTx}${trade.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                      {shortenHash(trade.evmTxHash)}
+                    </a>
+                  ) : '-'}
                 </td>
               </tr>
               );

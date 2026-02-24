@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
 import { formatNumber, formatAddress, formatDate } from '../utils/formatters';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
+import UserProfileModal from './modals/UserProfileModal';
 
 function InsightCard({ icon, title, value, detail, valueClass }) {
   return (
@@ -16,8 +18,9 @@ function InsightCard({ icon, title, value, detail, valueClass }) {
 }
 
 export default function InsightsPage() {
-  const { network } = useNetwork();
+  const { network, config } = useNetwork();
   const { data: insights, loading, error } = useInsights(network);
+  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
 
   if (loading) {
     return (
@@ -39,6 +42,11 @@ export default function InsightsPage() {
       </div>
     );
   }
+
+  const shortenHash = (hash) => {
+    if (!hash) return '-';
+    return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
+  };
 
   const formatHour = (hour) => {
     if (hour === 0) return '12 AM';
@@ -233,13 +241,15 @@ export default function InsightsPage() {
                   <th>Position Size</th>
                   <th>Type</th>
                   <th>Date</th>
+                  <th>TX Hash</th>
+                  <th>EVM TX Hash</th>
                 </tr>
               </thead>
               <tbody>
                 {insights.topWins.map((t, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td><span className="address-link" style={{ cursor: 'pointer' }} onClick={() => setSelectedUserAddress({ bech32: t.trader, evm: t.evmTrader })}>{formatAddress(t.evmTrader || t.trader)}</span></td>
                     <td>{t.symbol}</td>
                     <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
                     <td>{t.leverage}x</td>
@@ -247,6 +257,8 @@ export default function InsightsPage() {
                     <td>${formatNumber(t.positionSize, 2)}</td>
                     <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
                     <td>{formatDate(t.timestamp)}</td>
+                    <td>{t.txHash ? <a href={`${config.explorerTx}${t.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.txHash)}</a> : '-'}</td>
+                    <td>{t.evmTxHash ? <a href={`${config.explorerEvmTx}${t.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.evmTxHash)}</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -271,13 +283,15 @@ export default function InsightsPage() {
                   <th>Position Size</th>
                   <th>Type</th>
                   <th>Date</th>
+                  <th>TX Hash</th>
+                  <th>EVM TX Hash</th>
                 </tr>
               </thead>
               <tbody>
                 {insights.topLosses.map((t, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td><span className="address-link" style={{ cursor: 'pointer' }} onClick={() => setSelectedUserAddress({ bech32: t.trader, evm: t.evmTrader })}>{formatAddress(t.evmTrader || t.trader)}</span></td>
                     <td>{t.symbol}</td>
                     <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
                     <td>{t.leverage}x</td>
@@ -285,6 +299,8 @@ export default function InsightsPage() {
                     <td>${formatNumber(t.positionSize, 2)}</td>
                     <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
                     <td>{formatDate(t.timestamp)}</td>
+                    <td>{t.txHash ? <a href={`${config.explorerTx}${t.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.txHash)}</a> : '-'}</td>
+                    <td>{t.evmTxHash ? <a href={`${config.explorerEvmTx}${t.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.evmTxHash)}</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -310,13 +326,15 @@ export default function InsightsPage() {
                   <th>Position Size</th>
                   <th>Type</th>
                   <th>Date</th>
+                  <th>TX Hash</th>
+                  <th>EVM TX Hash</th>
                 </tr>
               </thead>
               <tbody>
                 {insights.topPctWins.map((t, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td><span className="address-link" style={{ cursor: 'pointer' }} onClick={() => setSelectedUserAddress({ bech32: t.trader, evm: t.evmTrader })}>{formatAddress(t.evmTrader || t.trader)}</span></td>
                     <td>{t.symbol}</td>
                     <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
                     <td>{t.leverage}x</td>
@@ -325,6 +343,8 @@ export default function InsightsPage() {
                     <td>${formatNumber(t.positionSize, 2)}</td>
                     <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
                     <td>{formatDate(t.timestamp)}</td>
+                    <td>{t.txHash ? <a href={`${config.explorerTx}${t.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.txHash)}</a> : '-'}</td>
+                    <td>{t.evmTxHash ? <a href={`${config.explorerEvmTx}${t.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.evmTxHash)}</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -350,13 +370,15 @@ export default function InsightsPage() {
                   <th>Position Size</th>
                   <th>Type</th>
                   <th>Date</th>
+                  <th>TX Hash</th>
+                  <th>EVM TX Hash</th>
                 </tr>
               </thead>
               <tbody>
                 {insights.topPctLosses.map((t, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></td>
+                    <td><span className="address-link" style={{ cursor: 'pointer' }} onClick={() => setSelectedUserAddress({ bech32: t.trader, evm: t.evmTrader })}>{formatAddress(t.evmTrader || t.trader)}</span></td>
                     <td>{t.symbol}</td>
                     <td><span className={`direction-badge ${t.isLong ? 'long' : 'short'}`}>{t.isLong ? 'Long' : 'Short'}</span></td>
                     <td>{t.leverage}x</td>
@@ -365,12 +387,18 @@ export default function InsightsPage() {
                     <td>${formatNumber(t.positionSize, 2)}</td>
                     <td>{t.type.replace('position_', '').replace(/_/g, ' ')}</td>
                     <td>{formatDate(t.timestamp)}</td>
+                    <td>{t.txHash ? <a href={`${config.explorerTx}${t.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.txHash)}</a> : '-'}</td>
+                    <td>{t.evmTxHash ? <a href={`${config.explorerEvmTx}${t.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">{shortenHash(t.evmTxHash)}</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {selectedUserAddress && (
+        <UserProfileModal address={selectedUserAddress} onClose={() => setSelectedUserAddress(null)} />
       )}
     </div>
   );
