@@ -111,7 +111,7 @@ export default function TradesTable() {
         Showing {startIndex + 1}-{Math.min(endIndex, sorted.length)} of {sorted.length} transactions
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -198,6 +198,74 @@ export default function TradesTable() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="profile-cards-mobile">
+        {paginatedTrades.map((trade) => {
+          const pnl = trade.realizedPnlCollateral / 1000000;
+          return (
+            <div key={trade.id} className="profile-card">
+              <div className="profile-card-header">
+                <div className="profile-card-badges">
+                  <span className={getBadgeClass(trade.tradeChangeType)}>
+                    {formatTradeTypeBadge(trade.tradeChangeType)}
+                  </span>
+                  <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+                    {trade.trade?.isLong ? 'Long' : 'Short'}
+                  </span>
+                  <span className="profile-card-market">
+                    {trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}
+                  </span>
+                </div>
+                <span className="profile-card-time">{formatDate(trade.block?.block_ts)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Leverage</span>
+                <span className="profile-card-value">{formatNumber(trade.trade?.leverage, 1)}x</span>
+                <span className="profile-card-label">Collateral</span>
+                <span className="profile-card-value">${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Open</span>
+                <span className="profile-card-value">${formatNumber(trade.trade?.openPrice || 0, 2)}</span>
+                <span className="profile-card-label">Close</span>
+                <span className="profile-card-value">
+                  {trade.trade?.closePrice ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}
+                </span>
+              </div>
+              {pnl !== 0 && (
+                <div className="profile-card-row">
+                  <span className="profile-card-label">PnL</span>
+                  <span className={pnl > 0 ? 'pnl-positive profile-card-value' : 'pnl-negative profile-card-value'}>
+                    {formatPnl(pnl)}
+                  </span>
+                </div>
+              )}
+              <div className="profile-card-row">
+                <span className="profile-card-label">Trader</span>
+                <span className="profile-card-value">
+                  <span
+                    className="address-link"
+                    onClick={() => setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {formatAddress(trade.trade?.evmTrader || trade.trade?.trader)}
+                  </span>
+                </span>
+                {trade.txHash && (
+                  <>
+                    <span className="profile-card-label">TX</span>
+                    <span className="profile-card-value">
+                      <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                        {shortenHash(trade.txHash)}
+                      </a>
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (

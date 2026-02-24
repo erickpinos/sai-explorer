@@ -59,7 +59,7 @@ export default function CollateralTable() {
 
   return (
     <div>
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -94,6 +94,33 @@ export default function CollateralTable() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="profile-cards-mobile">
+        {sorted.map((c, i) => (
+          <div key={c.tokenId ?? i} className="profile-card">
+            <div className="profile-card-header">
+              <div className="profile-card-badges">
+                {c.logoUrl && <img src={c.logoUrl} alt={c.symbol} className="collateral-logo" style={{ width: '20px', height: '20px' }} />}
+                <span className="profile-card-market">{c.symbol}</span>
+                <span style={{ color: '#888', fontSize: '12px' }}>{c.name}</span>
+              </div>
+              <span className="profile-card-time">Index {c.tokenId}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Price</span>
+              <span className="profile-card-value">${formatNumber(c.price, 6)}</span>
+              <span className="profile-card-label">Vaults</span>
+              <span className="profile-card-value">{c.vaultCount}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">TVL</span>
+              <span className="profile-card-value">${formatNumber(c.vaultTvl, 2)}</span>
+              <span className="profile-card-label">Total OI</span>
+              <span className="profile-card-value">${formatNumber(c.totalOi, 2)}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="collateral-footer">

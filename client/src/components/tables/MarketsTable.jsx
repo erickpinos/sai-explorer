@@ -67,7 +67,7 @@ export default function MarketsTable() {
   return (
     <div>
       <div className="table-info">{sorted.length} markets</div>
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -110,6 +110,43 @@ export default function MarketsTable() {
             })}
           </tbody>
         </table>
+      </div>
+      <div className="profile-cards-mobile">
+        {sorted.map((m, i) => {
+          const symbol = m.baseToken?.symbol || (m.marketId != null ? String(m.marketId) : '-');
+          const priceChange = m.priceChangePct24Hrs || 0;
+          const changeClass = priceChange >= 0 ? 'pnl-positive' : 'pnl-negative';
+          const changeSign = priceChange >= 0 ? '+' : '';
+          return (
+            <div key={i} className="profile-card">
+              <div className="profile-card-header">
+                <div className="profile-card-badges">
+                  <span className="profile-card-market">{symbol}</span>
+                  <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {m.marketId}</span>
+                </div>
+                <span className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}%</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Price</span>
+                <span className="profile-card-value">{formatPrice(m.price || 0)}</span>
+                <span className="profile-card-label">Leverage</span>
+                <span className="profile-card-value">{m.minLeverage || 1}x-{m.maxLeverage || 100}x</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">OI Long</span>
+                <span className="profile-card-value">${formatNumber((m.oiLong || 0) / 1e6, 2)}</span>
+                <span className="profile-card-label">OI Short</span>
+                <span className="profile-card-value">${formatNumber((m.oiShort || 0) / 1e6, 2)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Open Fee</span>
+                <span className="profile-card-value">{formatNumber((m.openFeePct || 0) * 100, 3)}%</span>
+                <span className="profile-card-label">Close Fee</span>
+                <span className="profile-card-value">{formatNumber((m.closeFeePct || 0) * 100, 3)}%</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

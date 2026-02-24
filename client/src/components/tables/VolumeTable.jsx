@@ -64,7 +64,7 @@ export default function VolumeTable() {
         {sorted.length} traders
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -106,6 +106,45 @@ export default function VolumeTable() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="profile-cards-mobile">
+        {sorted.map((u, i) => (
+          <div key={u.trader} className="profile-card">
+            <div className="profile-card-header">
+              <div className="profile-card-badges">
+                <span className="profile-card-rank">#{i + 1}</span>
+                <span
+                  className="address-link profile-card-market"
+                  onClick={() => setSelectedUserAddress({ bech32: u.trader, evm: u.evmTrader })}
+                  style={{ cursor: 'pointer' }}
+                  title={u.evmTrader || u.trader}
+                >
+                  {formatAddress(u.evmTrader || u.trader)}
+                </span>
+              </div>
+              {u.firstTradeTs && <span className="profile-card-time">{new Date(u.firstTradeTs).toLocaleDateString()}</span>}
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Volume</span>
+              <span className="profile-card-value">${formatNumber(u.totalVolume, 2)}</span>
+              <span className="profile-card-label">Trades</span>
+              <span className="profile-card-value">{u.tradeCount}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">PnL</span>
+              <span className={`profile-card-value ${u.realizedPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>{formatPnl(u.realizedPnl)}</span>
+              <span className="profile-card-label">Liquidations</span>
+              <span className="profile-card-value">{u.liquidations}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Opens</span>
+              <span className="profile-card-value">{u.opens}</span>
+              <span className="profile-card-label">Closes</span>
+              <span className="profile-card-value">{u.closes}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {selectedUserAddress && (

@@ -89,26 +89,30 @@ export default function UserProfileModal({ address, onClose }) {
     if (tradesLoading) return <LoadingSpinner />;
     if (!trades || trades.length === 0) return <EmptyState message="No trades found" />;
 
+    const tradeList = trades.slice(0, 50);
+
     return (
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>TIME</th>
-              <th>TYPE</th>
-              <th>MARKET</th>
-              <th>DIRECTION</th>
-              <th>LEVERAGE</th>
-              <th>OPEN PRICE</th>
-              <th>CLOSE PRICE</th>
-              <th>COLLATERAL</th>
-              <th>PNL</th>
+      <>
+        {/* Desktop table */}
+        <div className="table-wrapper profile-table-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th>TIME</th>
+                <th>TYPE</th>
+                <th>MARKET</th>
+                <th>DIRECTION</th>
+                <th>LEVERAGE</th>
+                <th>OPEN PRICE</th>
+                <th>CLOSE PRICE</th>
+                <th>COLLATERAL</th>
+                <th>PNL</th>
               <th>TX Hash</th>
               <th>EVM TX Hash</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trades.slice(0, 50).map((trade) => {
+              </tr>
+            </thead>
+            <tbody>
+              {tradeList.map((trade) => {
               const displayType = (
                 trade.trade?.tradeType === 'limit' &&
                 trade.tradeChangeType?.toLowerCase().includes('closed') &&
@@ -116,28 +120,28 @@ export default function UserProfileModal({ address, onClose }) {
                 !parseFloat(trade.realizedPnlCollateral)
               ) ? 'limit_order_cancelled' : trade.tradeChangeType;
               return (
-              <tr key={trade.id}>
-                <td>{formatDate(trade.block?.block_ts)}</td>
-                <td>
-                  <span className={getBadgeClass(displayType)}>
-                    {formatTradeTypeBadge(displayType)}
-                  </span>
-                </td>
-                <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
-                <td>
-                  <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
-                    {trade.trade?.isLong ? 'Long' : 'Short'}
-                  </span>
-                </td>
-                <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
-                <td>{formatPrice(trade.trade?.openPrice || 0)}</td>
-                <td>
-                  {parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}
-                </td>
-                <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
-                <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
-                  {formatPnl(trade.realizedPnlCollateral / 1000000)}
-                </td>
+                <tr key={trade.id}>
+                  <td>{formatDate(trade.block?.block_ts)}</td>
+                  <td>
+                    <span className={getBadgeClass(displayType)}>
+                      {formatTradeTypeBadge(displayType)}
+                    </span>
+                  </td>
+                  <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
+                  <td>
+                    <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+                      {trade.trade?.isLong ? 'Long' : 'Short'}
+                    </span>
+                  </td>
+                  <td>{formatNumber(trade.trade?.leverage, 1)}x</td>
+                  <td>{formatPrice(trade.trade?.openPrice || 0)}</td>
+                  <td>
+                    {parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}
+                  </td>
+                  <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
+                  <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
+                    {formatPnl(trade.realizedPnlCollateral / 1000000)}
+                  </td>
                 <td>
                   {trade.txHash ? (
                     <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
@@ -152,12 +156,58 @@ export default function UserProfileModal({ address, onClose }) {
                     </a>
                   ) : '-'}
                 </td>
-              </tr>
-              );
+                </tr>
+                );
             })}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="profile-cards-mobile">
+          {tradeList.map((trade) => {
+            const pnl = trade.realizedPnlCollateral / 1000000;
+            return (
+              <div key={trade.id} className="profile-card">
+                <div className="profile-card-header">
+                  <div className="profile-card-badges">
+                    <span className={getBadgeClass(trade.tradeChangeType)}>
+                      {formatTradeTypeBadge(trade.tradeChangeType)}
+                    </span>
+                    <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+                      {trade.trade?.isLong ? 'Long' : 'Short'}
+                    </span>
+                    <span className="profile-card-market">
+                      {trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}
+                    </span>
+                  </div>
+                  <span className="profile-card-time">{formatDate(trade.block?.block_ts)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Leverage</span>
+                  <span className="profile-card-value">{formatNumber(trade.trade?.leverage, 1)}x</span>
+                  <span className="profile-card-label">Collateral</span>
+                  <span className="profile-card-value">${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Open</span>
+                  <span className="profile-card-value">${formatNumber(trade.trade?.openPrice || 0, 2)}</span>
+                  <span className="profile-card-label">Close</span>
+                  <span className="profile-card-value">
+                    {trade.trade?.closePrice ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}
+                  </span>
+                </div>
+                {pnl !== 0 && (
+                  <div className="profile-card-row">
+                    <span className="profile-card-label">PnL</span>
+                    <span className={pnl > 0 ? 'pnl-positive profile-card-value' : 'pnl-negative profile-card-value'}>{formatPnl(pnl)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </>
     );
   };
 
@@ -165,29 +215,52 @@ export default function UserProfileModal({ address, onClose }) {
     if (depositsLoading) return <LoadingSpinner />;
     if (!deposits || deposits.length === 0) return <EmptyState message="No deposits found" />;
 
+    const depositList = deposits.slice(0, 50);
+
     return (
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Vault</th>
-              <th>Amount</th>
-              <th>Shares</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deposits.slice(0, 50).map((deposit, idx) => (
-              <tr key={idx}>
-                <td>{formatDate(deposit.block_ts)}</td>
-                <td>{deposit.collateral_token_symbol || '-'}</td>
-                <td>${formatNumber(deposit.amount / 1000000, 2)}</td>
-                <td>{formatNumber(deposit.shares / 1000000, 2)}</td>
+      <>
+        {/* Desktop table */}
+        <div className="table-wrapper profile-table-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Vault</th>
+                <th>Amount</th>
+                <th>Shares</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {depositList.map((deposit, idx) => (
+                <tr key={idx}>
+                  <td>{formatDate(deposit.block_ts)}</td>
+                  <td>{deposit.collateral_token_symbol || '-'}</td>
+                  <td>${formatNumber(deposit.amount / 1000000, 2)}</td>
+                  <td>{formatNumber(deposit.shares / 1000000, 2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="profile-cards-mobile">
+          {depositList.map((deposit, idx) => (
+            <div key={idx} className="profile-card">
+              <div className="profile-card-header">
+                <span className="profile-card-market">{deposit.collateral_token_symbol || '-'} Vault</span>
+                <span className="profile-card-time">{formatDate(deposit.block_ts)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Amount</span>
+                <span className="profile-card-value">${formatNumber(deposit.amount / 1000000, 2)}</span>
+                <span className="profile-card-label">Shares</span>
+                <span className="profile-card-value">{formatNumber(deposit.shares / 1000000, 2)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
     );
   };
 
@@ -195,29 +268,52 @@ export default function UserProfileModal({ address, onClose }) {
     if (withdrawsLoading) return <LoadingSpinner />;
     if (!withdraws || withdraws.length === 0) return <EmptyState message="No withdrawals found" />;
 
+    const withdrawList = withdraws.slice(0, 50);
+
     return (
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Unlock Epoch</th>
-              <th>Vault</th>
-              <th>Shares</th>
-              <th>Auto Redeem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {withdraws.slice(0, 50).map((withdraw, idx) => (
-              <tr key={idx}>
-                <td>{withdraw.unlock_epoch}</td>
-                <td>{withdraw.collateral_token_symbol || '-'}</td>
-                <td>{formatNumber(withdraw.shares / 1000000, 2)}</td>
-                <td>{withdraw.auto_redeem ? 'Yes' : 'No'}</td>
+      <>
+        {/* Desktop table */}
+        <div className="table-wrapper profile-table-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th>Unlock Epoch</th>
+                <th>Vault</th>
+                <th>Shares</th>
+                <th>Auto Redeem</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {withdrawList.map((withdraw, idx) => (
+                <tr key={idx}>
+                  <td>{withdraw.unlock_epoch}</td>
+                  <td>{withdraw.collateral_token_symbol || '-'}</td>
+                  <td>{formatNumber(withdraw.shares / 1000000, 2)}</td>
+                  <td>{withdraw.auto_redeem ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="profile-cards-mobile">
+          {withdrawList.map((withdraw, idx) => (
+            <div key={idx} className="profile-card">
+              <div className="profile-card-header">
+                <span className="profile-card-market">{withdraw.collateral_token_symbol || '-'} Vault</span>
+                <span className="profile-card-time">Epoch {withdraw.unlock_epoch}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Shares</span>
+                <span className="profile-card-value">{formatNumber(withdraw.shares / 1000000, 2)}</span>
+                <span className="profile-card-label">Auto Redeem</span>
+                <span className="profile-card-value">{withdraw.auto_redeem ? 'Yes' : 'No'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
     );
   };
 

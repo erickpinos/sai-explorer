@@ -26,7 +26,7 @@ export default function WithdrawsTable() {
         Showing {startIndex + 1}-{Math.min(endIndex, withdraws.length)} of {withdraws.length} withdraws
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -51,6 +51,27 @@ export default function WithdrawsTable() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="profile-cards-mobile">
+        {paginatedWithdraws.map((withdraw, index) => (
+          <div key={index} className="profile-card">
+            <div className="profile-card-header">
+              <span className="profile-card-market">{withdraw.vault?.collateralToken?.symbol || '-'} Vault</span>
+              <span className="profile-card-time">Epoch {withdraw.unlockEpoch || '-'}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Shares</span>
+              <span className="profile-card-value">{formatNumber(withdraw.shares)}</span>
+              <span className="profile-card-label">Auto Redeem</span>
+              <span className="profile-card-value">{withdraw.autoRedeem ? 'Yes' : 'No'}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Depositor</span>
+              <span className="profile-card-value" title={withdraw.depositor}>{formatAddress(withdraw.depositor)}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {totalPages > 1 && (

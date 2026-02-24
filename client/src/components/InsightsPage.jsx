@@ -228,7 +228,7 @@ export default function InsightsPage() {
       {insights.topWins?.length > 0 && (
         <div id="biggest-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Wins</h3>
-          <div className="table-wrapper">
+          <div className="table-wrapper profile-table-desktop">
             <table>
               <thead>
                 <tr>
@@ -264,13 +264,39 @@ export default function InsightsPage() {
               </tbody>
             </table>
           </div>
+          <div className="profile-cards-mobile">
+            {insights.topWins.map((t, i) => (
+              <div key={i} className="profile-card">
+                <div className="profile-card-header">
+                  <div className="profile-card-badges">
+                    <span className="profile-card-rank">#{i + 1}</span>
+                    <span className={`badge ${t.isLong ? 'badge-green' : 'badge-red'}`}>{t.isLong ? 'Long' : 'Short'}</span>
+                    <span className="profile-card-market">{t.symbol}</span>
+                  </div>
+                  <span className="profile-card-time">{formatDate(t.timestamp)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">PnL</span>
+                  <span className="profile-card-value pnl-positive">+${formatNumber(t.pnlUsd, 2)}</span>
+                  <span className="profile-card-label">Leverage</span>
+                  <span className="profile-card-value">{t.leverage}x</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Size</span>
+                  <span className="profile-card-value">${formatNumber(t.positionSize, 2)}</span>
+                  <span className="profile-card-label">Trader</span>
+                  <span className="profile-card-value"><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {insights.topLosses?.length > 0 && (
         <div id="biggest-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Losses</h3>
-          <div className="table-wrapper">
+          <div className="table-wrapper profile-table-desktop">
             <table>
               <thead>
                 <tr>
@@ -306,13 +332,39 @@ export default function InsightsPage() {
               </tbody>
             </table>
           </div>
+          <div className="profile-cards-mobile">
+            {insights.topLosses.map((t, i) => (
+              <div key={i} className="profile-card">
+                <div className="profile-card-header">
+                  <div className="profile-card-badges">
+                    <span className="profile-card-rank">#{i + 1}</span>
+                    <span className={`badge ${t.isLong ? 'badge-green' : 'badge-red'}`}>{t.isLong ? 'Long' : 'Short'}</span>
+                    <span className="profile-card-market">{t.symbol}</span>
+                  </div>
+                  <span className="profile-card-time">{formatDate(t.timestamp)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">PnL</span>
+                  <span className="profile-card-value pnl-negative">-${formatNumber(Math.abs(t.pnlUsd), 2)}</span>
+                  <span className="profile-card-label">Leverage</span>
+                  <span className="profile-card-value">{t.leverage}x</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Size</span>
+                  <span className="profile-card-value">${formatNumber(t.positionSize, 2)}</span>
+                  <span className="profile-card-label">Trader</span>
+                  <span className="profile-card-value"><span className="address-link">{formatAddress(t.evmTrader || t.trader)}</span></span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {insights.topPctWins?.length > 0 && (
         <div id="biggest-pct-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Wins</h3>
-          <div className="table-wrapper">
+          <div className="table-wrapper profile-table-desktop">
             <table>
               <thead>
                 <tr>
@@ -350,13 +402,39 @@ export default function InsightsPage() {
               </tbody>
             </table>
           </div>
+          <div className="profile-cards-mobile">
+            {insights.topPctWins.map((t, i) => (
+              <div key={i} className="profile-card">
+                <div className="profile-card-header">
+                  <div className="profile-card-badges">
+                    <span className="profile-card-rank">#{i + 1}</span>
+                    <span className={`badge ${t.isLong ? 'badge-green' : 'badge-red'}`}>{t.isLong ? 'Long' : 'Short'}</span>
+                    <span className="profile-card-market">{t.symbol}</span>
+                  </div>
+                  <span className="profile-card-time">{formatDate(t.timestamp)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">PnL %</span>
+                  <span className="profile-card-value pnl-positive">+{formatNumber(t.pnlPct, 2)}%</span>
+                  <span className="profile-card-label">PnL $</span>
+                  <span className="profile-card-value pnl-positive">+${formatNumber(t.pnlUsd, 2)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Leverage</span>
+                  <span className="profile-card-value">{t.leverage}x</span>
+                  <span className="profile-card-label">Size</span>
+                  <span className="profile-card-value">${formatNumber(t.positionSize, 2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {insights.topPctLosses?.length > 0 && (
         <div id="biggest-pct-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Losses</h3>
-          <div className="table-wrapper">
+          <div className="table-wrapper profile-table-desktop">
             <table>
               <thead>
                 <tr>
@@ -393,6 +471,32 @@ export default function InsightsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="profile-cards-mobile">
+            {insights.topPctLosses.map((t, i) => (
+              <div key={i} className="profile-card">
+                <div className="profile-card-header">
+                  <div className="profile-card-badges">
+                    <span className="profile-card-rank">#{i + 1}</span>
+                    <span className={`badge ${t.isLong ? 'badge-green' : 'badge-red'}`}>{t.isLong ? 'Long' : 'Short'}</span>
+                    <span className="profile-card-market">{t.symbol}</span>
+                  </div>
+                  <span className="profile-card-time">{formatDate(t.timestamp)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">PnL %</span>
+                  <span className="profile-card-value pnl-negative">{formatNumber(t.pnlPct, 2)}%</span>
+                  <span className="profile-card-label">PnL $</span>
+                  <span className="profile-card-value pnl-negative">-${formatNumber(Math.abs(t.pnlUsd), 2)}</span>
+                </div>
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Leverage</span>
+                  <span className="profile-card-value">{t.leverage}x</span>
+                  <span className="profile-card-label">Size</span>
+                  <span className="profile-card-value">${formatNumber(t.positionSize, 2)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -59,7 +59,7 @@ export default function DepositsTable() {
         Showing {startIndex + 1}-{Math.min(endIndex, deposits.length)} of {deposits.length} deposits
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
             <tr>
@@ -154,6 +154,48 @@ export default function DepositsTable() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="profile-cards-mobile">
+        {paginatedDeposits.map((deposit, index) => (
+          <div key={deposit.id || index} className="profile-card">
+            <div className="profile-card-header">
+              <div className="profile-card-badges">
+                <span className="badge badge-green">Deposit</span>
+                <span className="profile-card-market">{deposit.vault?.collateralToken?.symbol || '-'}</span>
+              </div>
+              <span className="profile-card-time">{formatDate(deposit.block?.block_ts)}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Amount</span>
+              <span className="profile-card-value">${formatNumber(deposit.amount / 1000000, 2)}</span>
+              <span className="profile-card-label">Shares</span>
+              <span className="profile-card-value">{formatNumber(deposit.shares / 1000000, 2)}</span>
+            </div>
+            <div className="profile-card-row">
+              <span className="profile-card-label">Depositor</span>
+              <span className="profile-card-value">
+                <span
+                  className="address-link"
+                  onClick={() => setSelectedUserAddress({ bech32: deposit.depositor, evm: nibiToHex(deposit.depositor) })}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {formatAddress(deposit.depositor)}
+                </span>
+              </span>
+              {deposit.txHash && (
+                <>
+                  <span className="profile-card-label">TX</span>
+                  <span className="profile-card-value">
+                    <a href={`https://nibiru.explorers.guru/transaction/${deposit.txHash}`} target="_blank" rel="noopener noreferrer" className="address-link">
+                      {formatAddress(deposit.txHash)}
+                    </a>
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {totalPages > 1 && (
