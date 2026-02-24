@@ -1229,3 +1229,76 @@ td a:hover {
     max-height: 350px;
   }
 }
+
+/* User Profile modal: desktop table / mobile cards */
+.profile-table-desktop { display: block; }
+.profile-cards-mobile  { display: none; }
+
+@media (max-width: 640px) {
+  .profile-table-desktop { display: none; }
+  .profile-cards-mobile  { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+
+  .profile-card {
+    background: #1a1a2e;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .profile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .profile-card-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .profile-card-market {
+    font-weight: 600;
+    font-size: 14px;
+    color: #e2e8f0;
+  }
+
+  .profile-card-time {
+    font-size: 11px;
+    color: #666;
+  }
+
+  .profile-card-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr;
+    column-gap: 8px;
+    row-gap: 4px;
+    align-items: baseline;
+  }
+
+  .profile-card-label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .profile-card-value {
+    font-size: 13px;
+    color: #e2e8f0;
+    font-weight: 500;
+  }
+
+  .profile-card-rank {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6366f1;
+    min-width: 24px;
+  }
+}
