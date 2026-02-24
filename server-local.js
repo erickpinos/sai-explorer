@@ -104,10 +104,10 @@ try {
 
 async function autoSync() {
   try {
-    console.log('\n🔄 Auto-sync: fetching new data...');
+    console.log('\n🔄 Auto-sync: fetching new data (mainnet + testnet)...');
     const startTime = Date.now();
 
-    const fakeReq = { body: { network: 'mainnet' }, method: 'POST' };
+    const fakeReq = { body: {}, method: 'POST' };
     let result;
     const fakeRes = {
       setHeader: () => {},
@@ -120,7 +120,12 @@ async function autoSync() {
 
     const duration = Date.now() - startTime;
     if (result?.success) {
-      console.log(`✅ Auto-sync complete in ${duration}ms — ${result.trades} new trades, ${result.deposits} new deposits, ${result.withdraws} new withdraws`);
+      const m = result.mainnet || {};
+      const t = result.testnet || {};
+      const mt = (m.trades || 0) + (t.trades || 0);
+      const md = (m.deposits || 0) + (t.deposits || 0);
+      const mw = (m.withdraws || 0) + (t.withdraws || 0);
+      console.log(`✅ Auto-sync complete in ${duration}ms — mainnet: ${m.trades || 0}t/${m.deposits || 0}d/${m.withdraws || 0}w | testnet: ${t.trades || 0}t/${t.deposits || 0}d/${t.withdraws || 0}w`);
     } else {
       console.log(`⚠️ Auto-sync finished in ${duration}ms with issues`);
     }

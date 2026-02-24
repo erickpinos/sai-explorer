@@ -3,7 +3,7 @@ import { nibiToHex } from '../scripts/addressUtils.js';
 
 const GRAPHQL_ENDPOINTS = {
   mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://testnet-sai-keeper.nibiru.fi/query'
+  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
 };
 
 async function fetchGraphQL(queryString, network = 'mainnet') {
@@ -228,14 +228,21 @@ export default async function handler(req, res) {
 
   try {
     const startTime = Date.now();
-    const { network = 'mainnet' } = req.body || {};
+    const { network } = req.body || {};
 
-    // Sync the specified network
-    const [tradesCount, depositsCount, withdrawsCount] = await Promise.all([
-      syncTrades(network),
-      syncDeposits(network),
-      syncWithdraws(network)
-    ]);
+    // Sync both networks when no specific network requested (e.g. auto-sync), else sync the specified one
+    const networks = !network || network === 'all' ? ['mainnet', 'testnet'] : [network];
+
+    const allResults = await Promise.all(
+      networks.map(async (net) => {
+        const [trades, deposits, withdraws] = await Promise.all([
+          syncTrades(net),
+          syncDeposits(net),
+          syncWithdraws(net)
+        ]);
+        return { network: net, trades, deposits, withdraws };
+      })
+    );
 
     const duration = Date.now() - startTime;
 
@@ -243,11 +250,18 @@ export default async function handler(req, res) {
       success: true,
       synced_at: new Date().toISOString(),
       duration_ms: duration,
-      network,
-      trades: tradesCount,
-      deposits: depositsCount,
-      withdraws: withdrawsCount
+      mainnet: allResults.find(r => r.network === 'mainnet') || { trades: 0, deposits: 0, withdraws: 0 },
+      testnet: allResults.find(r => r.network === 'testnet') || { trades: 0, deposits: 0, withdraws: 0 }
     };
+
+    // For single-network requests, also include legacy flat format
+    if (network && network !== 'all') {
+      const single = allResults[0];
+      results.network = network;
+      results.trades = single.trades;
+      results.deposits = single.deposits;
+      results.withdraws = single.withdraws;
+    }
 
     console.log('Sync completed:', results);
     res.status(200).json(results);

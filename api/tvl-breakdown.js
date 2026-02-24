@@ -1,6 +1,6 @@
 const GRAPHQL_ENDPOINTS = {
   mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://testnet-sai-keeper.nibiru.fi/query'
+  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
 };
 
 // Active (non-deprecated) vault ERC20 addresses

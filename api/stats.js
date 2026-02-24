@@ -2,7 +2,7 @@ import { sql } from '@vercel/postgres';
 
 const GRAPHQL_ENDPOINTS = {
   mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://testnet-sai-keeper.nibiru.fi/query'
+  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
 };
 const ACTIVE_VAULTS = new Set([
   '0xE96397b6135240956413031c0B26507eeCCD4B39',

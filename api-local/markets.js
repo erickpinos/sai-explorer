@@ -1,6 +1,6 @@
 const GRAPHQL_ENDPOINTS = {
   mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://testnet-sai-keeper.nibiru.fi/query'
+  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
 };
 
 export default async function handler(req, res) {
