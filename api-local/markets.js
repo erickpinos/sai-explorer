@@ -37,9 +37,11 @@ export default async function handler(req, res) {
             closeFeePct
             visible
           }
-          collateralIndices {
-            symbol
-            price
+        }
+        oracle {
+          tokenPricesUsd {
+            token { symbol }
+            priceUsd
           }
         }
       }` }),
@@ -47,11 +49,13 @@ export default async function handler(req, res) {
 
     const json = await response.json();
     const rawMarkets = json.data?.perp?.borrowings || [];
-    const collateralIndices = json.data?.perp?.collateralIndices || [];
+    const tokenPrices = json.data?.oracle?.tokenPricesUsd || [];
 
     const collateralPrices = {};
-    for (const ci of collateralIndices) {
-      collateralPrices[ci.symbol.toLowerCase()] = ci.price || 1;
+    for (const tp of tokenPrices) {
+      if (tp.token?.symbol) {
+        collateralPrices[tp.token.symbol.toLowerCase()] = tp.priceUsd || 1;
+      }
     }
 
     const markets = rawMarkets.map(m => {
