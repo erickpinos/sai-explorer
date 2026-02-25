@@ -160,6 +160,9 @@ export default function MarketsTable() {
           );
         })}
       </div>
+      <div className="markets-note">
+        * OI values for markets using stNIBI as collateral are stored natively in stNIBI and converted to USD using the live stNIBI price.
+      </div>
     </div>
   );
 }
