@@ -139,6 +139,12 @@ export default function MarketsTable() {
                 <span className="profile-card-value">${formatNumber((m.oiShort || 0) / 1e6, 2)}</span>
               </div>
               <div className="profile-card-row">
+                <span className="profile-card-label">Max OI</span>
+                <span className="profile-card-value">${formatNumber((m.oiMax || 0) / 1e6, 2)}</span>
+                <span className="profile-card-label">OI Usage</span>
+                <span className="profile-card-value">{m.oiMax ? formatNumber(((m.oiLong || 0) + (m.oiShort || 0)) / m.oiMax * 100, 1) : '0'}%</span>
+              </div>
+              <div className="profile-card-row">
                 <span className="profile-card-label">Open Fee</span>
                 <span className="profile-card-value">{formatNumber((m.openFeePct || 0) * 100, 3)}%</span>
                 <span className="profile-card-label">Close Fee</span>
