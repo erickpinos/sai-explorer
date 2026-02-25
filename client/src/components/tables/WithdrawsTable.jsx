@@ -5,11 +5,13 @@ import { formatNumber, formatAddress } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import { WITHDRAWS_PER_PAGE } from '../../utils/constants';
+import { useViewToggle } from '../ui/ViewToggle';
 
 export default function WithdrawsTable() {
   const { network } = useNetwork();
   const { data: withdraws, loading, error } = useWithdraws(network);
   const [currentPage, setCurrentPage] = useState(1);
+  const { toggle, viewClass } = useViewToggle();
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -21,9 +23,10 @@ export default function WithdrawsTable() {
   const totalPages = Math.ceil(withdraws.length / WITHDRAWS_PER_PAGE);
 
   return (
-    <div>
+    <div className={viewClass}>
       <div className="table-info">
         Showing {startIndex + 1}-{Math.min(endIndex, withdraws.length)} of {withdraws.length} withdraws
+        {toggle}
       </div>
 
       <div className="table-wrapper profile-table-desktop">

@@ -4,6 +4,7 @@ import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import { useViewToggle } from '../ui/ViewToggle';
 
 const SORT_KEYS = {
   tokenId: (c) => c.tokenId ?? 0,
@@ -17,6 +18,7 @@ export default function CollateralTable() {
   const { data, loading, error } = useCollateral(network);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const { toggle, viewClass } = useViewToggle();
 
   const handleSort = (col) => {
     if (col === sortCol) {
@@ -58,7 +60,8 @@ export default function CollateralTable() {
   const activeIndices = data?.activeIndices || [];
 
   return (
-    <div>
+    <div className={viewClass}>
+      <div className="table-info">{sorted.length} indices{toggle}</div>
       <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>

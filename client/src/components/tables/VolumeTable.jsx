@@ -5,6 +5,7 @@ import { formatNumber, formatAddress } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
+import { useViewToggle } from '../ui/ViewToggle';
 
 const COLUMNS = [
   { key: 'totalVolume',  label: 'Total Volume' },
@@ -22,6 +23,7 @@ export default function VolumeTable() {
   const [sortCol, setSortCol] = useState('totalVolume');
   const [sortDir, setSortDir] = useState('desc');
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
+  const { toggle, viewClass } = useViewToggle();
 
   const handleSort = (col) => {
     if (col === sortCol) {
@@ -59,9 +61,10 @@ export default function VolumeTable() {
   };
 
   return (
-    <div>
+    <div className={viewClass}>
       <div className="table-info">
         {sorted.length} traders
+        {toggle}
       </div>
 
       <div className="table-wrapper profile-table-desktop">

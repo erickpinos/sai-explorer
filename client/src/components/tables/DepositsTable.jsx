@@ -6,6 +6,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
 import { DEPOSITS_PER_PAGE } from '../../utils/constants';
+import { useViewToggle } from '../ui/ViewToggle';
 
 // Bech32 decoding to convert nibi addresses to 0x
 const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
@@ -43,6 +44,7 @@ export default function DepositsTable() {
   const { data: deposits, loading, error } = useDeposits(network);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
+  const { toggle, viewClass } = useViewToggle();
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -54,9 +56,10 @@ export default function DepositsTable() {
   const totalPages = Math.ceil(deposits.length / DEPOSITS_PER_PAGE);
 
   return (
-    <div>
+    <div className={viewClass}>
       <div className="table-info">
         Showing {startIndex + 1}-{Math.min(endIndex, deposits.length)} of {deposits.length} deposits
+        {toggle}
       </div>
 
       <div className="table-wrapper profile-table-desktop">

@@ -6,6 +6,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
+import { useViewToggle } from '../ui/ViewToggle';
 
 const getBadgeClass = (status) => {
   if (!status) return 'badge badge-purple';
@@ -60,6 +61,7 @@ export default function TradesTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const [sortCol, setSortCol] = useState('time');
+  const { toggle, viewClass } = useViewToggle();
   const [sortDir, setSortDir] = useState('desc');
 
   const handleSort = (col) => {
@@ -106,9 +108,10 @@ export default function TradesTable() {
   };
 
   return (
-    <div>
+    <div className={viewClass}>
       <div className="table-info">
         Showing {startIndex + 1}-{Math.min(endIndex, sorted.length)} of {sorted.length} transactions
+        {toggle}
       </div>
 
       <div className="table-wrapper profile-table-desktop">

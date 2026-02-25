@@ -4,6 +4,7 @@ import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatPrice } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import { useViewToggle } from '../ui/ViewToggle';
 
 const SORT_KEYS = {
   marketId:     (m) => m.marketId ?? 0,
@@ -24,6 +25,7 @@ export default function MarketsTable() {
   const { data, loading, error } = useMarkets(network);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
+  const { toggle, viewClass } = useViewToggle();
 
   const handleSort = (col) => {
     if (col === sortCol) {
@@ -65,8 +67,8 @@ export default function MarketsTable() {
   };
 
   return (
-    <div>
-      <div className="table-info">{sorted.length} markets</div>
+    <div className={viewClass}>
+      <div className="table-info">{sorted.length} markets{toggle}</div>
       <div className="table-wrapper profile-table-desktop">
         <table>
           <thead>
