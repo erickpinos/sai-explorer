@@ -37,12 +37,36 @@ export default async function handler(req, res) {
             closeFeePct
             visible
           }
+          collateralIndices {
+            symbol
+            price
+          }
         }
       }` }),
     });
 
     const json = await response.json();
-    const markets = json.data?.perp?.borrowings || [];
+    const rawMarkets = json.data?.perp?.borrowings || [];
+    const collateralIndices = json.data?.perp?.collateralIndices || [];
+
+    const collateralPrices = {};
+    for (const ci of collateralIndices) {
+      collateralPrices[ci.symbol.toLowerCase()] = ci.price || 1;
+    }
+
+    const markets = rawMarkets.map(m => {
+      const collSymbol = (m.collateralToken?.symbol || '').toLowerCase();
+      const isUsd = collSymbol === 'usdc' || collSymbol === 'usdt';
+      const collPrice = isUsd ? 1 : (collateralPrices[collSymbol] || 1);
+
+      return {
+        ...m,
+        oiLongUsd: (m.oiLong || 0) / 1e6 * collPrice,
+        oiShortUsd: (m.oiShort || 0) / 1e6 * collPrice,
+        oiMaxUsd: (m.oiMax || 0) / 1e6 * collPrice,
+        collateralPrice: collPrice,
+      };
+    });
 
     res.status(200).json({ markets });
   } catch (error) {

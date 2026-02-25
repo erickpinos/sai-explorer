@@ -12,9 +12,9 @@ const SORT_KEYS = {
   collateral:   (m) => m.collateralToken?.symbol || '',
   price:        (m) => m.price || 0,
   priceChange:  (m) => m.priceChangePct24Hrs || 0,
-  oiLong:       (m) => m.oiLong || 0,
-  oiShort:      (m) => m.oiShort || 0,
-  oiMax:        (m) => m.oiMax || 0,
+  oiLong:       (m) => m.oiLongUsd || 0,
+  oiShort:      (m) => m.oiShortUsd || 0,
+  oiMax:        (m) => m.oiMaxUsd || 0,
   openFee:      (m) => m.openFeePct || 0,
   closeFee:     (m) => m.closeFeePct || 0,
   fundingLong:  (m) => m.feesPerHourLong || 0,
@@ -40,7 +40,7 @@ export default function MarketsTable() {
   const sorted = useMemo(() => {
     const markets = (data?.markets || []).filter(m => m.visible !== false);
     if (!sortCol) {
-      return [...markets].sort((a, b) => (b.oiLong + b.oiShort) - (a.oiLong + a.oiShort));
+      return [...markets].sort((a, b) => ((b.oiLongUsd || 0) + (b.oiShortUsd || 0)) - ((a.oiLongUsd || 0) + (a.oiShortUsd || 0)));
     }
     const getter = SORT_KEYS[sortCol];
     return [...markets].sort((a, b) => {
@@ -102,9 +102,9 @@ export default function MarketsTable() {
                   <td>{m.collateralToken?.symbol || '-'}</td>
                   <td>{formatPrice(m.price || 0)}</td>
                   <td className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}%</td>
-                  <td>${formatNumber((m.oiLong || 0) / 1e6, 2)}</td>
-                  <td>${formatNumber((m.oiShort || 0) / 1e6, 2)}</td>
-                  <td>${formatNumber((m.oiMax || 0) / 1e6, 2)}</td>
+                  <td>${formatNumber(m.oiLongUsd || 0, 2)}</td>
+                  <td>${formatNumber(m.oiShortUsd || 0, 2)}</td>
+                  <td>${formatNumber(m.oiMaxUsd || 0, 2)}</td>
                   <td>{m.minLeverage || 1}x - {m.maxLeverage || 100}x</td>
                   <td>{formatNumber((m.openFeePct || 0) * 100, 3)}%</td>
                   <td>{formatNumber((m.closeFeePct || 0) * 100, 3)}%</td>
@@ -140,15 +140,15 @@ export default function MarketsTable() {
               </div>
               <div className="profile-card-row">
                 <span className="profile-card-label">OI Long</span>
-                <span className="profile-card-value">${formatNumber((m.oiLong || 0) / 1e6, 2)}</span>
+                <span className="profile-card-value">${formatNumber(m.oiLongUsd || 0, 2)}</span>
                 <span className="profile-card-label">OI Short</span>
-                <span className="profile-card-value">${formatNumber((m.oiShort || 0) / 1e6, 2)}</span>
+                <span className="profile-card-value">${formatNumber(m.oiShortUsd || 0, 2)}</span>
               </div>
               <div className="profile-card-row">
                 <span className="profile-card-label">Max OI</span>
-                <span className="profile-card-value">${formatNumber((m.oiMax || 0) / 1e6, 2)}</span>
+                <span className="profile-card-value">${formatNumber(m.oiMaxUsd || 0, 2)}</span>
                 <span className="profile-card-label">OI Usage</span>
-                <span className="profile-card-value">{m.oiMax ? formatNumber(((m.oiLong || 0) + (m.oiShort || 0)) / m.oiMax * 100, 1) : '0'}%</span>
+                <span className="profile-card-value">{m.oiMaxUsd ? formatNumber(((m.oiLongUsd || 0) + (m.oiShortUsd || 0)) / m.oiMaxUsd * 100, 1) : '0'}%</span>
               </div>
               <div className="profile-card-row">
                 <span className="profile-card-label">Open Fee</span>
