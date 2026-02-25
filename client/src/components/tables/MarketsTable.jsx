@@ -9,6 +9,7 @@ import { useViewToggle } from '../ui/ViewToggle';
 const SORT_KEYS = {
   marketId:     (m) => m.marketId ?? 0,
   symbol:       (m) => m.baseToken?.symbol || '',
+  collateral:   (m) => m.collateralToken?.symbol || '',
   price:        (m) => m.price || 0,
   priceChange:  (m) => m.priceChangePct24Hrs || 0,
   oiLong:       (m) => m.oiLong || 0,
@@ -75,6 +76,7 @@ export default function MarketsTable() {
             <tr>
               <SortTh col="marketId">Market ID</SortTh>
               <SortTh col="symbol">Market</SortTh>
+              <SortTh col="collateral">Collateral</SortTh>
               <SortTh col="price">Price</SortTh>
               <SortTh col="priceChange">24h Change</SortTh>
               <SortTh col="oiLong">OI Long</SortTh>
@@ -97,6 +99,7 @@ export default function MarketsTable() {
                 <tr key={i}>
                   <td><strong>{m.marketId != null ? m.marketId : '-'}</strong></td>
                   <td><strong>{symbol}</strong></td>
+                  <td>{m.collateralToken?.symbol || '-'}</td>
                   <td>{formatPrice(m.price || 0)}</td>
                   <td className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}%</td>
                   <td>${formatNumber((m.oiLong || 0) / 1e6, 2)}</td>
@@ -125,6 +128,7 @@ export default function MarketsTable() {
                 <div className="profile-card-badges">
                   <span className="profile-card-market">{symbol}</span>
                   <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {m.marketId}</span>
+                  <span className="badge badge-purple" style={{ fontSize: '11px' }}>{m.collateralToken?.symbol || '-'}</span>
                 </div>
                 <span className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}%</span>
               </div>
