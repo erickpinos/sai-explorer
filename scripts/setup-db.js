@@ -31,6 +31,7 @@ async function setupDatabase() {
         sl NUMERIC,
         market_id INTEGER,
         base_token_symbol TEXT,
+        collateral_token_symbol TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);

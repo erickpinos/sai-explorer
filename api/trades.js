@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
         tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
         trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-        collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol
+        collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
       FROM trades
       WHERE network = ${network}
       ORDER BY block_ts DESC
@@ -61,6 +61,9 @@ export default async function handler(req, res) {
           marketId: row.market_id,
           baseToken: {
             symbol: row.base_token_symbol
+          },
+          collateralToken: {
+            symbol: row.collateral_token_symbol
           }
         }
       }

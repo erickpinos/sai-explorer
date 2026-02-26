@@ -45,6 +45,8 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - `realized_pnl_collateral` is stored in micro-units (divide by 1,000,000 for USD)
 
 ## Recent Changes
+- Added collateral_token_symbol to trades table, fetched directly from GraphQL perpBorrowing.collateralToken (Feb 2026)
+- Collateral type displayed per-trade in Perpetual Trades tab (resolves ambiguity of shared market IDs across collateral types)
 - Fixed percentage display: multiplied realized_pnl_pct by 100 across all insights (Feb 2026)
 - Added "Biggest $ Win" and "Biggest $ Loss" insight cards using topWins/topLosses data
 - Renamed existing cards to "Biggest % Win" and "Biggest % Loss" for clarity

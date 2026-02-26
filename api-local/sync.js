@@ -46,7 +46,7 @@ async function syncTrades(network) {
           trade {
             id trader tradeType isLong isOpen leverage openPrice closePrice
             collateralAmount openCollateralAmount tp sl
-            perpBorrowing { marketId baseToken { symbol } }
+            perpBorrowing { marketId baseToken { symbol } collateralToken { symbol } }
           }
         }
       }
@@ -69,9 +69,9 @@ async function syncTrades(network) {
             id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
             tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
             trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-            collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol
+            collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
           )
           ON CONFLICT (id) DO NOTHING
         `, [
@@ -80,7 +80,7 @@ async function syncTrades(network) {
           t.trade.trader, nibiToHex(t.trade.trader), t.trade.tradeType, t.trade.isLong, t.trade.isOpen,
           t.trade.leverage, t.trade.openPrice, t.trade.closePrice,
           t.trade.collateralAmount, t.trade.openCollateralAmount, t.trade.tp, t.trade.sl,
-          t.trade.perpBorrowing?.marketId, t.trade.perpBorrowing?.baseToken?.symbol
+          t.trade.perpBorrowing?.marketId, t.trade.perpBorrowing?.baseToken?.symbol, t.trade.perpBorrowing?.collateralToken?.symbol
         ]);
         newTradesCount++;
       } catch (err) {
