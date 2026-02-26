@@ -45,6 +45,7 @@ const SORT_GETTERS = {
   time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
   type:       (t) => t.tradeChangeType || '',
   market:     (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
+  marketId:   (t) => t.trade?.perpBorrowing?.marketId ?? 0,
   trader:     (t) => t.trade?.trader || '',
   evmAddress: (t) => t.trade?.evmTrader || '',
   direction:  (t) => t.trade?.isLong ? 1 : 0,
@@ -136,6 +137,7 @@ export default function TradesTable() {
             <tr>
               <SortTh col="time">Time</SortTh>
               <SortTh col="type">Type</SortTh>
+              <SortTh col="marketId">Market ID</SortTh>
               <SortTh col="market">Market</SortTh>
               <SortTh col="collateralType">Collateral Type</SortTh>
               <SortTh col="trader">Trader</SortTh>
@@ -166,6 +168,7 @@ export default function TradesTable() {
                     {formatTradeTypeBadge(displayType)}
                   </span>
                 </td>
+                <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>
                 <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
                 <td><span className="badge badge-purple" style={{ fontSize: '11px' }}>{trade._collateralType}</span></td>
                 <td>
@@ -234,6 +237,7 @@ export default function TradesTable() {
                   <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
                     {trade.trade?.isLong ? 'Long' : 'Short'}
                   </span>
+                  <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {trade.trade?.perpBorrowing?.marketId ?? '-'}</span>
                   <span className="profile-card-market">
                     {trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}
                   </span>
