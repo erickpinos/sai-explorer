@@ -37,6 +37,12 @@ const formatPnl = (pnl) => {
   return `${sign}$${formatNumber(Math.abs(pnl), 2)}`;
 };
 
+const toUsd = (microAmount, collateralPrice) => {
+  const raw = (parseFloat(microAmount) || 0) / 1000000;
+  const price = parseFloat(collateralPrice) || 1;
+  return raw * price;
+};
+
 export default function UserProfileModal({ address, onClose }) {
   const { network, config } = useNetwork();
   const [activeTab, setActiveTab] = useState('trades');
@@ -138,9 +144,9 @@ export default function UserProfileModal({ address, onClose }) {
                   <td>
                     {parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}
                   </td>
-                  <td>${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</td>
+                  <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</td>
                   <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
-                    {formatPnl(trade.realizedPnlCollateral / 1000000)}
+                    {formatPnl(toUsd(trade.realizedPnlCollateral, trade.collateralPrice))}
                   </td>
                 <td>
                   {trade.txHash ? (
@@ -166,7 +172,7 @@ export default function UserProfileModal({ address, onClose }) {
         {/* Mobile cards */}
         <div className="profile-cards-mobile">
           {tradeList.map((trade) => {
-            const pnl = trade.realizedPnlCollateral / 1000000;
+            const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
             return (
               <div key={trade.id} className="profile-card">
                 <div className="profile-card-header">
@@ -187,7 +193,7 @@ export default function UserProfileModal({ address, onClose }) {
                   <span className="profile-card-label">Leverage</span>
                   <span className="profile-card-value">{formatNumber(trade.trade?.leverage, 1)}x</span>
                   <span className="profile-card-label">Collateral</span>
-                  <span className="profile-card-value">${formatNumber((trade.trade?.collateralAmount || 0) / 1000000, 2)}</span>
+                  <span className="profile-card-value">${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</span>
                 </div>
                 <div className="profile-card-row">
                   <span className="profile-card-label">Open</span>
