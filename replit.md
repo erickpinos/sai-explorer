@@ -56,6 +56,8 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - Added "Biggest $ Win" and "Biggest $ Loss" insight cards using topWins/topLosses data
 - Renamed existing cards to "Biggest % Win" and "Biggest % Loss" for clarity
 - Fixed trade_change_type filter consistency (position_opened vs open)
+- Backfill optimization: metadata tracking in `metadata` table prevents redundant GraphQL scans when missing count is unchanged; backfill UPDATE queries now filter by network to prevent cross-network data contamination (Feb 2026)
+- Sync UPSERT: `ON CONFLICT (id) DO UPDATE` fills NULL collateral_token_symbol/base_token_symbol/evm_trader from new GraphQL data without overwriting existing values
 - Configured for Replit environment (Feb 2026)
 - Updated Vite to port 5000 with allowedHosts: true
 - Database connection updated to use Replit's DATABASE_URL

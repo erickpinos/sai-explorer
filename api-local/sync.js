@@ -73,7 +73,13 @@ async function syncTrades(network) {
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
           )
-          ON CONFLICT (id) DO NOTHING
+          ON CONFLICT (id) DO UPDATE SET
+            collateral_token_symbol = EXCLUDED.collateral_token_symbol,
+            base_token_symbol = EXCLUDED.base_token_symbol,
+            evm_trader = EXCLUDED.evm_trader
+          WHERE trades.collateral_token_symbol IS NULL
+            OR trades.base_token_symbol IS NULL
+            OR trades.evm_trader IS NULL
         `, [
           t.id, network, t.tradeChangeType, t.realizedPnlPct, t.realizedPnlCollateral,
           t.txHash, t.evmTxHash, t.collateralPrice, t.block.block, t.block.block_ts,
@@ -94,6 +100,84 @@ async function syncTrades(network) {
 
   console.log(`Synced ${newTradesCount} new trades for ${network}`);
   return newTradesCount;
+}
+
+async function backfillTradeSymbols(network) {
+  const missing = await pool.query(`
+    SELECT COUNT(*) as cnt FROM trades
+    WHERE network = $1 AND collateral_token_symbol IS NULL
+  `, [network]);
+
+  const missingCount = parseInt(missing.rows[0].cnt);
+  if (missingCount === 0) return 0;
+
+  const metaKey = `backfill_done_${network}`;
+  const meta = await pool.query('SELECT value FROM metadata WHERE key = $1', [metaKey]);
+  const lastBackfillCount = parseInt(meta.rows[0]?.value || '0');
+  if (lastBackfillCount > 0 && lastBackfillCount === missingCount) {
+    return 0;
+  }
+
+  console.log(`Backfilling ${missingCount} trades missing collateral_token_symbol for ${network}...`);
+
+  const PAGE_SIZE = 100;
+  let offset = 0;
+  let updatedCount = 0;
+  const MAX_PAGES = 50;
+
+  while (offset < MAX_PAGES * PAGE_SIZE) {
+    const res = await fetchGraphQL(`{
+      perp {
+        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+          id
+          trade {
+            trader
+            perpBorrowing { marketId baseToken { symbol } collateralToken { symbol } }
+          }
+        }
+      }
+    }`, network);
+
+    const trades = res.data?.perp?.tradeHistory || [];
+    if (trades.length === 0) break;
+
+    for (const t of trades) {
+      const symbol = t.trade?.perpBorrowing?.collateralToken?.symbol;
+      const baseSymbol = t.trade?.perpBorrowing?.baseToken?.symbol;
+      const evmTrader = nibiToHex(t.trade?.trader);
+      if (!symbol && !baseSymbol && !evmTrader) continue;
+
+      try {
+        const result = await pool.query(`
+          UPDATE trades SET
+            collateral_token_symbol = COALESCE(collateral_token_symbol, $1),
+            base_token_symbol = COALESCE(base_token_symbol, $2),
+            evm_trader = COALESCE(evm_trader, $3)
+          WHERE id = $4 AND network = $5
+            AND (collateral_token_symbol IS NULL OR base_token_symbol IS NULL OR evm_trader IS NULL)
+        `, [symbol, baseSymbol, evmTrader, t.id, network]);
+        if (result.rowCount > 0) updatedCount++;
+      } catch (err) {
+        // ignore individual errors
+      }
+    }
+
+    if (trades.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  const remainingMissing = await pool.query(`
+    SELECT COUNT(*) as cnt FROM trades
+    WHERE network = $1 AND collateral_token_symbol IS NULL
+  `, [network]);
+  const remainingCount = parseInt(remainingMissing.rows[0].cnt);
+  await pool.query(`
+    INSERT INTO metadata (key, value, updated_at) VALUES ($1, $2, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
+  `, [metaKey, String(remainingCount)]);
+
+  console.log(`Backfilled ${updatedCount} trades for ${network} (${remainingCount} still missing)`);
+  return updatedCount;
 }
 
 async function syncDeposits(network) {
@@ -240,7 +324,8 @@ export default async function handler(req, res) {
           syncDeposits(net),
           syncWithdraws(net)
         ]);
-        return { network: net, trades, deposits, withdraws };
+        const backfilled = await backfillTradeSymbols(net);
+        return { network: net, trades, deposits, withdraws, backfilled };
       })
     );
 

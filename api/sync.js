@@ -108,7 +108,13 @@ async function syncTrades(network) {
             ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
             ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol}
           )
-          ON CONFLICT (id) DO NOTHING
+          ON CONFLICT (id) DO UPDATE SET
+            collateral_token_symbol = EXCLUDED.collateral_token_symbol,
+            base_token_symbol = EXCLUDED.base_token_symbol,
+            evm_trader = EXCLUDED.evm_trader
+          WHERE trades.collateral_token_symbol IS NULL
+            OR trades.base_token_symbol IS NULL
+            OR trades.evm_trader IS NULL
         `;
         newTradesCount++;
       } catch (err) {
@@ -122,6 +128,84 @@ async function syncTrades(network) {
 
   console.log(`Synced ${newTradesCount} new trades for ${network}`);
   return newTradesCount;
+}
+
+async function backfillTradeSymbols(network) {
+  const missing = await sql`
+    SELECT COUNT(*) as cnt FROM trades
+    WHERE network = ${network} AND collateral_token_symbol IS NULL
+  `;
+
+  const missingCount = parseInt(missing.rows[0].cnt);
+  if (missingCount === 0) return 0;
+
+  const metaKey = `backfill_done_${network}`;
+  const meta = await sql`SELECT value FROM metadata WHERE key = ${metaKey}`;
+  const lastBackfillCount = parseInt(meta.rows[0]?.value || '0');
+  if (lastBackfillCount > 0 && lastBackfillCount === missingCount) {
+    return 0;
+  }
+
+  console.log(`Backfilling ${missingCount} trades missing collateral_token_symbol for ${network}...`);
+
+  const PAGE_SIZE = 100;
+  let offset = 0;
+  let updatedCount = 0;
+  const MAX_PAGES = 50;
+
+  while (offset < MAX_PAGES * PAGE_SIZE) {
+    const res = await fetchGraphQL(`{
+      perp {
+        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+          id
+          trade {
+            trader
+            perpBorrowing { marketId baseToken { symbol } collateralToken { symbol } }
+          }
+        }
+      }
+    }`, network);
+
+    const trades = res.data?.perp?.tradeHistory || [];
+    if (trades.length === 0) break;
+
+    for (const t of trades) {
+      const symbol = t.trade?.perpBorrowing?.collateralToken?.symbol;
+      const baseSymbol = t.trade?.perpBorrowing?.baseToken?.symbol;
+      const evmTrader = nibiToHex(t.trade?.trader);
+      if (!symbol && !baseSymbol && !evmTrader) continue;
+
+      try {
+        const result = await sql`
+          UPDATE trades SET
+            collateral_token_symbol = COALESCE(trades.collateral_token_symbol, ${symbol}),
+            base_token_symbol = COALESCE(trades.base_token_symbol, ${baseSymbol}),
+            evm_trader = COALESCE(trades.evm_trader, ${evmTrader})
+          WHERE id = ${t.id} AND network = ${network}
+            AND (collateral_token_symbol IS NULL OR base_token_symbol IS NULL OR evm_trader IS NULL)
+        `;
+        if (result.rowCount > 0) updatedCount++;
+      } catch (err) {
+        // ignore individual errors
+      }
+    }
+
+    if (trades.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  const remainingMissing = await sql`
+    SELECT COUNT(*) as cnt FROM trades
+    WHERE network = ${network} AND collateral_token_symbol IS NULL
+  `;
+  const remainingCount = parseInt(remainingMissing.rows[0].cnt);
+  await sql`
+    INSERT INTO metadata (key, value, updated_at) VALUES (${metaKey}, ${String(remainingCount)}, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = ${String(remainingCount)}, updated_at = NOW()
+  `;
+
+  console.log(`Backfilled ${updatedCount} trades for ${network} (${remainingCount} still missing)`);
+  return updatedCount;
 }
 
 async function syncDeposits(network) {
@@ -265,6 +349,11 @@ export default async function handler(req, res) {
       ])
     ]);
 
+    const [mainnetBackfill, testnetBackfill] = await Promise.all([
+      backfillTradeSymbols('mainnet'),
+      backfillTradeSymbols('testnet')
+    ]);
+
     const duration = Date.now() - startTime;
 
     const results = {
@@ -274,12 +363,14 @@ export default async function handler(req, res) {
       mainnet: {
         trades: mainnetResults[0],
         deposits: mainnetResults[1],
-        withdraws: mainnetResults[2]
+        withdraws: mainnetResults[2],
+        backfilled: mainnetBackfill
       },
       testnet: {
         trades: testnetResults[0],
         deposits: testnetResults[1],
-        withdraws: testnetResults[2]
+        withdraws: testnetResults[2],
+        backfilled: testnetBackfill
       }
     };
 

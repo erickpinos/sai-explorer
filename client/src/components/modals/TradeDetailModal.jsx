@@ -44,7 +44,7 @@ export default function TradeDetailModal({ trade, onClose }) {
   const t = trade.trade || {};
   const pb = t.perpBorrowing || {};
   const collPrice = parseFloat(trade.collateralPrice) || 1;
-  const collSymbol = isInsightTrade ? '-' : (pb.collateralToken?.symbol || 'USDC');
+  const collSymbol = isInsightTrade ? '-' : (pb.collateralToken?.symbol || (collPrice < 0.5 ? 'stNIBI' : 'USDC'));
   const isStablecoin = isInsightTrade ? true : ['USDC', 'USDT'].includes(collSymbol.toUpperCase());
   const marketSymbol = isInsightTrade ? trade.symbol : (pb.baseToken?.symbol || '-');
 
