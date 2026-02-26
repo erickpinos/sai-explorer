@@ -39,32 +39,55 @@ export default function TradeDetailModal({ trade, onClose }) {
 
   if (!trade) return null;
 
+  const isInsightTrade = !trade.trade && trade.symbol;
+
   const t = trade.trade || {};
   const pb = t.perpBorrowing || {};
   const collPrice = parseFloat(trade.collateralPrice) || 1;
-  const collSymbol = pb.collateralToken?.symbol || 'USDC';
-  const isStablecoin = ['USDC', 'USDT'].includes(collSymbol.toUpperCase());
-  const marketSymbol = pb.baseToken?.symbol || '-';
+  const collSymbol = isInsightTrade ? '-' : (pb.collateralToken?.symbol || 'USDC');
+  const isStablecoin = isInsightTrade ? true : ['USDC', 'USDT'].includes(collSymbol.toUpperCase());
+  const marketSymbol = isInsightTrade ? trade.symbol : (pb.baseToken?.symbol || '-');
 
-  const rawCollateral = (parseFloat(t.collateralAmount) || 0) / 1000000;
-  const collateralUsd = rawCollateral * collPrice;
+  let rawCollateral, collateralUsd, rawOpenCollateral, openCollateralUsd, rawPnl, pnlUsd, pnlPct;
 
-  const rawOpenCollateral = (parseFloat(t.openCollateralAmount) || 0) / 1000000;
-  const openCollateralUsd = rawOpenCollateral * collPrice;
+  if (isInsightTrade) {
+    const leverage = parseFloat(trade.leverage) || 1;
+    pnlUsd = parseFloat(trade.pnlUsd) || 0;
+    collateralUsd = (parseFloat(trade.positionSize) || 0) / leverage;
+    rawCollateral = collateralUsd;
+    rawOpenCollateral = 0;
+    openCollateralUsd = 0;
+    rawPnl = pnlUsd;
+    pnlPct = parseFloat(trade.pnlPct) || 0;
+  } else {
+    rawCollateral = (parseFloat(t.collateralAmount) || 0) / 1000000;
+    collateralUsd = rawCollateral * collPrice;
+    rawOpenCollateral = (parseFloat(t.openCollateralAmount) || 0) / 1000000;
+    openCollateralUsd = rawOpenCollateral * collPrice;
+    rawPnl = (parseFloat(trade.realizedPnlCollateral) || 0) / 1000000;
+    pnlUsd = rawPnl * collPrice;
+    pnlPct = parseFloat(trade.realizedPnlPct) || 0;
+  }
 
-  const rawPnl = (parseFloat(trade.realizedPnlCollateral) || 0) / 1000000;
-  const pnlUsd = rawPnl * collPrice;
-  const pnlPct = parseFloat(trade.realizedPnlPct) || 0;
+  const tradeIsLong = isInsightTrade ? trade.isLong : t.isLong;
+  const tradeLeverage = isInsightTrade ? trade.leverage : t.leverage;
+  const tradeTrader = isInsightTrade ? trade.trader : t.trader;
+  const tradeEvmTrader = isInsightTrade ? trade.evmTrader : t.evmTrader;
+  const tradeTxHash = isInsightTrade ? trade.txHash : trade.txHash;
+  const tradeEvmTxHash = isInsightTrade ? trade.evmTxHash : trade.evmTxHash;
+  const tradeTimestamp = isInsightTrade ? trade.timestamp : trade.block?.block_ts;
 
-  const displayType = (
-    t.tradeType === 'limit' &&
-    trade.tradeChangeType?.toLowerCase().includes('closed') &&
-    !parseFloat(t.closePrice) &&
-    !parseFloat(trade.realizedPnlCollateral)
-  ) ? 'limit_order_cancelled' : trade.tradeChangeType;
+  const displayType = isInsightTrade
+    ? trade.type
+    : (
+      t.tradeType === 'limit' &&
+      trade.tradeChangeType?.toLowerCase().includes('closed') &&
+      !parseFloat(t.closePrice) &&
+      !parseFloat(trade.realizedPnlCollateral)
+    ) ? 'limit_order_cancelled' : trade.tradeChangeType;
 
-  const hasTp = parseFloat(t.tp) > 0;
-  const hasSl = parseFloat(t.sl) > 0;
+  const hasTp = !isInsightTrade && parseFloat(t.tp) > 0;
+  const hasSl = !isInsightTrade && parseFloat(t.sl) > 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -75,8 +98,8 @@ export default function TradeDetailModal({ trade, onClose }) {
             <span className={getTradeTypeBadgeClass(displayType)}>
               {getTradeTypeLabel(displayType)}
             </span>
-            <span className={t.isLong ? 'badge badge-green' : 'badge badge-red'}>
-              {t.isLong ? 'Long' : 'Short'}
+            <span className={tradeIsLong ? 'badge badge-green' : 'badge badge-red'}>
+              {tradeIsLong ? 'Long' : 'Short'}
             </span>
           </div>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -91,52 +114,64 @@ export default function TradeDetailModal({ trade, onClose }) {
                   <span className="trade-detail-label">Market</span>
                   <span className="trade-detail-value"><strong>{marketSymbol}</strong></span>
                 </div>
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Market ID</span>
-                  <span className="trade-detail-value">{pb.marketId != null ? pb.marketId : '-'}</span>
-                </div>
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Collateral Type</span>
-                  <span className="trade-detail-value">
-                    <span className="badge badge-purple" style={{ fontSize: '11px' }}>{collSymbol}</span>
-                  </span>
-                </div>
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Market ID</span>
+                    <span className="trade-detail-value">{pb.marketId != null ? pb.marketId : '-'}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Collateral Type</span>
+                    <span className="trade-detail-value">
+                      <span className="badge badge-purple" style={{ fontSize: '11px' }}>{collSymbol}</span>
+                    </span>
+                  </div>
+                )}
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Direction</span>
                   <span className="trade-detail-value">
-                    <span className={t.isLong ? 'badge badge-green' : 'badge badge-red'}>
-                      {t.isLong ? 'Long' : 'Short'}
+                    <span className={tradeIsLong ? 'badge badge-green' : 'badge badge-red'}>
+                      {tradeIsLong ? 'Long' : 'Short'}
                     </span>
                   </span>
                 </div>
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Leverage</span>
-                  <span className="trade-detail-value">{formatNumber(t.leverage, 1)}x</span>
+                  <span className="trade-detail-value">{formatNumber(tradeLeverage, 1)}x</span>
                 </div>
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Order Type</span>
-                  <span className="trade-detail-value" style={{ textTransform: 'capitalize' }}>{t.tradeType || '-'}</span>
-                </div>
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Status</span>
-                  <span className="trade-detail-value">{t.isOpen ? 'Open' : 'Closed'}</span>
-                </div>
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Order Type</span>
+                    <span className="trade-detail-value" style={{ textTransform: 'capitalize' }}>{t.tradeType || '-'}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Status</span>
+                    <span className="trade-detail-value">{t.isOpen ? 'Open' : 'Closed'}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="trade-detail-section">
-              <h3 className="trade-detail-section-title">Pricing</h3>
+              <h3 className="trade-detail-section-title">{isInsightTrade ? 'Date' : 'Pricing'}</h3>
               <div className="trade-detail-rows">
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Open Price</span>
-                  <span className="trade-detail-value">{formatPrice(t.openPrice || 0)}</span>
-                </div>
-                <div className="trade-detail-row">
-                  <span className="trade-detail-label">Close Price</span>
-                  <span className="trade-detail-value">
-                    {parseFloat(t.closePrice) > 0 ? formatPrice(t.closePrice) : '-'}
-                  </span>
-                </div>
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Open Price</span>
+                    <span className="trade-detail-value">{formatPrice(t.openPrice || 0)}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">Close Price</span>
+                    <span className="trade-detail-value">
+                      {parseFloat(t.closePrice) > 0 ? formatPrice(t.closePrice) : '-'}
+                    </span>
+                  </div>
+                )}
                 {hasTp && (
                   <div className="trade-detail-row">
                     <span className="trade-detail-label">Take Profit</span>
@@ -151,7 +186,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                 )}
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Time</span>
-                  <span className="trade-detail-value">{formatDate(trade.block?.block_ts)}</span>
+                  <span className="trade-detail-value">{formatDate(tradeTimestamp)}</span>
                 </div>
               </div>
             </div>
@@ -160,7 +195,7 @@ export default function TradeDetailModal({ trade, onClose }) {
               <h3 className="trade-detail-section-title">Collateral</h3>
               <div className="trade-detail-rows">
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Current Collateral</span>
+                  <span className="trade-detail-label">{isInsightTrade ? 'Collateral' : 'Current Collateral'}</span>
                   <span className="trade-detail-value"><strong>${formatNumber(collateralUsd, 2)}</strong></span>
                 </div>
                 {openCollateralUsd > 0 && openCollateralUsd !== collateralUsd && (
@@ -171,7 +206,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                 )}
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Position Size</span>
-                  <span className="trade-detail-value">${formatNumber(collateralUsd * (parseFloat(t.leverage) || 1), 2)}</span>
+                  <span className="trade-detail-value">${formatNumber(isInsightTrade ? (trade.positionSize || 0) : collateralUsd * (parseFloat(tradeLeverage) || 1), 2)}</span>
                 </div>
               </div>
             </div>
@@ -204,35 +239,35 @@ export default function TradeDetailModal({ trade, onClose }) {
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Trader (Bech32)</span>
                   <span className="trade-detail-value trade-detail-mono">
-                    <a href={`https://nibiru.explorers.guru/account/${t.trader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
-                      {t.trader || '-'}
+                    <a href={`https://nibiru.explorers.guru/account/${tradeTrader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                      {tradeTrader || '-'}
                     </a>
                   </span>
                 </div>
                 <div className="trade-detail-row">
                   <span className="trade-detail-label">Trader (EVM)</span>
                   <span className="trade-detail-value trade-detail-mono">
-                    <a href={`https://nibiscan.io/address/${t.evmTrader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
-                      {t.evmTrader || '-'}
+                    <a href={`https://nibiscan.io/address/${tradeEvmTrader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                      {tradeEvmTrader || '-'}
                     </a>
                   </span>
                 </div>
-                {trade.txHash && (
+                {tradeTxHash && (
                   <div className="trade-detail-row">
                     <span className="trade-detail-label">TX Hash</span>
                     <span className="trade-detail-value trade-detail-mono">
-                      <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
-                        {shortenHash(trade.txHash)}
+                      <a href={`${config.explorerTx}${tradeTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                        {shortenHash(tradeTxHash)}
                       </a>
                     </span>
                   </div>
                 )}
-                {trade.evmTxHash && (
+                {tradeEvmTxHash && (
                   <div className="trade-detail-row">
                     <span className="trade-detail-label">EVM TX Hash</span>
                     <span className="trade-detail-value trade-detail-mono">
-                      <a href={`${config.explorerEvmTx}${trade.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
-                        {shortenHash(trade.evmTxHash)}
+                      <a href={`${config.explorerEvmTx}${tradeEvmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                        {shortenHash(tradeEvmTxHash)}
                       </a>
                     </span>
                   </div>
@@ -259,7 +294,7 @@ export default function TradeDetailModal({ trade, onClose }) {
               <div className="trade-detail-explainer-item">
                 <strong>Position Size</strong>
                 <p>
-                  The total position size is the collateral multiplied by the leverage: ${formatNumber(collateralUsd, 2)} × {formatNumber(t.leverage, 1)}x = <strong>${formatNumber(collateralUsd * (parseFloat(t.leverage) || 1), 2)}</strong>.
+                  The total position size is the collateral multiplied by the leverage: ${formatNumber(collateralUsd, 2)} × {formatNumber(tradeLeverage, 1)}x = <strong>${formatNumber(collateralUsd * (parseFloat(tradeLeverage) || 1), 2)}</strong>.
                 </p>
               </div>
               {(pnlUsd !== 0 || pnlPct !== 0) && (
