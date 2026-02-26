@@ -5,6 +5,7 @@ import { formatNumber, formatDate, formatAddress, formatPrice } from '../../util
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
+import TradeDetailModal from '../modals/TradeDetailModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
 
@@ -68,6 +69,7 @@ export default function TradesTable() {
   const { data: trades, loading, error } = useTrades(network);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
+  const [selectedTrade, setSelectedTrade] = useState(null);
   const [sortCol, setSortCol] = useState('time');
   const { toggle, viewClass } = useViewToggle();
   const [sortDir, setSortDir] = useState('desc');
@@ -152,7 +154,7 @@ export default function TradesTable() {
                 !parseFloat(trade.realizedPnlCollateral)
               ) ? 'limit_order_cancelled' : trade.tradeChangeType;
               return (
-              <tr key={trade.id}>
+              <tr key={trade.id} className="clickable-row" onClick={() => setSelectedTrade(trade)}>
                 <td>{formatDate(trade.block?.block_ts)}</td>
                 <td>
                   <span className={getBadgeClass(displayType)}>
@@ -166,7 +168,7 @@ export default function TradesTable() {
                   <span
                     className="address-link"
                     title={trade.trade?.trader}
-                    onClick={() => setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader })}
+                    onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(trade.trade?.trader)}
@@ -176,7 +178,7 @@ export default function TradesTable() {
                   <span
                     className="address-link"
                     title={trade.trade?.evmTrader}
-                    onClick={() => setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader })}
+                    onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(trade.trade?.evmTrader)}
@@ -194,14 +196,14 @@ export default function TradesTable() {
                 <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
                   {formatPnl(toUsd(trade.realizedPnlCollateral, trade.collateralPrice))}
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   {trade.txHash ? (
                     <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                       {shortenHash(trade.txHash)}
                     </a>
                   ) : '-'}
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   {trade.evmTxHash ? (
                     <a href={`${config.explorerEvmTx}${trade.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                       {shortenHash(trade.evmTxHash)}
@@ -219,7 +221,7 @@ export default function TradesTable() {
         {paginatedTrades.map((trade) => {
           const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
           return (
-            <div key={trade.id} className="profile-card">
+            <div key={trade.id} className="profile-card clickable-row" onClick={() => setSelectedTrade(trade)}>
               <div className="profile-card-header">
                 <div className="profile-card-badges">
                   <span className={getBadgeClass(trade.tradeChangeType)}>
@@ -263,7 +265,7 @@ export default function TradesTable() {
                 <span className="profile-card-value">
                   <span
                     className="address-link"
-                    onClick={() => setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader })}
+                    onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(trade.trade?.evmTrader || trade.trade?.trader)}
@@ -272,7 +274,7 @@ export default function TradesTable() {
                 {trade.txHash && (
                   <>
                     <span className="profile-card-label">TX</span>
-                    <span className="profile-card-value">
+                    <span className="profile-card-value" onClick={(e) => e.stopPropagation()}>
                       <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                         {shortenHash(trade.txHash)}
                       </a>
@@ -299,6 +301,10 @@ export default function TradesTable() {
 
       {selectedUserAddress && (
         <UserProfileModal address={selectedUserAddress} onClose={() => setSelectedUserAddress(null)} />
+      )}
+
+      {selectedTrade && (
+        <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />
       )}
     </div>
   );
