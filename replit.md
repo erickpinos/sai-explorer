@@ -42,11 +42,13 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 ## Data Notes
 - `realized_pnl_pct` in the database is stored as a ratio (e.g., -1 = -100%, 9 = 900%)
 - Backend multiplies by 100 before sending to frontend, so frontend displays values directly as percentages
-- `realized_pnl_collateral` is stored in micro-units (divide by 1,000,000 for USD)
+- `realized_pnl_collateral` is stored in micro-units (divide by 1,000,000 then multiply by collateral_price for USD)
+- `collateral_price` is stored per trade at sync time; for USDC it's ~1.0, for stNIBI it's ~0.005. All SQL queries that produce USD values must multiply by COALESCE(collateral_price, 1)
 
 ## Recent Changes
+- Fixed USD conversion across ALL backend APIs: insights, stats, volume, user-stats, chart-data now multiply by collateral_price for correct USD values (Feb 2026)
 - Added TradeDetailModal: clicking a trade row opens a detailed modal with position info, pricing, collateral, PnL, addresses, and an explanation of how collateral & PnL are calculated (Feb 2026)
-- Fixed USD conversion for stNIBI-collateral trades: collateral and PnL values now multiply by collateralPrice for correct USD display (Feb 2026)
+- Fixed USD conversion for stNIBI-collateral trades in frontend: collateral and PnL values now multiply by collateralPrice for correct USD display (Feb 2026)
 - Added collateral_token_symbol to trades table, fetched directly from GraphQL perpBorrowing.collateralToken (Feb 2026)
 - Collateral type displayed per-trade in Perpetual Trades tab (resolves ambiguity of shared market IDs across collateral types)
 - Fixed percentage display: multiplied realized_pnl_pct by 100 across all insights (Feb 2026)

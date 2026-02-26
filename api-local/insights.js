@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
       pool.query(`
         SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
-               realized_pnl_collateral / 1000000.0 as pnl_usd
+               realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
 
       pool.query(`
         SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
-               realized_pnl_collateral / 1000000.0 as pnl_usd
+               realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd
         FROM trades
         WHERE network = $1
           AND realized_pnl_pct IS NOT NULL
@@ -132,31 +132,31 @@ export default async function handler(req, res) {
 
       pool.query(`
         SELECT trader, evm_trader, base_token_symbol, is_long,
-          realized_pnl_collateral / 1000000.0 as pnl_usd,
-          collateral_amount * leverage / 1000000.0 as position_size,
+          realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
+          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
-        ORDER BY realized_pnl_collateral DESC
+        ORDER BY realized_pnl_collateral * COALESCE(collateral_price, 1) DESC
         LIMIT 10
       `, [network]),
 
       pool.query(`
         SELECT trader, evm_trader, base_token_symbol, is_long,
-          realized_pnl_collateral / 1000000.0 as pnl_usd,
-          collateral_amount * leverage / 1000000.0 as position_size,
+          realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
+          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
-        ORDER BY realized_pnl_collateral ASC
+        ORDER BY realized_pnl_collateral * COALESCE(collateral_price, 1) ASC
         LIMIT 10
       `, [network]),
 
       pool.query(`
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_pct,
-          realized_pnl_collateral / 1000000.0 as pnl_usd,
-          collateral_amount * leverage / 1000000.0 as position_size,
+          realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
+          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = $1 AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
@@ -168,8 +168,8 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_pct,
-          realized_pnl_collateral / 1000000.0 as pnl_usd,
-          collateral_amount * leverage / 1000000.0 as position_size,
+          realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
+          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = $1 AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
@@ -180,8 +180,8 @@ export default async function handler(req, res) {
 
       pool.query(`
         SELECT
-          SUM(CASE WHEN realized_pnl_collateral > 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_wins,
-          SUM(CASE WHEN realized_pnl_collateral < 0 THEN realized_pnl_collateral ELSE 0 END) / 1000000.0 as total_losses,
+          SUM(CASE WHEN realized_pnl_collateral > 0 THEN realized_pnl_collateral * COALESCE(collateral_price, 1) ELSE 0 END) / 1000000.0 as total_wins,
+          SUM(CASE WHEN realized_pnl_collateral < 0 THEN realized_pnl_collateral * COALESCE(collateral_price, 1) ELSE 0 END) / 1000000.0 as total_losses,
           COUNT(CASE WHEN realized_pnl_collateral > 0 THEN 1 END) as win_count,
           COUNT(CASE WHEN realized_pnl_collateral < 0 THEN 1 END) as loss_count
         FROM trades

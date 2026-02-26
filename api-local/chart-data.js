@@ -21,7 +21,7 @@ export default async function handler(req, res) {
           DATE(block_ts) as day,
           COUNT(*) as trade_count,
           SUM(CASE WHEN trade_change_type IN ('position_opened', 'order_triggered')
-              THEN ABS(collateral_amount * leverage / 1000000) ELSE 0 END) as volume
+              THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
         FROM trades
         WHERE network = $1
           ${cutoff ? `AND block_ts >= $2` : ''}

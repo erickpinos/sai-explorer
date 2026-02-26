@@ -17,9 +17,9 @@ export default async function handler(req, res) {
         evm_trader,
         COUNT(*) as trade_count,
         SUM(CASE WHEN trade_change_type = 'position_opened'
-            THEN ABS(collateral_amount * leverage / 1000000)
+            THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))
             ELSE 0 END) as total_volume,
-        SUM(COALESCE(realized_pnl_collateral, 0) / 1000000) as realized_pnl,
+        SUM(COALESCE(realized_pnl_collateral, 0) / 1000000 * COALESCE(collateral_price, 1)) as realized_pnl,
         COUNT(CASE WHEN trade_change_type = 'position_opened' THEN 1 END) as opens,
         COUNT(CASE WHEN trade_change_type LIKE 'position_closed%' THEN 1 END) as closes,
         COUNT(CASE WHEN trade_change_type = 'position_liquidated' THEN 1 END) as liquidations,

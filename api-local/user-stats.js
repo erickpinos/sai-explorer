@@ -21,8 +21,8 @@ export default async function handler(req, res) {
     const tradesResult = await pool.query(`
       SELECT
         COUNT(*) as total_trades,
-        SUM(collateral_amount * leverage / 1000000) as total_volume,
-        SUM(realized_pnl_collateral / 1000000) as realized_pnl
+        SUM(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) as total_volume,
+        SUM(realized_pnl_collateral / 1000000 * COALESCE(collateral_price, 1)) as realized_pnl
       FROM trades
       WHERE network = $1
         AND (trader = $2 OR evm_trader = $2)
