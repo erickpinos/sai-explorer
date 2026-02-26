@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useTrades } from '../../hooks/useApi';
+import { useTrades, useMarkets } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -53,16 +53,28 @@ const SORT_GETTERS = {
   closePrice: (t) => parseFloat(t.trade?.closePrice) || 0,
   collateral: (t) => parseFloat(t.trade?.collateralAmount) || 0,
   pnl:        (t) => parseFloat(t.realizedPnlCollateral) || 0,
+  collateralType: (t) => t._collateralType || '',
 };
 
 export default function TradesTable() {
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
+  const { data: marketsData } = useMarkets(network);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const [sortCol, setSortCol] = useState('time');
   const { toggle, viewClass } = useViewToggle();
   const [sortDir, setSortDir] = useState('desc');
+
+  const collateralByMarketId = useMemo(() => {
+    const map = {};
+    (marketsData?.markets || []).forEach(m => {
+      if (m.marketId != null && m.collateralToken?.symbol) {
+        map[m.marketId] = m.collateralToken.symbol;
+      }
+    });
+    return map;
+  }, [marketsData]);
 
   const handleSort = (col) => {
     if (col === sortCol) {
@@ -76,15 +88,19 @@ export default function TradesTable() {
 
   const sorted = useMemo(() => {
     if (!trades) return [];
+    const enriched = trades.map(t => ({
+      ...t,
+      _collateralType: collateralByMarketId[t.trade?.perpBorrowing?.marketId] || '-'
+    }));
     const getter = SORT_GETTERS[sortCol];
-    if (!getter) return trades;
-    return [...trades].sort((a, b) => {
+    if (!getter) return enriched;
+    return [...enriched].sort((a, b) => {
       const aVal = getter(a);
       const bVal = getter(b);
       if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
     });
-  }, [trades, sortCol, sortDir]);
+  }, [trades, sortCol, sortDir, collateralByMarketId]);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -121,6 +137,7 @@ export default function TradesTable() {
               <SortTh col="time">Time</SortTh>
               <SortTh col="type">Type</SortTh>
               <SortTh col="market">Market</SortTh>
+              <SortTh col="collateralType">Collateral Type</SortTh>
               <SortTh col="trader">Trader</SortTh>
               <SortTh col="evmAddress">EVM Address</SortTh>
               <SortTh col="direction">Direction</SortTh>
@@ -150,6 +167,7 @@ export default function TradesTable() {
                   </span>
                 </td>
                 <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
+                <td><span className="badge badge-purple" style={{ fontSize: '11px' }}>{trade._collateralType}</span></td>
                 <td>
                   <span
                     className="address-link"
@@ -219,6 +237,7 @@ export default function TradesTable() {
                   <span className="profile-card-market">
                     {trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}
                   </span>
+                  <span className="badge badge-purple" style={{ fontSize: '11px' }}>{trade._collateralType}</span>
                 </div>
                 <span className="profile-card-time">{formatDate(trade.block?.block_ts)}</span>
               </div>
