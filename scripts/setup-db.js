@@ -37,6 +37,14 @@ async function setupDatabase() {
     `);
     console.log('✓ Created trades table');
 
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS evm_tx_hash TEXT');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS collateral_price NUMERIC');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS evm_trader TEXT');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS market_id INTEGER');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS base_token_symbol TEXT');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
+    console.log('✓ Ensured trades columns up to date');
+
     // Create indexes for trades
     await query('CREATE INDEX IF NOT EXISTS idx_trades_network ON trades(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_block_ts ON trades(network, block_ts DESC)');
@@ -66,6 +74,12 @@ async function setupDatabase() {
     `);
     console.log('✓ Created deposits table');
 
+    await query('ALTER TABLE deposits ADD COLUMN IF NOT EXISTS evm_tx_hash TEXT');
+    await query('ALTER TABLE deposits ADD COLUMN IF NOT EXISTS vault_address TEXT');
+    await query('ALTER TABLE deposits ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
+    await query('ALTER TABLE deposits ADD COLUMN IF NOT EXISTS vault_tvl NUMERIC');
+    console.log('✓ Ensured deposits columns up to date');
+
     // Create indexes for deposits
     await query('CREATE INDEX IF NOT EXISTS idx_deposits_network ON deposits(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_deposits_block_ts ON deposits(network, block_ts DESC)');
@@ -90,6 +104,10 @@ async function setupDatabase() {
     `);
     console.log('✓ Created withdraws table');
 
+    await query('ALTER TABLE withdraws ADD COLUMN IF NOT EXISTS vault_address TEXT');
+    await query('ALTER TABLE withdraws ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
+    console.log('✓ Ensured withdraws columns up to date');
+
     // Create indexes for withdraws
     await query('CREATE INDEX IF NOT EXISTS idx_withdraws_network ON withdraws(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_withdraws_depositor ON withdraws(depositor)');
@@ -109,6 +127,10 @@ async function setupDatabase() {
       )
     `);
     console.log('✓ Created markets table');
+
+    await query('ALTER TABLE markets ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
+    await query('ALTER TABLE markets ADD COLUMN IF NOT EXISTS base_token_symbol TEXT');
+    console.log('✓ Ensured markets columns up to date');
 
     // Create metadata table (for tracking sync state)
     await query(`

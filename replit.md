@@ -46,6 +46,7 @@ A blockchain explorer for Sai.fun transactions with real-time data syncing and a
 - `collateral_price` is stored per trade at sync time; for USDC it's ~1.0, for stNIBI it's ~0.005. All SQL queries that produce USD values must multiply by COALESCE(collateral_price, 1)
 
 ## Recent Changes
+- Added ALTER TABLE migration statements to setup-db.js to ensure missing columns are added to existing tables on Vercel/Neon deployments (Feb 2026)
 - Fixed USD conversion across ALL backend APIs: insights, stats, volume, user-stats, chart-data now multiply by collateral_price for correct USD values (Feb 2026)
 - Added TradeDetailModal: clicking a trade row opens a detailed modal with position info, pricing, collateral, PnL, addresses, and an explanation of how collateral & PnL are calculated (Feb 2026)
 - Fixed USD conversion for stNIBI-collateral trades in frontend: collateral and PnL values now multiply by collateralPrice for correct USD display (Feb 2026)
