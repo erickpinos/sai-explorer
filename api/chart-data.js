@@ -21,8 +21,7 @@ export default async function handler(req, res) {
           SELECT
             DATE(block_ts) as day,
             COUNT(*) as trade_count,
-            SUM(CASE WHEN trade_change_type IN ('position_opened', 'order_triggered')
-                THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
+            SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as volume
           FROM trades
           WHERE network = ${network} AND block_ts >= ${cutoff.toISOString()}
           GROUP BY DATE(block_ts)
@@ -32,8 +31,7 @@ export default async function handler(req, res) {
           SELECT
             DATE(block_ts) as day,
             COUNT(*) as trade_count,
-            SUM(CASE WHEN trade_change_type IN ('position_opened', 'order_triggered')
-                THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
+            SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as volume
           FROM trades
           WHERE network = ${network}
           GROUP BY DATE(block_ts)

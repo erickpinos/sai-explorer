@@ -55,7 +55,6 @@ export default async function handler(req, res) {
               ELSE 0 END) as total_volume
         FROM trades
         WHERE network = ${network}
-          AND trade_change_type IN ('position_opened', 'order_triggered')
       `,
 
       // Total deposits
