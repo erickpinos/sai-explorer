@@ -194,6 +194,28 @@ npm run setup-db
 
 ---
 
+## Vercel
+
+### Linking the project locally
+
+```bash
+vercel link
+```
+
+### Backfilling the production database
+
+If the Vercel DB is missing historical data (e.g. after a fresh deploy), pull the production env vars and run the full indexer against it:
+
+```bash
+vercel env pull .env.vercel.local
+set -a && source .env.vercel.local && set +a && node scripts/initial-index.js
+rm .env.vercel.local
+```
+
+> `setup-db` uses `CREATE TABLE IF NOT EXISTS` — it never drops data, so it's safe to run on production without re-indexing.
+
+---
+
 ## Contributing
 
 1. Fork the repository
