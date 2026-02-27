@@ -79,7 +79,7 @@ export default function InsightsPage() {
         <ActivityChart />
       </div>
       <div id="daily-volume" style={{ marginBottom: '2rem' }}>
-        <VolumeChart />
+        <VolumeChart showMethodology />
       </div>
 
       <div id="platform-stats" className="insights-grid">

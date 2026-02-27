@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStats, useTvlBreakdown } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatUSD } from '../../utils/formatters';
+import VolumeChart from '../charts/VolumeChart';
 
 function truncateAddress(addr) {
   if (!addr) return '—';
@@ -68,16 +69,20 @@ function TvlBreakdownModal({ network, onClose }) {
 function VolumeMethodologyModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Volume Methodology</h2>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="methodology-content">
           <div className="methodology-section">
+            <VolumeChart />
+          </div>
+
+          <div className="methodology-section">
             <h3>How Trading Volume is Calculated</h3>
             <p>
-              Trading volume represents the total <strong>notional value</strong> of all perpetual trades executed on the platform.
+              Trading volume represents the total <strong>notional value</strong> of all perpetual trades executed on the platform, counted on both the open and close of each position. This matches the methodology used by DeFiLlama and most industry aggregators.
             </p>
           </div>
 
@@ -87,30 +92,27 @@ function VolumeMethodologyModal({ onClose }) {
               Volume = Collateral Amount &times; Leverage
             </div>
             <p>
-              Each trade's notional size is calculated by multiplying the collateral deposited by the leverage used.
-              For example, a $100 collateral position at 10x leverage = $1,000 notional volume.
+              Each trade's notional size is calculated by multiplying the collateral by the leverage used.
+              For example, a $100 collateral position at 10x leverage = $1,000 notional volume per leg.
+              A full round-trip (open + close) contributes $2,000 total.
             </p>
           </div>
 
           <div className="methodology-section">
             <h3>What's Counted</h3>
             <ul>
-              <li><strong>Position Opens</strong> &mdash; When a new market order position is opened</li>
-              <li><strong>Triggered Orders</strong> &mdash; When a limit order executes and becomes a position</li>
+              <li><strong>Position Opens</strong> &mdash; Direct opens and triggered limit/stop orders</li>
+              <li><strong>Position Closes</strong> &mdash; User closes, take profit, and stop loss triggers</li>
+              <li><strong>Liquidations</strong> &mdash; When a position is liquidated</li>
             </ul>
           </div>
 
           <div className="methodology-section">
             <h3>What's Excluded</h3>
             <ul>
-              <li><strong>Closes &amp; Liquidations</strong> &mdash; Settling an existing position, not new volume</li>
-              <li><strong>TP/SL Updates</strong> &mdash; Parameter changes, no capital deployed</li>
-              <li><strong>Pending Orders</strong> &mdash; Limit orders not yet triggered</li>
+              <li><strong>TP/SL Updates</strong> &mdash; Parameter changes only, no capital deployed</li>
+              <li><strong>Limit/Stop Order Created/Cancelled</strong> &mdash; Pending orders that haven't executed or were cancelled</li>
             </ul>
-            <p className="methodology-note">
-              Each position is counted once — when it is opened. Counting closes would double-count
-              every position since the same notional appears in both the open and close records.
-            </p>
           </div>
         </div>
       </div>

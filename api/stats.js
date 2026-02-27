@@ -55,6 +55,7 @@ export default async function handler(req, res) {
               ELSE 0 END) as total_volume
         FROM trades
         WHERE network = ${network}
+          AND trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
       `,
 
       // Total deposits

@@ -26,6 +26,7 @@ body {
   font-size: 0.8rem;
   text-align: center;
   padding: 6px 16px;
+  margin-bottom: 24px;
 }
 
 .disclaimer-banner a {
@@ -223,6 +224,38 @@ h1 {
   font-size: 13px !important;
   color: #666 !important;
   font-style: italic;
+}
+
+/* Volume Methodology Dropdown */
+.volume-methodology-dropdown {
+  margin-top: 16px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.volume-methodology-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.volume-methodology-toggle:hover {
+  color: #e1e1e6;
+}
+
+.volume-methodology-chevron {
+  font-size: 10px;
+}
+
+.volume-methodology-body {
+  padding: 8px 0 4px;
 }
 
 /* Fun Facts */

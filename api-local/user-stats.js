@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       FROM trades
       WHERE network = $1
         AND (trader = $2 OR evm_trader = $2)
+        AND trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
     `, [network, address]);
 
     const depositsResult = await pool.query(`

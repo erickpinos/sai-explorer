@@ -25,6 +25,7 @@ export default async function handler(req, res) {
       FROM trades
       WHERE network = ${network}
         AND (trader = ${address} OR evm_trader = ${address})
+        AND trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
     `;
 
     const depositsResult = await sql`
