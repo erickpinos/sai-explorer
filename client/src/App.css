@@ -19,6 +19,24 @@ body {
   flex-direction: column;
 }
 
+.disclaimer-banner {
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a3a;
+  color: #888;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 6px 16px;
+}
+
+.disclaimer-banner a {
+  color: #a78bfa;
+  text-decoration: none;
+}
+
+.disclaimer-banner a:hover {
+  text-decoration: underline;
+}
+
 .container {
   max-width: 1400px;
   margin: 0 auto;

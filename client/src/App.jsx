@@ -79,6 +79,11 @@ function AppContent() {
     <div className="app">
       <Header onFetchNew={handleFetchNew} onRefetchAll={handleRefetchAll} syncing={syncing} />
 
+      <div className="disclaimer-banner">
+        Values shown are estimates. For official stats, visit{' '}
+        <a href="https://defillama.com/protocol/sai" target="_blank" rel="noopener noreferrer">DefiLlama</a>.
+      </div>
+
       <div className="container">
         <Stats key={`stats-${refreshKey}`} />
 
