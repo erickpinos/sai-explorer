@@ -1,6 +1,6 @@
 # Sai Transaction Explorer
 
-A blockchain explorer for Sai.fun transactions with real-time data syncing and analytics.
+Sai Explorer is a blockchain analytics dashboard for Sai.fun, a perpetual trading platform on Nibiru chain. It indexes on-chain trade, deposit, and withdrawal data into a Postgres database and serves it through a React frontend.
 
 ## Features
 
@@ -135,21 +135,75 @@ Port 5433 is used to avoid conflicts with any local Postgres installation (which
 
 ---
 
+## How It Works
+
+### Data Flow
+
+```
+Nibiru Chain (GraphQL) → Sync Engine → PostgreSQL → REST API → React Frontend
+```
+
+1. **Sync** — The sync engine polls `sai-keeper.nibiru.fi` (GraphQL) to fetch trade history, deposits, and withdrawals. It does incremental sync, only fetching records newer than the last stored timestamp. Runs on startup and every 5 minutes locally, or via Vercel cron in production.
+
+2. **PostgreSQL** — Stores trades (opens, closes, liquidations, TP/SL updates, limit orders), LP deposits, withdrawal requests, and sync metadata.
+
+3. **REST API** — 15 endpoints serve aggregated data. Most query the database; markets and collateral data are fetched live from GraphQL.
+
+4. **React Frontend** — A tab-based SPA with 7 views: Trades, Deposits, Withdraws, Volume (User Stats), Markets, Collateral, and Insights.
+
+### Key Concepts
+
+- **Dual addresses**: Every trader has a Bech32 (`nibi1...`) and EVM (`0x...`) address. The sync engine converts between them using `scripts/addressUtils.js`.
+- **Volume formula**: `ABS(collateral_amount × leverage / 1,000,000 × collateral_price)`. Excludes meta events (TP/SL updates, limit/stop order creation/cancellation). Canonical list defined in `shared/constants.js`.
+- **Network toggle**: Supports mainnet and testnet via React Context.
+- **Two API directories**: `api/` uses Vercel's `@vercel/postgres` for serverless deployment; `api-local/` uses `pg` Pool for the local Express server. Both must have identical business logic. Shared constants (excluded trade types, active vaults, GraphQL endpoints) live in `shared/constants.js`.
+
+### API Endpoints
+
+| Endpoint | Description | Data Source |
+|---|---|---|
+| `GET /api/trades` | Perpetual trade history | DB |
+| `GET /api/deposits` | LP deposit history | DB |
+| `GET /api/withdraws` | Withdrawal requests | DB |
+| `GET /api/stats` | Platform totals (volume, TVL, trader count) | DB + GraphQL |
+| `GET /api/volume` | Per-user volume rankings | DB |
+| `GET /api/insights` | Analytics (biggest wins/losses, liquidation rates) | DB |
+| `GET /api/chart-data` | Daily activity and volume | DB |
+| `GET /api/tvl-breakdown` | TVL by vault | GraphQL |
+| `GET /api/markets` | Market data (prices, OI, fees, funding) | GraphQL |
+| `GET /api/collateral` | Collateral indices and vault data | GraphQL |
+| `GET /api/user-stats` | Individual user statistics | DB |
+| `GET /api/user-trades` | Individual user trade history | DB |
+| `GET /api/user-deposits` | Individual user deposits | DB |
+| `GET /api/user-withdraws` | Individual user withdrawals | DB |
+| `POST /api/sync` | Trigger data sync from blockchain | GraphQL → DB |
+
+All `GET` endpoints accept `?network=mainnet|testnet`. User endpoints also require `?address=...`.
+
+---
+
 ## Project Structure
 
 ```
 ├── server-local.js        # Express API server
 ├── api-local/             # API route handlers (local dev)
 ├── api/                   # Serverless function handlers (production)
+├── shared/
+│   └── constants.js       # Shared constants (excluded trade types, active vaults, endpoints)
 ├── scripts/
 │   ├── setup-db.js        # Creates database tables
 │   ├── db.js              # Database connection pool
+│   ├── addressUtils.js    # Bech32 ↔ EVM address conversion
 │   └── initial-index.js   # Historical data indexer
 ├── client/                # React + Vite frontend
 │   ├── src/
 │   │   ├── components/
-│   │   ├── hooks/
-│   │   └── utils/
+│   │   │   ├── tables/    # TradesTable, DepositsTable, VolumeTable, etc.
+│   │   │   ├── charts/    # ActivityChart, VolumeChart
+│   │   │   ├── modals/    # UserProfileModal, TradeDetailModal
+│   │   │   └── ui/        # Header, Tabs, Stats, FunFacts
+│   │   ├── hooks/         # useApi, useNetwork
+│   │   └── utils/         # formatters, constants
 │   └── vite.config.js
 ├── docker-compose.yml     # Local Postgres
 └── .env.local             # Local env vars (not committed)

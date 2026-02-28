@@ -1,13 +1,5 @@
 import { pool } from '../scripts/db.js';
-
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
-const ACTIVE_VAULTS = new Set([
-  '0xE96397b6135240956413031c0B26507eeCCD4B39',
-  '0x7275AfFf575aD79da8b245784cE54a203Df954e6',
-]);
+import { ACTIVE_VAULTS, GRAPHQL_ENDPOINTS, EXCLUDED_TRADE_TYPES_SQL } from '../shared/constants.js';
 
 async function fetchLiveTvl(network) {
   const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
@@ -50,12 +42,10 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT
           COUNT(*) as total_trades,
-          SUM(CASE WHEN collateral_amount IS NOT NULL AND leverage IS NOT NULL
-              THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))
-              ELSE 0 END) as total_volume
+          SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as total_volume
         FROM trades
         WHERE network = $1
-          AND trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
+          AND trade_change_type NOT IN (${EXCLUDED_TRADE_TYPES_SQL})
       `, [network]),
 
       // Total deposits

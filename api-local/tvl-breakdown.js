@@ -1,13 +1,4 @@
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
-
-// Active (non-deprecated) vault ERC20 addresses
-const ACTIVE_VAULTS = new Set([
-  '0xE96397b6135240956413031c0B26507eeCCD4B39',
-  '0x7275AfFf575aD79da8b245784cE54a203Df954e6',
-]);
+import { ACTIVE_VAULTS, GRAPHQL_ENDPOINTS } from '../shared/constants.js';
 
 async function fetchGraphQL(query, network) {
   const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;

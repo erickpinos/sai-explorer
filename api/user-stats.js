@@ -1,4 +1,5 @@
 import { sql } from '@vercel/postgres';
+// NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     const tradesResult = await sql`
       SELECT
         COUNT(*) as total_trades,
-        SUM(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) as total_volume,
+        SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as total_volume,
         SUM(realized_pnl_collateral / 1000000 * COALESCE(collateral_price, 1)) as realized_pnl
       FROM trades
       WHERE network = ${network}

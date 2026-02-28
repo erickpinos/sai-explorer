@@ -1,4 +1,6 @@
 import { sql } from '@vercel/postgres';
+// PnL queries use != 'position_opened' (not the full exclusion list) because
+// only close/liquidation events realize PnL. This is intentional.
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -133,7 +135,7 @@ export default async function handler(req, res) {
       sql`
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
-          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
+          ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
@@ -144,7 +146,7 @@ export default async function handler(req, res) {
       sql`
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
-          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
+          ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
@@ -156,7 +158,7 @@ export default async function handler(req, res) {
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_pct,
           realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
-          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
+          ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
@@ -169,7 +171,7 @@ export default async function handler(req, res) {
         SELECT trader, evm_trader, base_token_symbol, is_long,
           realized_pnl_pct,
           realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd,
-          collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1) as position_size,
+          ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
         WHERE network = ${network} AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
