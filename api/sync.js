@@ -20,7 +20,7 @@ async function syncTrades(network) {
   const PAGE_SIZE = 100;
   let offset = 0;
   let newTradesCount = 0;
-  const MAX_PAGES = 5; // Limit to 5 pages per sync to stay within time limit
+  const MAX_PAGES = 10;
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
     const res = await fetchGraphQL(`{
@@ -41,43 +41,46 @@ async function syncTrades(network) {
     const trades = res.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    // Insert new trades
+    // Collect new trades, stop at old data
+    const batch = [];
+    let reachedOld = false;
     for (const t of trades) {
-      // Skip if older than our last sync
       if (sinceDate && new Date(t.block.block_ts) <= sinceDate) {
         console.log(`Reached old trades at ${t.block.block_ts}, stopping`);
-        return newTradesCount;
+        reachedOld = true;
+        break;
       }
-
-      try {
-        await sql`
-          INSERT INTO trades (
-            id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
-            tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
-            trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-            collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
-          ) VALUES (
-            ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
-            ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
-            ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
-            ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
-            ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
-            ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol}
-          )
-          ON CONFLICT (id) DO UPDATE SET
-            collateral_token_symbol = EXCLUDED.collateral_token_symbol,
-            base_token_symbol = EXCLUDED.base_token_symbol,
-            evm_trader = EXCLUDED.evm_trader
-          WHERE trades.collateral_token_symbol IS NULL
-            OR trades.base_token_symbol IS NULL
-            OR trades.evm_trader IS NULL
-        `;
-        newTradesCount++;
-      } catch (err) {
-        console.error('Error inserting trade:', err);
-      }
+      batch.push(t);
     }
 
+    // Insert batch concurrently
+    if (batch.length > 0) {
+      const results = await Promise.allSettled(batch.map(t => sql`
+        INSERT INTO trades (
+          id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
+          tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
+          trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
+          collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
+        ) VALUES (
+          ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
+          ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
+          ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
+          ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
+          ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
+          ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          collateral_token_symbol = EXCLUDED.collateral_token_symbol,
+          base_token_symbol = EXCLUDED.base_token_symbol,
+          evm_trader = EXCLUDED.evm_trader
+        WHERE trades.collateral_token_symbol IS NULL
+          OR trades.base_token_symbol IS NULL
+          OR trades.evm_trader IS NULL
+      `));
+      newTradesCount += results.filter(r => r.status === 'fulfilled').length;
+    }
+
+    if (reachedOld) break;
     if (trades.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -125,25 +128,25 @@ async function backfillTradeSymbols(network) {
     const trades = res.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    for (const t of trades) {
-      const symbol = t.trade?.perpBorrowing?.collateralToken?.symbol;
-      const baseSymbol = t.trade?.perpBorrowing?.baseToken?.symbol;
-      const evmTrader = nibiToHex(t.trade?.trader);
-      if (!symbol && !baseSymbol && !evmTrader) continue;
+    const updates = trades
+      .map(t => ({
+        id: t.id,
+        symbol: t.trade?.perpBorrowing?.collateralToken?.symbol,
+        baseSymbol: t.trade?.perpBorrowing?.baseToken?.symbol,
+        evmTrader: nibiToHex(t.trade?.trader),
+      }))
+      .filter(u => u.symbol || u.baseSymbol || u.evmTrader);
 
-      try {
-        const result = await sql`
-          UPDATE trades SET
-            collateral_token_symbol = COALESCE(trades.collateral_token_symbol, ${symbol}),
-            base_token_symbol = COALESCE(trades.base_token_symbol, ${baseSymbol}),
-            evm_trader = COALESCE(trades.evm_trader, ${evmTrader})
-          WHERE id = ${t.id} AND network = ${network}
-            AND (collateral_token_symbol IS NULL OR base_token_symbol IS NULL OR evm_trader IS NULL)
-        `;
-        if (result.rowCount > 0) updatedCount++;
-      } catch (err) {
-        // ignore individual errors
-      }
+    if (updates.length > 0) {
+      const results = await Promise.allSettled(updates.map(u => sql`
+        UPDATE trades SET
+          collateral_token_symbol = COALESCE(trades.collateral_token_symbol, ${u.symbol}),
+          base_token_symbol = COALESCE(trades.base_token_symbol, ${u.baseSymbol}),
+          evm_trader = COALESCE(trades.evm_trader, ${u.evmTrader})
+        WHERE id = ${u.id} AND network = ${network}
+          AND (collateral_token_symbol IS NULL OR base_token_symbol IS NULL OR evm_trader IS NULL)
+      `));
+      updatedCount += results.filter(r => r.status === 'fulfilled' && r.value.rowCount > 0).length;
     }
 
     if (trades.length < PAGE_SIZE) break;
@@ -181,7 +184,7 @@ async function syncDeposits(network) {
   const PAGE_SIZE = 100;
   let offset = 0;
   let newDepositsCount = 0;
-  const MAX_PAGES = 5;
+  const MAX_PAGES = 10;
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
     const res = await fetchGraphQL(`{
@@ -197,31 +200,34 @@ async function syncDeposits(network) {
     const deposits = res.data?.lp?.depositHistory || [];
     if (deposits.length === 0) break;
 
+    const batch = [];
+    let reachedOld = false;
     for (const d of deposits) {
       if (sinceDate && new Date(d.block.block_ts) <= sinceDate) {
         console.log(`Reached old deposits at ${d.block.block_ts}, stopping`);
-        return newDepositsCount;
+        reachedOld = true;
+        break;
       }
-
-      try {
-        await sql`
-          INSERT INTO deposits (
-            network, depositor, amount, shares,
-            block_height, block_ts, tx_hash, evm_tx_hash,
-            vault_address, collateral_token_symbol, vault_tvl
-          ) VALUES (
-            ${network}, ${d.depositor}, ${d.amount}, ${d.shares},
-            ${d.block.block}, ${d.block.block_ts}, ${d.txHash}, ${d.evmTxHash},
-            ${d.vault.address}, ${d.vault.collateralToken.symbol}, ${d.vault.tvl}
-          )
-          ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
-        `;
-        newDepositsCount++;
-      } catch (err) {
-        console.error('Error inserting deposit:', err);
-      }
+      batch.push(d);
     }
 
+    if (batch.length > 0) {
+      const results = await Promise.allSettled(batch.map(d => sql`
+        INSERT INTO deposits (
+          network, depositor, amount, shares,
+          block_height, block_ts, tx_hash, evm_tx_hash,
+          vault_address, collateral_token_symbol, vault_tvl
+        ) VALUES (
+          ${network}, ${d.depositor}, ${d.amount}, ${d.shares},
+          ${d.block.block}, ${d.block.block_ts}, ${d.txHash}, ${d.evmTxHash},
+          ${d.vault.address}, ${d.vault.collateralToken.symbol}, ${d.vault.tvl}
+        )
+        ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
+      `));
+      newDepositsCount += results.filter(r => r.status === 'fulfilled').length;
+    }
+
+    if (reachedOld) break;
     if (deposits.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -236,7 +242,7 @@ async function syncWithdraws(network) {
   const PAGE_SIZE = 100;
   let offset = 0;
   let newWithdrawsCount = 0;
-  const MAX_PAGES = 5;
+  const MAX_PAGES = 10;
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
     const res = await fetchGraphQL(`{
@@ -251,23 +257,17 @@ async function syncWithdraws(network) {
     const withdraws = res.data?.lp?.withdrawRequests || [];
     if (withdraws.length === 0) break;
 
-    for (const w of withdraws) {
-      try {
-        await sql`
-          INSERT INTO withdraws (
-            network, depositor, shares, unlock_epoch, auto_redeem,
-            vault_address, collateral_token_symbol
-          ) VALUES (
-            ${network}, ${w.depositor}, ${w.shares}, ${w.unlockEpoch}, ${w.autoRedeem},
-            ${w.vault.address}, ${w.vault.collateralToken.symbol}
-          )
-          ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO NOTHING
-        `;
-        newWithdrawsCount++;
-      } catch (err) {
-        console.error('Error inserting withdraw:', err);
-      }
-    }
+    const results = await Promise.allSettled(withdraws.map(w => sql`
+      INSERT INTO withdraws (
+        network, depositor, shares, unlock_epoch, auto_redeem,
+        vault_address, collateral_token_symbol
+      ) VALUES (
+        ${network}, ${w.depositor}, ${w.shares}, ${w.unlockEpoch}, ${w.autoRedeem},
+        ${w.vault.address}, ${w.vault.collateralToken.symbol}
+      )
+      ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO NOTHING
+    `));
+    newWithdrawsCount += results.filter(r => r.status === 'fulfilled').length;
 
     if (withdraws.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;

@@ -1,4 +1,6 @@
-export default function Pagination({ page, totalPages, onPageChange }) {
+import { memo } from 'react';
+
+export default memo(function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
   return (
     <div className="pagination">
@@ -11,4 +13,4 @@ export default function Pagination({ page, totalPages, onPageChange }) {
       </button>
     </div>
   );
-}
+});

@@ -51,6 +51,9 @@ async function setupDatabase() {
     await query('CREATE INDEX IF NOT EXISTS idx_trades_trader ON trades(trader)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_evm_trader ON trades(evm_trader)');
     await query('CREATE INDEX IF NOT EXISTS idx_trades_market ON trades(market_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_trades_network_type ON trades(network, trade_change_type)');
+    await query('CREATE INDEX IF NOT EXISTS idx_trades_trader_network_ts ON trades(trader, network, block_ts DESC)');
+    await query('CREATE INDEX IF NOT EXISTS idx_trades_evm_trader_network_ts ON trades(evm_trader, network, block_ts DESC)');
     console.log('✓ Created trades indexes');
 
     // Create deposits table
@@ -84,6 +87,7 @@ async function setupDatabase() {
     await query('CREATE INDEX IF NOT EXISTS idx_deposits_network ON deposits(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_deposits_block_ts ON deposits(network, block_ts DESC)');
     await query('CREATE INDEX IF NOT EXISTS idx_deposits_depositor ON deposits(depositor)');
+    await query('CREATE INDEX IF NOT EXISTS idx_deposits_network_depositor ON deposits(network, depositor, block_ts DESC)');
     console.log('✓ Created deposits indexes');
 
     // Create withdraws table
@@ -111,6 +115,7 @@ async function setupDatabase() {
     // Create indexes for withdraws
     await query('CREATE INDEX IF NOT EXISTS idx_withdraws_network ON withdraws(network)');
     await query('CREATE INDEX IF NOT EXISTS idx_withdraws_depositor ON withdraws(depositor)');
+    await query('CREATE INDEX IF NOT EXISTS idx_withdraws_network_depositor ON withdraws(network, depositor, unlock_epoch DESC)');
     console.log('✓ Created withdraws indexes');
 
     // Create markets table (for cached market data)

@@ -5,7 +5,10 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
 // Helper function to execute SQL queries

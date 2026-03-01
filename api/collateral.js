@@ -1,4 +1,5 @@
 import { fetchGraphQL } from '../shared/graphql.js';
+import { cachedFetch } from '../shared/cache.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,39 +13,49 @@ export default async function handler(req, res) {
     const { network = 'mainnet' } = req.query;
 
     const [tokensRes, vaultsRes, marketsRes] = await Promise.all([
-      fetchGraphQL(`{ oracle { tokenPricesUsd { token { id symbol name logoUrl } priceUsd } } }`, network),
-      fetchGraphQL(`{ lp { vaults { address sharesERC20 availableAssets collateralToken { id symbol } } } }`, network),
-      fetchGraphQL(`{ perp { borrowings { marketId collateralToken { id } oiLong oiShort visible } } }`, network),
+      cachedFetch(`collateral:tokens:${network}`, () => fetchGraphQL(`{ oracle { tokenPricesUsd { token { id symbol name logoUrl } priceUsd } } }`, network)),
+      cachedFetch(`collateral:vaults:${network}`, () => fetchGraphQL(`{ lp { vaults { address sharesERC20 availableAssets collateralToken { id symbol } } } }`, network)),
+      cachedFetch(`collateral:markets:${network}`, () => fetchGraphQL(`{ perp { borrowings { marketId collateralToken { id } oiLong oiShort visible } } }`, network)),
     ]);
 
     const tokenPrices = tokensRes.data?.oracle?.tokenPricesUsd || [];
     const vaults = vaultsRes.data?.lp?.vaults || [];
     const markets = marketsRes.data?.perp?.borrowings || [];
 
-    // Find which token IDs are used as collateral in vaults or markets
     const vaultCollateralIds = new Set(vaults.map(v => v.collateralToken?.id).filter(Boolean));
     const marketCollateralIds = new Set(markets.map(m => m.collateralToken?.id).filter(Boolean));
     const collateralIds = new Set([...vaultCollateralIds, ...marketCollateralIds]);
 
-    // Build price map
-    const priceMap = {};
-    for (const t of tokenPrices) {
-      if (t.token?.id != null) priceMap[t.token.id] = parseFloat(t.priceUsd || 0);
+    // Build lookup maps for O(1) access instead of O(n) filter per token
+    const vaultsByCollateral = {};
+    for (const v of vaults) {
+      const id = v.collateralToken?.id;
+      if (id != null) {
+        if (!vaultsByCollateral[id]) vaultsByCollateral[id] = [];
+        vaultsByCollateral[id].push(v);
+      }
+    }
+    const marketsByCollateral = {};
+    for (const m of markets) {
+      const id = m.collateralToken?.id;
+      if (id != null && m.visible !== false) {
+        if (!marketsByCollateral[id]) marketsByCollateral[id] = [];
+        marketsByCollateral[id].push(m);
+      }
     }
 
-    // Filter tokens to only collateral tokens and compute stats
     const collateralIndices = tokenPrices
       .filter(t => collateralIds.has(t.token?.id))
       .map(t => {
         const tokenId = t.token.id;
         const price = parseFloat(t.priceUsd || 0);
 
-        const relatedVaults = vaults.filter(v => v.collateralToken?.id === tokenId);
+        const relatedVaults = vaultsByCollateral[tokenId] || [];
         const vaultTvl = relatedVaults.reduce((sum, v) => {
           return sum + ((v.availableAssets || 0) / 1e6) * price;
         }, 0);
 
-        const relatedMarkets = markets.filter(m => m.collateralToken?.id === tokenId && m.visible !== false);
+        const relatedMarkets = marketsByCollateral[tokenId] || [];
         const totalOi = relatedMarkets.reduce((sum, m) => {
           return sum + ((m.oiLong || 0) + (m.oiShort || 0)) / 1e6;
         }, 0);

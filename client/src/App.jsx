@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { NetworkProvider, useNetwork } from './hooks/useNetwork';
 import Header from './components/ui/Header';
 import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
-import TradesTable from './components/tables/TradesTable';
-import DepositsTable from './components/tables/DepositsTable';
-import WithdrawsTable from './components/tables/WithdrawsTable';
-import VolumeTable from './components/tables/VolumeTable';
-import MarketsTable from './components/tables/MarketsTable';
-import CollateralTable from './components/tables/CollateralTable';
 import FunFacts from './components/ui/FunFacts';
-import InsightsPage from './components/InsightsPage';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import { TABS } from './utils/constants';
 import './App.css';
+
+const TradesTable = lazy(() => import('./components/tables/TradesTable'));
+const DepositsTable = lazy(() => import('./components/tables/DepositsTable'));
+const WithdrawsTable = lazy(() => import('./components/tables/WithdrawsTable'));
+const VolumeTable = lazy(() => import('./components/tables/VolumeTable'));
+const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
+const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
+const InsightsPage = lazy(() => import('./components/InsightsPage'));
 
 function AppContent() {
   const { network } = useNetwork();
@@ -92,7 +94,9 @@ function AppContent() {
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="content">
-          {renderTabContent()}
+          <Suspense fallback={<LoadingSpinner />}>
+            {renderTabContent()}
+          </Suspense>
         </div>
       </div>
 

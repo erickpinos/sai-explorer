@@ -2,19 +2,22 @@ import { pool } from '../scripts/db.js';
 import { ACTIVE_VAULTS, EXCLUDED_TRADE_TYPES_SQL } from '../shared/constants.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';
+import { cachedFetch } from '../shared/cache.js';
 
 async function fetchLiveTvl(network) {
-  const [vaultsRes, pricesRes] = await Promise.all([
-    fetchGraphQL('{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }', network),
-    fetchGraphQL('{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }', network),
-  ]);
-  const prices = buildPriceMap(pricesRes.data?.oracle?.tokenPricesUsd);
-  return (vaultsRes.data?.lp?.vaults || [])
-    .filter(v => ACTIVE_VAULTS.has(v.sharesERC20 || ''))
-    .reduce((sum, v) => {
-      const token = (v.collateralToken?.symbol || '').toUpperCase();
-      return sum + (v.availableAssets / 1e6) * (prices[token] ?? 1);
-    }, 0);
+  return cachedFetch(`tvl:${network}`, async () => {
+    const [vaultsRes, pricesRes] = await Promise.all([
+      fetchGraphQL('{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }', network),
+      fetchGraphQL('{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }', network),
+    ]);
+    const prices = buildPriceMap(pricesRes.data?.oracle?.tokenPricesUsd);
+    return (vaultsRes.data?.lp?.vaults || [])
+      .filter(v => ACTIVE_VAULTS.has(v.sharesERC20 || ''))
+      .reduce((sum, v) => {
+        const token = (v.collateralToken?.symbol || '').toUpperCase();
+        return sum + (v.availableAssets / 1e6) * (prices[token] ?? 1);
+      }, 0);
+  });
 }
 
 export default async function handler(req, res) {

@@ -33,143 +33,142 @@ export default function DepositsTable() {
       </div>
 
       <div className="table-wrapper profile-table-desktop">
-        <table>
-          <thead>
-            <tr>
-              <th>TIME</th>
-              <th>ACTION</th>
-              <th>DEPOSITOR</th>
-              <th>AMOUNT</th>
-              <th>TOKEN</th>
-              <th>SHARES</th>
-              <th>BLOCK</th>
-              <th>VAULT (NIBI)</th>
-              <th>VAULT SHARES (HARDCODED)</th>
-              <th>TX HASH</th>
-              <th>EVM TX HASH</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedDeposits.map((deposit, index) => (
-              <tr key={deposit.id || index}>
-                <td>{formatDate(deposit.block?.block_ts)}</td>
-                <td>
+          <table>
+            <thead>
+              <tr>
+                <th>TIME</th>
+                <th>ACTION</th>
+                <th>DEPOSITOR</th>
+                <th>AMOUNT</th>
+                <th>TOKEN</th>
+                <th>SHARES</th>
+                <th>BLOCK</th>
+                <th>VAULT (NIBI)</th>
+                <th>VAULT SHARES (HARDCODED)</th>
+                <th>TX HASH</th>
+                <th>EVM TX HASH</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedDeposits.map((deposit, index) => (
+                <tr key={deposit.id || index}>
+                  <td>{formatDate(deposit.block?.block_ts)}</td>
+                  <td>
+                    <span className="badge badge-green">Deposit</span>
+                  </td>
+                  <td>
+                    <span
+                      className="address-link"
+                      onClick={() => setSelectedUserAddress({
+                        bech32: deposit.depositor,
+                        evm: nibiToHex(deposit.depositor)
+                      })}
+                      style={{ cursor: 'pointer' }}
+                      title={deposit.depositor}
+                    >
+                      {formatAddress(deposit.depositor)}
+                    </span>
+                  </td>
+                  <td>${formatNumber(deposit.amount / 1000000, 2)}</td>
+                  <td>{deposit.vault?.collateralToken?.symbol || '-'}</td>
+                  <td>{formatNumber(deposit.shares / 1000000, 2)}</td>
+                  <td>{deposit.block?.block || '-'}</td>
+                  <td>
+                    <span className="address-link" title={deposit.vault?.address}>
+                      {formatAddress(deposit.vault?.address)}
+                    </span>
+                  </td>
+                  <td>
+                    {deposit.vault?.address ? (
+                      <a
+                        href={`https://nibiscan.io/token/${nibiToHex(deposit.vault.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="address-link"
+                        title={nibiToHex(deposit.vault.address)}
+                      >
+                        {formatAddress(nibiToHex(deposit.vault.address))}
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>
+                    {deposit.txHash ? (
+                      <a
+                        href={`https://nibiru.explorers.guru/transaction/${deposit.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="address-link"
+                        title={deposit.txHash}
+                      >
+                        {formatAddress(deposit.txHash)}
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>
+                    {deposit.evmTxHash ? (
+                      <a
+                        href={`https://nibiscan.io/tx/${deposit.evmTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="address-link"
+                        title={deposit.evmTxHash}
+                      >
+                        {formatAddress(deposit.evmTxHash)}
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      <div className="profile-cards-mobile">
+          {paginatedDeposits.map((deposit, index) => (
+            <div key={deposit.id || index} className="profile-card">
+              <div className="profile-card-header">
+                <div className="profile-card-badges">
                   <span className="badge badge-green">Deposit</span>
-                </td>
-                <td>
+                  <span className="profile-card-market">{deposit.vault?.collateralToken?.symbol || '-'}</span>
+                </div>
+                <span className="profile-card-time">{formatDate(deposit.block?.block_ts)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Amount</span>
+                <span className="profile-card-value">${formatNumber(deposit.amount / 1000000, 2)}</span>
+                <span className="profile-card-label">Shares</span>
+                <span className="profile-card-value">{formatNumber(deposit.shares / 1000000, 2)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Depositor</span>
+                <span className="profile-card-value">
                   <span
                     className="address-link"
-                    onClick={() => setSelectedUserAddress({
-                      bech32: deposit.depositor,
-                      evm: nibiToHex(deposit.depositor)
-                    })}
+                    onClick={() => setSelectedUserAddress({ bech32: deposit.depositor, evm: nibiToHex(deposit.depositor) })}
                     style={{ cursor: 'pointer' }}
-                    title={deposit.depositor}
                   >
                     {formatAddress(deposit.depositor)}
                   </span>
-                </td>
-                <td>${formatNumber(deposit.amount / 1000000, 2)}</td>
-                <td>{deposit.vault?.collateralToken?.symbol || '-'}</td>
-                <td>{formatNumber(deposit.shares / 1000000, 2)}</td>
-                <td>{deposit.block?.block || '-'}</td>
-                <td>
-                  <span className="address-link" title={deposit.vault?.address}>
-                    {formatAddress(deposit.vault?.address)}
-                  </span>
-                </td>
-                <td>
-                  {deposit.vault?.address ? (
-                    <a
-                      href={`https://nibiscan.io/token/${nibiToHex(deposit.vault.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="address-link"
-                      title={nibiToHex(deposit.vault.address)}
-                    >
-                      {formatAddress(nibiToHex(deposit.vault.address))}
-                    </a>
-                  ) : (
-                    '-'
-                  )}
-                </td>
-                <td>
-                  {deposit.txHash ? (
-                    <a
-                      href={`https://nibiru.explorers.guru/transaction/${deposit.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="address-link"
-                      title={deposit.txHash}
-                    >
-                      {formatAddress(deposit.txHash)}
-                    </a>
-                  ) : (
-                    '-'
-                  )}
-                </td>
-                <td>
-                  {deposit.evmTxHash ? (
-                    <a
-                      href={`https://nibiscan.io/tx/${deposit.evmTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="address-link"
-                      title={deposit.evmTxHash}
-                    >
-                      {formatAddress(deposit.evmTxHash)}
-                    </a>
-                  ) : (
-                    '-'
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="profile-cards-mobile">
-        {paginatedDeposits.map((deposit, index) => (
-          <div key={deposit.id || index} className="profile-card">
-            <div className="profile-card-header">
-              <div className="profile-card-badges">
-                <span className="badge badge-green">Deposit</span>
-                <span className="profile-card-market">{deposit.vault?.collateralToken?.symbol || '-'}</span>
-              </div>
-              <span className="profile-card-time">{formatDate(deposit.block?.block_ts)}</span>
-            </div>
-            <div className="profile-card-row">
-              <span className="profile-card-label">Amount</span>
-              <span className="profile-card-value">${formatNumber(deposit.amount / 1000000, 2)}</span>
-              <span className="profile-card-label">Shares</span>
-              <span className="profile-card-value">{formatNumber(deposit.shares / 1000000, 2)}</span>
-            </div>
-            <div className="profile-card-row">
-              <span className="profile-card-label">Depositor</span>
-              <span className="profile-card-value">
-                <span
-                  className="address-link"
-                  onClick={() => setSelectedUserAddress({ bech32: deposit.depositor, evm: nibiToHex(deposit.depositor) })}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {formatAddress(deposit.depositor)}
                 </span>
-              </span>
-              {deposit.txHash && (
-                <>
-                  <span className="profile-card-label">TX</span>
-                  <span className="profile-card-value">
-                    <a href={`https://nibiru.explorers.guru/transaction/${deposit.txHash}`} target="_blank" rel="noopener noreferrer" className="address-link">
-                      {formatAddress(deposit.txHash)}
-                    </a>
-                  </span>
-                </>
-              )}
+                {deposit.txHash && (
+                  <>
+                    <span className="profile-card-label">TX</span>
+                    <span className="profile-card-value">
+                      <a href={`https://nibiru.explorers.guru/transaction/${deposit.txHash}`} target="_blank" rel="noopener noreferrer" className="address-link">
+                        {formatAddress(deposit.txHash)}
+                      </a>
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -28,23 +28,21 @@ export default function VolumeChart({ showMethodology = false }) {
   const { data, loading, error } = useChartData(network, period);
 
   const volumeByDay = data?.volumeByDay || [];
-  const labels = volumeByDay.map(d => d.date);
-  const values = volumeByDay.map(d => d.volume);
 
-  const chartData = {
-    labels,
+  const chartData = useMemo(() => ({
+    labels: volumeByDay.map(d => d.date),
     datasets: [
       {
         label: 'Trading Volume (USD)',
-        data: values,
+        data: volumeByDay.map(d => d.volume),
         backgroundColor: 'rgba(139, 92, 246, 0.8)',
         borderColor: 'rgba(139, 92, 246, 1)',
         borderWidth: 1,
       },
     ],
-  };
+  }), [volumeByDay]);
 
-  const options = {
+  const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: true,
     aspectRatio: 2.5,
@@ -89,7 +87,9 @@ export default function VolumeChart({ showMethodology = false }) {
         grid: { color: '#2a2a3a' },
       },
     },
-  };
+  }), []);
+
+  const labels = chartData.labels;
 
   return (
     <div className="chart-section">

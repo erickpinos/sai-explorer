@@ -136,11 +136,19 @@ async function autoSync() {
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 API server running on http://localhost:${PORT}`);
   console.log(`📡 Auto-sync enabled: runs on startup and every 5 minutes`);
   console.log(`\n✨ Ready!\n`);
 
   autoSync();
-  setInterval(autoSync, SYNC_INTERVAL_MS);
+  const syncInterval = setInterval(autoSync, SYNC_INTERVAL_MS);
+
+  const shutdown = () => {
+    clearInterval(syncInterval);
+    server.close();
+    pool.end();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 });

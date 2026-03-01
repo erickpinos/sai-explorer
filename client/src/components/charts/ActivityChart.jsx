@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -27,31 +27,28 @@ export default function ActivityChart() {
   const { data, loading, error } = useChartData(network, period);
 
   const activity = data?.activity || [];
-  const labels = activity.map(d => d.date);
-  const tradeData = activity.map(d => d.trades);
-  const depositData = activity.map(d => d.deposits);
 
-  const chartData = {
-    labels,
+  const chartData = useMemo(() => ({
+    labels: activity.map(d => d.date),
     datasets: [
       {
         label: 'Perpetual Trades',
-        data: tradeData,
+        data: activity.map(d => d.trades),
         backgroundColor: 'rgba(99, 102, 241, 0.8)',
         borderColor: 'rgba(99, 102, 241, 1)',
         borderWidth: 1,
       },
       {
         label: 'LP Deposits',
-        data: depositData,
+        data: activity.map(d => d.deposits),
         backgroundColor: 'rgba(34, 197, 94, 0.8)',
         borderColor: 'rgba(34, 197, 94, 1)',
         borderWidth: 1,
       },
     ],
-  };
+  }), [activity]);
 
-  const options = {
+  const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: true,
     aspectRatio: 2.5,
@@ -89,7 +86,9 @@ export default function ActivityChart() {
         grid: { color: '#2a2a3a' },
       },
     },
-  };
+  }), []);
+
+  const labels = chartData.labels;
 
   return (
     <div className="chart-section">

@@ -1,4 +1,5 @@
 import { fetchGraphQL } from '../shared/graphql.js';
+import { cachedFetch } from '../shared/cache.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const { network = 'mainnet' } = req.query;
 
-    const json = await fetchGraphQL(`{
+    const json = await cachedFetch(`markets:${network}`, () => fetchGraphQL(`{
       perp {
         borrowings {
           marketId
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
           priceUsd
         }
       }
-    }`, network);
+    }`, network));
 
     const rawMarkets = json.data?.perp?.borrowings || [];
     const tokenPrices = json.data?.oracle?.tokenPricesUsd || [];

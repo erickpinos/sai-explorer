@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       WHERE network = $1
       GROUP BY trader, evm_trader
       ORDER BY total_volume DESC
+      LIMIT 500
     `, [network]);
 
     const users = result.rows.map(r => ({
