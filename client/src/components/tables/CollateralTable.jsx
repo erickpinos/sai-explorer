@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
 import { useCollateral } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import SortTh from '../ui/SortTh';
 import { useViewToggle } from '../ui/ViewToggle';
+import { useSortedData } from '../../hooks/useSortedData';
 
 const SORT_KEYS = {
   tokenId: (c) => c.tokenId ?? 0,
@@ -16,46 +17,17 @@ const SORT_KEYS = {
 export default function CollateralTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useCollateral(network);
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
   const { toggle, viewClass } = useViewToggle();
 
-  const handleSort = (col) => {
-    if (col === sortCol) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortCol(col);
-      setSortDir('asc');
-    }
-  };
-
-  const sorted = useMemo(() => {
-    const indices = data?.collateralIndices || [];
-    if (!sortCol) return indices; // API returns sorted by tokenId asc
-    const getter = SORT_KEYS[sortCol];
-    return [...indices].sort((a, b) => {
-      const aVal = getter(a);
-      const bVal = getter(b);
-      if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-  }, [data, sortCol, sortDir]);
+  const { sorted, sortCol, sortDir, handleSort } = useSortedData(data?.collateralIndices || [], null, 'asc', SORT_KEYS);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!sorted.length) return <EmptyState message="No collateral indices found" />;
 
-  const SortTh = ({ col, children }) => {
-    const active = col === sortCol;
-    return (
-      <th
-        className={`sortable${active ? ' sorted' : ''}`}
-        onClick={() => handleSort(col)}
-      >
-        {children} <span className="sort-icon">{active ? (sortDir === 'desc' ? '▼' : '▲') : '▼'}</span>
-      </th>
-    );
-  };
+  const Th = ({ col, children }) => (
+    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
+  );
 
   const activeIndices = data?.activeIndices || [];
 
@@ -66,10 +38,10 @@ export default function CollateralTable() {
         <table>
           <thead>
             <tr>
-              <SortTh col="tokenId">Index</SortTh>
-              <SortTh col="symbol">Symbol</SortTh>
-              <SortTh col="name">Name</SortTh>
-              <SortTh col="price">Price (USD)</SortTh>
+              <Th col="tokenId">Index</Th>
+              <Th col="symbol">Symbol</Th>
+              <Th col="name">Name</Th>
+              <Th col="price">Price (USD)</Th>
               <th>Vaults</th>
               <th>Vault TVL</th>
               <th>Markets</th>

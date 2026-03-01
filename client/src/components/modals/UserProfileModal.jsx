@@ -2,46 +2,9 @@ import { useState } from 'react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { useUserStats, useUserTrades, useUserDeposits, useUserWithdraws } from '../../hooks/useApi';
 import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
+import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
-
-// Import helper functions from TradesTable
-const getBadgeClass = (status) => {
-  if (!status) return 'badge badge-purple';
-  const statusLower = status.toLowerCase();
-  if (statusLower.includes('liquidat')) return 'badge badge-red';
-  if (statusLower.includes('opened')) return 'badge badge-blue';
-  if (statusLower.includes('cancel')) return 'badge badge-orange';
-  if (statusLower.includes('closed')) return 'badge badge-purple';
-  return 'badge badge-purple';
-};
-
-const formatTradeTypeBadge = (type) => {
-  if (!type) return 'Unknown';
-  const statusLower = type.toLowerCase();
-  if (statusLower.includes('liquidat')) return 'Liquidated';
-  if (statusLower.includes('opened')) return 'Opened';
-  if (statusLower.includes('cancel')) return 'Limit Order Cancelled';
-  if (statusLower.includes('closed')) return 'Closed';
-  return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-};
-
-const shortenHash = (hash) => {
-  if (!hash) return '-';
-  return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
-};
-
-const formatPnl = (pnl) => {
-  if (!pnl || pnl === 0) return '-';
-  const sign = pnl > 0 ? '+' : '';
-  return `${sign}$${formatNumber(Math.abs(pnl), 2)}`;
-};
-
-const toUsd = (microAmount, collateralPrice) => {
-  const raw = (parseFloat(microAmount) || 0) / 1000000;
-  const price = parseFloat(collateralPrice) || 1;
-  return raw * price;
-};
 
 export default function UserProfileModal({ address, onClose }) {
   const { network, config } = useNetwork();

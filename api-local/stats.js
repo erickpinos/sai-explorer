@@ -1,16 +1,14 @@
 import { pool } from '../scripts/db.js';
-import { ACTIVE_VAULTS, GRAPHQL_ENDPOINTS, EXCLUDED_TRADE_TYPES_SQL } from '../shared/constants.js';
+import { ACTIVE_VAULTS, EXCLUDED_TRADE_TYPES_SQL } from '../shared/constants.js';
+import { fetchGraphQL } from '../shared/graphql.js';
+import { buildPriceMap } from '../shared/buildPriceMap.js';
 
 async function fetchLiveTvl(network) {
-  const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
   const [vaultsRes, pricesRes] = await Promise.all([
-    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }' }) }).then(r => r.json()),
-    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }' }) }).then(r => r.json()),
+    fetchGraphQL('{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }', network),
+    fetchGraphQL('{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }', network),
   ]);
-  const prices = {};
-  for (const p of pricesRes.data?.oracle?.tokenPricesUsd || []) {
-    if (p.token?.symbol) prices[p.token.symbol.toUpperCase()] = parseFloat(p.priceUsd);
-  }
+  const prices = buildPriceMap(pricesRes.data?.oracle?.tokenPricesUsd);
   return (vaultsRes.data?.lp?.vaults || [])
     .filter(v => ACTIVE_VAULTS.has(v.sharesERC20 || ''))
     .reduce((sum, v) => {
@@ -20,7 +18,6 @@ async function fetchLiveTvl(network) {
 }
 
 export default async function handler(req, res) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -36,9 +33,7 @@ export default async function handler(req, res) {
   try {
     const { network = 'mainnet' } = req.query;
 
-    // Run parallel queries for stats
     const [tradesStats, depositsStats, uniqueTraders, recentTrades, withdrawsStats, liveTvl] = await Promise.all([
-      // Total trades count and volume
       pool.query(`
         SELECT
           COUNT(*) as total_trades,
@@ -48,7 +43,6 @@ export default async function handler(req, res) {
           AND trade_change_type NOT IN (${EXCLUDED_TRADE_TYPES_SQL})
       `, [network]),
 
-      // Total deposits
       pool.query(`
         SELECT
           COUNT(*) as total_deposits,
@@ -57,14 +51,12 @@ export default async function handler(req, res) {
         WHERE network = $1
       `, [network]),
 
-      // Unique traders count
       pool.query(`
         SELECT COUNT(DISTINCT trader) as unique_traders
         FROM trades
         WHERE network = $1
       `, [network]),
 
-      // Most recent trade timestamp
       pool.query(`
         SELECT block_ts
         FROM trades
@@ -73,7 +65,6 @@ export default async function handler(req, res) {
         LIMIT 1
       `, [network]),
 
-      // Total withdraws count
       pool.query(`
         SELECT COUNT(*) as total_withdraws
         FROM withdraws

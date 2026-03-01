@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
 import { formatNumber, formatAddress, formatDate } from '../utils/formatters';
+import { shortenHash } from '../utils/tradeHelpers';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
 import UserProfileModal from './modals/UserProfileModal';
@@ -44,11 +45,6 @@ export default function InsightsPage() {
       </div>
     );
   }
-
-  const shortenHash = (hash) => {
-    if (!hash) return '-';
-    return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
-  };
 
   const formatHour = (hour) => {
     if (hour === 0) return '12 AM';

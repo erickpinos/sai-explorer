@@ -1,14 +1,6 @@
-import { ACTIVE_VAULTS, GRAPHQL_ENDPOINTS } from '../shared/constants.js';
-
-async function fetchGraphQL(query, network) {
-  const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-  return res.json();
-}
+import { ACTIVE_VAULTS } from '../shared/constants.js';
+import { fetchGraphQL } from '../shared/graphql.js';
+import { buildPriceMap } from '../shared/buildPriceMap.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -46,11 +38,7 @@ export default async function handler(req, res) {
     const rawVaults = vaultsRes.data?.lp?.vaults || [];
     const rawPrices = pricesRes.data?.oracle?.tokenPricesUsd || [];
 
-    const tokenPrices = {};
-    for (const p of rawPrices) {
-      const symbol = p.token?.symbol;
-      if (symbol) tokenPrices[symbol.toUpperCase()] = parseFloat(p.priceUsd);
-    }
+    const tokenPrices = buildPriceMap(rawPrices);
 
     const vaults = rawVaults.map(v => {
       const erc20 = v.sharesERC20 || '';

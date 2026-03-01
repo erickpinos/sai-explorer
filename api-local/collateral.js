@@ -1,16 +1,4 @@
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
-
-async function gql(endpoint, query) {
-  const r = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-  return r.json();
-}
+import { fetchGraphQL } from '../shared/graphql.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,30 +10,26 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
-    const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
 
     const [tokensRes, vaultsRes, marketsRes] = await Promise.all([
-      gql(endpoint, `{ oracle { tokenPricesUsd { token { id symbol name logoUrl } priceUsd } } }`),
-      gql(endpoint, `{ lp { vaults { address sharesERC20 availableAssets collateralToken { id symbol } } } }`),
-      gql(endpoint, `{ perp { borrowings { marketId collateralToken { id } oiLong oiShort visible } } }`),
+      fetchGraphQL(`{ oracle { tokenPricesUsd { token { id symbol name logoUrl } priceUsd } } }`, network),
+      fetchGraphQL(`{ lp { vaults { address sharesERC20 availableAssets collateralToken { id symbol } } } }`, network),
+      fetchGraphQL(`{ perp { borrowings { marketId collateralToken { id } oiLong oiShort visible } } }`, network),
     ]);
 
     const tokenPrices = tokensRes.data?.oracle?.tokenPricesUsd || [];
     const vaults = vaultsRes.data?.lp?.vaults || [];
     const markets = marketsRes.data?.perp?.borrowings || [];
 
-    // Find which token IDs are used as collateral in vaults or markets
     const vaultCollateralIds = new Set(vaults.map(v => v.collateralToken?.id).filter(Boolean));
     const marketCollateralIds = new Set(markets.map(m => m.collateralToken?.id).filter(Boolean));
     const collateralIds = new Set([...vaultCollateralIds, ...marketCollateralIds]);
 
-    // Build price map
     const priceMap = {};
     for (const t of tokenPrices) {
       if (t.token?.id != null) priceMap[t.token.id] = parseFloat(t.priceUsd || 0);
     }
 
-    // Filter tokens to only collateral tokens and compute stats
     const collateralIndices = tokenPrices
       .filter(t => collateralIds.has(t.token?.id))
       .map(t => {

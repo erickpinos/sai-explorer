@@ -1,26 +1,25 @@
-import { useState } from 'react';
 import { useWithdraws } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import Pagination from '../ui/Pagination';
 import { WITHDRAWS_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
+import { usePagination } from '../../hooks/usePagination';
 
 export default function WithdrawsTable() {
   const { network } = useNetwork();
   const { data: withdraws, loading, error } = useWithdraws(network);
-  const [currentPage, setCurrentPage] = useState(1);
   const { toggle, viewClass } = useViewToggle();
+
+  const { page, setPage, paginatedData: paginatedWithdraws, totalPages, startIndex } = usePagination(withdraws || [], WITHDRAWS_PER_PAGE);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!withdraws || withdraws.length === 0) return <EmptyState message="No withdraws found" />;
 
-  const startIndex = (currentPage - 1) * WITHDRAWS_PER_PAGE;
   const endIndex = startIndex + WITHDRAWS_PER_PAGE;
-  const paginatedWithdraws = withdraws.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(withdraws.length / WITHDRAWS_PER_PAGE);
 
   return (
     <div className={viewClass}>
@@ -77,25 +76,7 @@ export default function WithdrawsTable() {
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

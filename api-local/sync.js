@@ -1,20 +1,6 @@
 import { pool } from '../scripts/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
-
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
-
-async function fetchGraphQL(queryString, network = 'mainnet') {
-  const endpoint = GRAPHQL_ENDPOINTS[network];
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: queryString })
-  });
-  return response.json();
-}
+import { fetchGraphQL } from '../shared/graphql.js';
 
 async function syncTrades(network) {
   console.log(`Syncing trades for ${network}...`);

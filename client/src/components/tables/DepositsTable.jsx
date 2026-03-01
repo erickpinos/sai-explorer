@@ -2,58 +2,28 @@ import { useState } from 'react';
 import { useDeposits } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress } from '../../utils/formatters';
+import { nibiToHex } from '../../utils/addressUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import Pagination from '../ui/Pagination';
 import UserProfileModal from '../modals/UserProfileModal';
 import { DEPOSITS_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
-
-// Bech32 decoding to convert nibi addresses to 0x
-const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
-
-function bech32Decode(str) {
-  const data = [];
-  for (let i = str.indexOf('1') + 1; i < str.length - 6; i++) {
-    data.push(CHARSET.indexOf(str[i]));
-  }
-  let acc = 0, bits = 0;
-  const bytes = [];
-  for (const val of data) {
-    acc = (acc << 5) | val;
-    bits += 5;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((acc >> bits) & 0xff);
-    }
-  }
-  return bytes;
-}
-
-function nibiToHex(nibiAddr) {
-  if (!nibiAddr) return null;
-  try {
-    const bytes = bech32Decode(nibiAddr);
-    return '0x' + bytes.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch {
-    return nibiAddr;
-  }
-}
+import { usePagination } from '../../hooks/usePagination';
 
 export default function DepositsTable() {
   const { network } = useNetwork();
   const { data: deposits, loading, error } = useDeposits(network);
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const { toggle, viewClass } = useViewToggle();
+
+  const { page, setPage, paginatedData: paginatedDeposits, totalPages, startIndex } = usePagination(deposits || [], DEPOSITS_PER_PAGE);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!deposits || deposits.length === 0) return <EmptyState message="No deposits found" />;
 
-  const startIndex = (currentPage - 1) * DEPOSITS_PER_PAGE;
   const endIndex = startIndex + DEPOSITS_PER_PAGE;
-  const paginatedDeposits = deposits.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(deposits.length / DEPOSITS_PER_PAGE);
 
   return (
     <div className={viewClass}>
@@ -201,25 +171,7 @@ export default function DepositsTable() {
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       {selectedUserAddress && (
         <UserProfileModal

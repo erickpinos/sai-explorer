@@ -1,7 +1,4 @@
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
+import { fetchGraphQL } from '../shared/graphql.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,41 +10,35 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
-    const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: `{
-        perp {
-          borrowings {
-            marketId
-            collateralToken { id symbol }
-            baseToken { symbol }
-            feesPerHourLong
-            feesPerHourShort
-            oiLong
-            oiShort
-            oiMax
-            price
-            priceChangePct24Hrs
-            minLeverage
-            maxLeverage
-            openFeePct
-            closeFeePct
-            visible
-          }
+    const json = await fetchGraphQL(`{
+      perp {
+        borrowings {
+          marketId
+          collateralToken { id symbol }
+          baseToken { symbol }
+          feesPerHourLong
+          feesPerHourShort
+          oiLong
+          oiShort
+          oiMax
+          price
+          priceChangePct24Hrs
+          minLeverage
+          maxLeverage
+          openFeePct
+          closeFeePct
+          visible
         }
-        oracle {
-          tokenPricesUsd {
-            token { symbol }
-            priceUsd
-          }
+      }
+      oracle {
+        tokenPricesUsd {
+          token { symbol }
+          priceUsd
         }
-      }` }),
-    });
+      }
+    }`, network);
 
-    const json = await response.json();
     const rawMarkets = json.data?.perp?.borrowings || [];
     const tokenPrices = json.data?.oracle?.tokenPricesUsd || [];
 

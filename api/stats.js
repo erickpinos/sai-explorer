@@ -1,16 +1,14 @@
 import { sql } from '@vercel/postgres';
-import { ACTIVE_VAULTS, GRAPHQL_ENDPOINTS } from '../shared/constants.js';
+import { ACTIVE_VAULTS } from '../shared/constants.js';
+import { fetchGraphQL } from '../shared/graphql.js';
+import { buildPriceMap } from '../shared/buildPriceMap.js';
 
 async function fetchLiveTvl(network) {
-  const endpoint = GRAPHQL_ENDPOINTS[network] || GRAPHQL_ENDPOINTS.mainnet;
   const [vaultsRes, pricesRes] = await Promise.all([
-    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }' }) }).then(r => r.json()),
-    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: '{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }' }) }).then(r => r.json()),
+    fetchGraphQL('{ lp { vaults { sharesERC20 availableAssets collateralToken { symbol } } } }', network),
+    fetchGraphQL('{ oracle { tokenPricesUsd { token { symbol } priceUsd } } }', network),
   ]);
-  const prices = {};
-  for (const p of pricesRes.data?.oracle?.tokenPricesUsd || []) {
-    if (p.token?.symbol) prices[p.token.symbol.toUpperCase()] = parseFloat(p.priceUsd);
-  }
+  const prices = buildPriceMap(pricesRes.data?.oracle?.tokenPricesUsd);
   return (vaultsRes.data?.lp?.vaults || [])
     .filter(v => ACTIVE_VAULTS.has(v.sharesERC20 || ''))
     .reduce((sum, v) => {

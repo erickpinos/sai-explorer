@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useMarkets } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatPrice } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import SortTh from '../ui/SortTh';
 import { useViewToggle } from '../ui/ViewToggle';
+import { useSortedData } from '../../hooks/useSortedData';
 
 const SORT_KEYS = {
   marketId:     (m) => m.marketId ?? 0,
@@ -19,53 +21,24 @@ const SORT_KEYS = {
   closeFee:     (m) => m.closeFeePct || 0,
   fundingLong:  (m) => m.feesPerHourLong || 0,
   fundingShort: (m) => m.feesPerHourShort || 0,
+  totalOi:      (m) => (m.oiLongUsd || 0) + (m.oiShortUsd || 0),
 };
 
 export default function MarketsTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useMarkets(network);
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('desc');
   const { toggle, viewClass } = useViewToggle();
 
-  const handleSort = (col) => {
-    if (col === sortCol) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortCol(col);
-      setSortDir('desc');
-    }
-  };
-
-  const sorted = useMemo(() => {
-    const markets = (data?.markets || []).filter(m => m.visible !== false);
-    if (!sortCol) {
-      return [...markets].sort((a, b) => ((b.oiLongUsd || 0) + (b.oiShortUsd || 0)) - ((a.oiLongUsd || 0) + (a.oiShortUsd || 0)));
-    }
-    const getter = SORT_KEYS[sortCol];
-    return [...markets].sort((a, b) => {
-      const aVal = getter(a);
-      const bVal = getter(b);
-      if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-  }, [data, sortCol, sortDir]);
+  const filteredMarkets = useMemo(() => (data?.markets || []).filter(m => m.visible !== false), [data]);
+  const { sorted, sortCol, sortDir, handleSort } = useSortedData(filteredMarkets, 'totalOi', 'desc', SORT_KEYS);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!sorted.length) return <EmptyState message="No markets found" />;
 
-  const SortTh = ({ col, children }) => {
-    const active = col === sortCol;
-    return (
-      <th
-        className={`sortable${active ? ' sorted' : ''}`}
-        onClick={() => handleSort(col)}
-      >
-        {children} <span className="sort-icon">{active ? (sortDir === 'desc' ? '▼' : '▲') : '▼'}</span>
-      </th>
-    );
-  };
+  const Th = ({ col, children }) => (
+    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
+  );
 
   return (
     <div className={viewClass}>
@@ -74,19 +47,19 @@ export default function MarketsTable() {
         <table>
           <thead>
             <tr>
-              <SortTh col="marketId">Market ID</SortTh>
-              <SortTh col="symbol">Market</SortTh>
-              <SortTh col="collateral">Collateral</SortTh>
-              <SortTh col="price">Price</SortTh>
-              <SortTh col="priceChange">24h Change</SortTh>
-              <SortTh col="oiLong">OI Long</SortTh>
-              <SortTh col="oiShort">OI Short</SortTh>
-              <SortTh col="oiMax">Max OI</SortTh>
+              <Th col="marketId">Market ID</Th>
+              <Th col="symbol">Market</Th>
+              <Th col="collateral">Collateral</Th>
+              <Th col="price">Price</Th>
+              <Th col="priceChange">24h Change</Th>
+              <Th col="oiLong">OI Long</Th>
+              <Th col="oiShort">OI Short</Th>
+              <Th col="oiMax">Max OI</Th>
               <th>Leverage</th>
-              <SortTh col="openFee">Open Fee</SortTh>
-              <SortTh col="closeFee">Close Fee</SortTh>
-              <SortTh col="fundingLong">Funding Long</SortTh>
-              <SortTh col="fundingShort">Funding Short</SortTh>
+              <Th col="openFee">Open Fee</Th>
+              <Th col="closeFee">Close Fee</Th>
+              <Th col="fundingLong">Funding Long</Th>
+              <Th col="fundingShort">Funding Short</Th>
             </tr>
           </thead>
           <tbody>

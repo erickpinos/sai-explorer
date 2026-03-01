@@ -1,50 +1,6 @@
 import { sql } from '@vercel/postgres';
-
-const GRAPHQL_ENDPOINTS = {
-  mainnet: 'https://sai-keeper.nibiru.fi/query',
-  testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query'
-};
-
-// Bech32 decoding to convert nibi addresses to 0x
-const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
-
-function bech32Decode(str) {
-  const data = [];
-  for (let i = str.indexOf('1') + 1; i < str.length - 6; i++) {
-    data.push(CHARSET.indexOf(str[i]));
-  }
-  let acc = 0, bits = 0;
-  const bytes = [];
-  for (const val of data) {
-    acc = (acc << 5) | val;
-    bits += 5;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((acc >> bits) & 0xff);
-    }
-  }
-  return bytes;
-}
-
-function nibiToHex(nibiAddr) {
-  if (!nibiAddr) return null;
-  try {
-    const bytes = bech32Decode(nibiAddr);
-    return '0x' + bytes.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch {
-    return nibiAddr;
-  }
-}
-
-async function fetchGraphQL(query, network = 'mainnet') {
-  const endpoint = GRAPHQL_ENDPOINTS[network];
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query })
-  });
-  return response.json();
-}
+import { nibiToHex } from '../scripts/addressUtils.js';
+import { fetchGraphQL } from '../shared/graphql.js';
 
 async function syncTrades(network) {
   console.log(`Syncing trades for ${network}...`);

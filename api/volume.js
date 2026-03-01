@@ -24,7 +24,8 @@ export default async function handler(req, res) {
         COUNT(CASE WHEN trade_change_type = 'position_opened' THEN 1 END) as opens,
         COUNT(CASE WHEN trade_change_type LIKE 'position_closed%' THEN 1 END) as closes,
         COUNT(CASE WHEN trade_change_type = 'position_liquidated' THEN 1 END) as liquidations,
-        MIN(block_ts) as first_trade_ts
+        MIN(block_ts) as first_trade_ts,
+        MAX(block_ts) as last_trade_ts
       FROM trades
       WHERE network = ${network}
       GROUP BY trader, evm_trader
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
       closes: parseInt(r.closes),
       liquidations: parseInt(r.liquidations),
       firstTradeTs: r.first_trade_ts,
+      lastTradeTs: r.last_trade_ts,
     }));
 
     res.status(200).json({ users });

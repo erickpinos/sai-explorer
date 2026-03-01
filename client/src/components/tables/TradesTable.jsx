@@ -1,52 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTrades } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
+import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import SortTh from '../ui/SortTh';
+import Pagination from '../ui/Pagination';
 import UserProfileModal from '../modals/UserProfileModal';
 import TradeDetailModal from '../modals/TradeDetailModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
-
-const getBadgeClass = (status) => {
-  if (!status) return 'badge badge-purple';
-  const s = status.toLowerCase();
-  if (s.includes('liquidat')) return 'badge badge-red';
-  if (s.includes('opened')) return 'badge badge-blue';
-  if (s.includes('cancel')) return 'badge badge-orange';
-  if (s.includes('closed')) return 'badge badge-purple';
-  if (s.includes('trigger')) return 'badge badge-yellow';
-  return 'badge badge-purple';
-};
-
-const formatTradeTypeBadge = (type) => {
-  if (!type) return 'Unknown';
-  const s = type.toLowerCase();
-  if (s.includes('liquidat')) return 'Liquidated';
-  if (s.includes('opened')) return 'Opened';
-  if (s.includes('cancel')) return 'Limit Order Cancelled';
-  if (s.includes('closed')) return 'Closed';
-  if (s.includes('trigger')) return 'Triggered';
-  return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-};
-
-const formatPnl = (pnl) => {
-  if (!pnl || pnl === 0) return '-';
-  const sign = pnl > 0 ? '+' : '';
-  return `${sign}$${formatNumber(Math.abs(pnl), 2)}`;
-};
-
-const shortenHash = (hash) => {
-  if (!hash) return '-';
-  return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
-};
-
-const toUsd = (microAmount, collateralPrice) => {
-  const raw = (parseFloat(microAmount) || 0) / 1000000;
-  const price = parseFloat(collateralPrice) || 1;
-  return raw * price;
-};
+import { useSortedData } from '../../hooks/useSortedData';
+import { usePagination } from '../../hooks/usePagination';
 
 const SORT_GETTERS = {
   time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
@@ -67,60 +33,27 @@ const SORT_GETTERS = {
 export default function TradesTable() {
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
-  const [sortCol, setSortCol] = useState('time');
   const { toggle, viewClass } = useViewToggle();
-  const [sortDir, setSortDir] = useState('desc');
 
-  const handleSort = (col) => {
-    if (col === sortCol) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortCol(col);
-      setSortDir('desc');
-    }
-    setCurrentPage(1);
-  };
+  const { sorted, sortCol, sortDir, handleSort: sortData } = useSortedData(trades, 'time', 'desc', SORT_GETTERS);
+  const { page, setPage, paginatedData: paginatedTrades, totalPages, startIndex } = usePagination(sorted, TRADES_PER_PAGE);
 
-  const sorted = useMemo(() => {
-    if (!trades) return [];
-    const getter = SORT_GETTERS[sortCol];
-    if (!getter) return trades;
-    return [...trades].sort((a, b) => {
-      const aVal = getter(a);
-      const bVal = getter(b);
-      if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-  }, [trades, sortCol, sortDir]);
+  const handleSort = (col) => { sortData(col); setPage(1); };
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!sorted.length) return <EmptyState message="No trades found" />;
 
-  const startIndex = (currentPage - 1) * TRADES_PER_PAGE;
-  const endIndex = startIndex + TRADES_PER_PAGE;
-  const paginatedTrades = sorted.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(sorted.length / TRADES_PER_PAGE);
-
-  const SortTh = ({ col, children }) => {
-    const active = col === sortCol;
-    return (
-      <th
-        className={`sortable${active ? ' sorted' : ''}`}
-        onClick={() => handleSort(col)}
-      >
-        {children} <span className="sort-icon">{active ? (sortDir === 'desc' ? '▼' : '▲') : '▼'}</span>
-      </th>
-    );
-  };
+  const Th = ({ col, children }) => (
+    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
+  );
 
   return (
     <div className={viewClass}>
       <div className="table-info">
-        Showing {startIndex + 1}-{Math.min(endIndex, sorted.length)} of {sorted.length} transactions
+        Showing {startIndex + 1}-{Math.min(startIndex + TRADES_PER_PAGE, sorted.length)} of {sorted.length} transactions
         {toggle}
       </div>
 
@@ -128,19 +61,19 @@ export default function TradesTable() {
         <table>
           <thead>
             <tr>
-              <SortTh col="time">Time</SortTh>
-              <SortTh col="type">Type</SortTh>
-              <SortTh col="marketId">Market ID</SortTh>
-              <SortTh col="market">Market</SortTh>
-              <SortTh col="collateralType">Collateral Type</SortTh>
-              <SortTh col="trader">Trader</SortTh>
-              <SortTh col="evmAddress">EVM Address</SortTh>
-              <SortTh col="direction">Direction</SortTh>
-              <SortTh col="leverage">Leverage</SortTh>
-              <SortTh col="openPrice">Open Price</SortTh>
-              <SortTh col="closePrice">Close Price</SortTh>
-              <SortTh col="collateral">Collateral</SortTh>
-              <SortTh col="pnl">PNL</SortTh>
+              <Th col="time">Time</Th>
+              <Th col="type">Type</Th>
+              <Th col="marketId">Market ID</Th>
+              <Th col="market">Market</Th>
+              <Th col="collateralType">Collateral Type</Th>
+              <Th col="trader">Trader</Th>
+              <Th col="evmAddress">EVM Address</Th>
+              <Th col="direction">Direction</Th>
+              <Th col="leverage">Leverage</Th>
+              <Th col="openPrice">Open Price</Th>
+              <Th col="closePrice">Close Price</Th>
+              <Th col="collateral">Collateral</Th>
+              <Th col="pnl">PNL</Th>
               <th>TX Hash</th>
               <th>EVM TX Hash</th>
             </tr>
@@ -287,17 +220,7 @@ export default function TradesTable() {
         })}
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
-            Previous
-          </button>
-          <span>Page {currentPage} of {totalPages}</span>
-          <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       {selectedUserAddress && (
         <UserProfileModal address={selectedUserAddress} onClose={() => setSelectedUserAddress(null)} />

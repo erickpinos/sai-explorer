@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useVolume } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../../utils/formatters';
+import { formatPnl } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
 import { useViewToggle } from '../ui/ViewToggle';
+import { useSortedData } from '../../hooks/useSortedData';
 
 const COLUMNS = [
   { key: 'totalVolume',  label: 'Total Volume' },
@@ -15,36 +17,16 @@ const COLUMNS = [
   { key: 'closes',       label: 'Closes' },
   { key: 'liquidations', label: 'Liquidations' },
   { key: 'firstTradeTs', label: 'First Trade' },
+  { key: 'lastTradeTs',  label: 'Last Trade' },
 ];
 
 export default function VolumeTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useVolume(network);
-  const [sortCol, setSortCol] = useState('totalVolume');
-  const [sortDir, setSortDir] = useState('desc');
   const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const { toggle, viewClass } = useViewToggle();
 
-  const handleSort = (col) => {
-    if (col === sortCol) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortCol(col);
-      setSortDir('desc');
-    }
-  };
-
-  const sorted = useMemo(() => {
-    const users = data?.users || [];
-    return [...users].sort((a, b) => {
-      const aVal = a[sortCol] ?? 0;
-      const bVal = b[sortCol] ?? 0;
-      if (typeof aVal === 'string') {
-        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-  }, [data, sortCol, sortDir]);
+  const { sorted, sortCol, sortDir, handleSort } = useSortedData(data?.users || [], 'totalVolume', 'desc', null);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -53,11 +35,6 @@ export default function VolumeTable() {
   const SortIcon = ({ col }) => {
     if (col !== sortCol) return <span className="sort-icon">▼</span>;
     return <span className="sort-icon" style={{ opacity: 1, color: '#6366f1' }}>{sortDir === 'desc' ? '▼' : '▲'}</span>;
-  };
-
-  const formatPnl = (val) => {
-    const sign = val >= 0 ? '+' : '';
-    return `${sign}$${formatNumber(Math.abs(val), 2)}`;
   };
 
   return (
@@ -105,6 +82,7 @@ export default function VolumeTable() {
                 <td>{u.closes}</td>
                 <td>{u.liquidations}</td>
                 <td>{u.firstTradeTs ? new Date(u.firstTradeTs).toLocaleDateString() : '—'}</td>
+                <td>{u.lastTradeTs ? new Date(u.lastTradeTs).toLocaleDateString() : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -126,7 +104,7 @@ export default function VolumeTable() {
                   {formatAddress(u.evmTrader || u.trader)}
                 </span>
               </div>
-              {u.firstTradeTs && <span className="profile-card-time">{new Date(u.firstTradeTs).toLocaleDateString()}</span>}
+              {u.lastTradeTs && <span className="profile-card-time">Last: {new Date(u.lastTradeTs).toLocaleDateString()}</span>}
             </div>
             <div className="profile-card-row">
               <span className="profile-card-label">Volume</span>
