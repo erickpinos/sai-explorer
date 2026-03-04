@@ -24,3 +24,8 @@ export const GRAPHQL_ENDPOINTS = {
   mainnet: 'https://sai-keeper.nibiru.fi/query',
   testnet: 'https://sai-keeper.testnet-2.nibiru.fi/query',
 };
+
+export const EVM_RPC_ENDPOINTS = {
+  mainnet: 'https://evm-rpc.nibiru.fi',
+  testnet: 'https://evm-rpc.testnet-2.nibiru.fi',
+};

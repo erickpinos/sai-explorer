@@ -92,8 +92,8 @@ export default function UserProfileModal({ address, onClose }) {
                 <tr key={trade.id}>
                   <td>{formatDate(trade.block?.block_ts)}</td>
                   <td>
-                    <span className={getBadgeClass(displayType)}>
-                      {formatTradeTypeBadge(displayType)}
+                    <span className={getBadgeClass(displayType, trade.txFailed)}>
+                      {formatTradeTypeBadge(displayType, trade.txFailed)}
                     </span>
                   </td>
                   <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
@@ -140,8 +140,8 @@ export default function UserProfileModal({ address, onClose }) {
               <div key={trade.id} className="profile-card">
                 <div className="profile-card-header">
                   <div className="profile-card-badges">
-                    <span className={getBadgeClass(trade.tradeChangeType)}>
-                      {formatTradeTypeBadge(trade.tradeChangeType)}
+                    <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
+                      {formatTradeTypeBadge(trade.tradeChangeType, trade.txFailed)}
                     </span>
                     <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
                       {trade.trade?.isLong ? 'Long' : 'Short'}

@@ -43,6 +43,7 @@ async function setupDatabase() {
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS market_id INTEGER');
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS base_token_symbol TEXT');
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS tx_failed BOOLEAN DEFAULT FALSE');
     console.log('✓ Ensured trades columns up to date');
 
     // Create indexes for trades

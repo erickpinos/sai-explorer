@@ -63,8 +63,8 @@ export default function TradeDetailModal({ trade, onClose }) {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <h2>Trade Details</h2>
-            <span className={getTradeTypeBadgeClass(displayType)}>
-              {getTradeTypeLabel(displayType)}
+            <span className={getTradeTypeBadgeClass(displayType, trade.txFailed)}>
+              {getTradeTypeLabel(displayType, trade.txFailed)}
             </span>
             <span className={tradeIsLong ? 'badge badge-green' : 'badge badge-red'}>
               {tradeIsLong ? 'Long' : 'Short'}

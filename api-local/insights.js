@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT base_token_symbol, COUNT(*) as trade_count
         FROM trades
-        WHERE network = $1 AND base_token_symbol IS NOT NULL
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND base_token_symbol IS NOT NULL
         GROUP BY base_token_symbol
         ORDER BY trade_count DESC
         LIMIT 1
@@ -49,14 +49,14 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE is_long = true) as long_count,
           COUNT(*) FILTER (WHERE is_long = false) as short_count
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
       `, [network]),
 
       pool.query(`
         SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
                realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND realized_pnl_pct IS NOT NULL
           AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct DESC
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
         SELECT realized_pnl_pct, base_token_symbol, is_long, leverage,
                realized_pnl_collateral / 1000000.0 * COALESCE(collateral_price, 1) as pnl_usd
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND realized_pnl_pct IS NOT NULL
           AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct ASC
@@ -77,13 +77,13 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT AVG(leverage) as avg_leverage
         FROM trades
-        WHERE network = $1 AND leverage IS NOT NULL AND leverage > 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND leverage IS NOT NULL AND leverage > 0
       `, [network]),
 
       pool.query(`
         SELECT trader, evm_trader, COUNT(*) as trade_count
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
         GROUP BY trader, evm_trader
         ORDER BY trade_count DESC
         LIMIT 1
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE trade_change_type = 'position_liquidated') as liquidations,
           COUNT(*) FILTER (WHERE trade_change_type LIKE 'position_closed%' OR trade_change_type = 'position_liquidated') as closed_trades
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
       `, [network]),
 
       pool.query(`
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE realized_pnl_pct > 0) as winning_trades,
           COUNT(*) FILTER (WHERE realized_pnl_pct <= 0) as losing_trades
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND realized_pnl_pct IS NOT NULL
           AND trade_change_type != 'position_opened'
         GROUP BY is_long
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT base_token_symbol, AVG(realized_pnl_pct) as avg_pnl_pct, COUNT(*) as trade_count
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND realized_pnl_pct IS NOT NULL
           AND trade_change_type != 'position_opened'
           AND base_token_symbol IS NOT NULL
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT EXTRACT(HOUR FROM block_ts) as hour, COUNT(*) as trade_count
         FROM trades
-        WHERE network = $1 AND block_ts IS NOT NULL
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND block_ts IS NOT NULL
         GROUP BY hour
         ORDER BY trade_count DESC
         LIMIT 1
@@ -138,7 +138,7 @@ export default async function handler(req, res) {
           ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
-        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral > 0
         ORDER BY realized_pnl_collateral * COALESCE(collateral_price, 1) DESC
         LIMIT 10
       `, [network]),
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
           ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
-        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral < 0
         ORDER BY realized_pnl_collateral * COALESCE(collateral_price, 1) ASC
         LIMIT 10
       `, [network]),
@@ -161,7 +161,7 @@ export default async function handler(req, res) {
           ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
-        WHERE network = $1 AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct > 0
           AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct DESC
         LIMIT 10
@@ -174,7 +174,7 @@ export default async function handler(req, res) {
           ABS(collateral_amount * leverage / 1000000.0 * COALESCE(collateral_price, 1)) as position_size,
           leverage, trade_change_type, block_ts, tx_hash, evm_tx_hash
         FROM trades
-        WHERE network = $1 AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND realized_pnl_pct IS NOT NULL AND realized_pnl_pct < 0
           AND trade_change_type != 'position_opened'
         ORDER BY realized_pnl_pct ASC
         LIMIT 10
@@ -187,7 +187,7 @@ export default async function handler(req, res) {
           COUNT(CASE WHEN realized_pnl_collateral > 0 THEN 1 END) as win_count,
           COUNT(CASE WHEN realized_pnl_collateral < 0 THEN 1 END) as loss_count
         FROM trades
-        WHERE network = $1 AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral != 0
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL) AND realized_pnl_collateral IS NOT NULL AND realized_pnl_collateral != 0
       `, [network]),
     ]);
 

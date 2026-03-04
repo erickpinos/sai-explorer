@@ -24,7 +24,7 @@ export default async function handler(req, res) {
           SUM(CASE WHEN trade_change_type NOT IN (${EXCLUDED_TRADE_TYPES_SQL})
               THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
           ${cutoff ? `AND block_ts >= $2` : ''}
         GROUP BY DATE(block_ts)
         ORDER BY day ASC

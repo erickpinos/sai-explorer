@@ -2,6 +2,7 @@ export function mapTradeRow(row) {
   return {
     id: row.id,
     tradeChangeType: row.trade_change_type,
+    txFailed: row.tx_failed || false,
     realizedPnlPct: row.realized_pnl_pct,
     realizedPnlCollateral: row.realized_pnl_collateral,
     txHash: row.tx_hash,

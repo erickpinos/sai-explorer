@@ -1,6 +1,7 @@
 import { formatNumber } from './formatters';
 
-export const getBadgeClass = (status) => {
+export const getBadgeClass = (status, txFailed) => {
+  if (txFailed) return 'badge badge-failed';
   if (!status) return 'badge badge-purple';
   const s = status.toLowerCase();
   if (s.includes('liquidat')) return 'badge badge-red';
@@ -11,7 +12,15 @@ export const getBadgeClass = (status) => {
   return 'badge badge-purple';
 };
 
-export const formatTradeTypeBadge = (type) => {
+export const formatTradeTypeBadge = (type, txFailed) => {
+  if (txFailed) {
+    if (!type) return 'Failed';
+    const s = type.toLowerCase();
+    if (s.includes('closed')) return 'Failed Close';
+    if (s.includes('opened')) return 'Failed Open';
+    if (s.includes('liquidat')) return 'Failed Liquidation';
+    return 'Failed';
+  }
   if (!type) return 'Unknown';
   const s = type.toLowerCase();
   if (s.includes('liquidat')) return 'Liquidated';

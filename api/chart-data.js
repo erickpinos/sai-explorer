@@ -25,7 +25,7 @@ export default async function handler(req, res) {
             SUM(CASE WHEN trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
                 THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
           FROM trades
-          WHERE network = ${network} AND block_ts >= ${cutoff.toISOString()}
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL) AND block_ts >= ${cutoff.toISOString()}
           GROUP BY DATE(block_ts)
           ORDER BY day ASC
         `
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
             SUM(CASE WHEN trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
                 THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
           FROM trades
-          WHERE network = ${network}
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
           GROUP BY DATE(block_ts)
           ORDER BY day ASC
         `,

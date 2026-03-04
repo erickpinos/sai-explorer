@@ -27,6 +27,7 @@ export default async function handler(req, res) {
       FROM trades
       WHERE network = $1
         AND (trader = $2 OR evm_trader = $2)
+        AND (tx_failed = FALSE OR tx_failed IS NULL)
         AND trade_change_type NOT IN (${EXCLUDED_TRADE_TYPES_SQL})
     `, [network, address]);
 

@@ -17,7 +17,7 @@ import { usePagination } from '../../hooks/usePagination';
 
 const SORT_GETTERS = {
   time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
-  type:       (t) => t.tradeChangeType || '',
+  type:       (t) => t.txFailed ? `failed_${t.tradeChangeType || ''}` : (t.tradeChangeType || ''),
   market:     (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
   marketId:   (t) => t.trade?.perpBorrowing?.marketId ?? 0,
   trader:     (t) => t.trade?.trader || '',
@@ -91,8 +91,8 @@ export default function TradesTable() {
                 <tr key={trade.id} className="clickable-row" onClick={() => setSelectedTrade(trade)}>
                   <td>{formatDate(trade.block?.block_ts)}</td>
                   <td>
-                    <span className={getBadgeClass(displayType)}>
-                      {formatTradeTypeBadge(displayType)}
+                    <span className={getBadgeClass(displayType, trade.txFailed)}>
+                      {formatTradeTypeBadge(displayType, trade.txFailed)}
                     </span>
                   </td>
                   <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>
@@ -157,8 +157,8 @@ export default function TradesTable() {
               <div key={trade.id} className="profile-card clickable-row" onClick={() => setSelectedTrade(trade)}>
                 <div className="profile-card-header">
                   <div className="profile-card-badges">
-                    <span className={getBadgeClass(trade.tradeChangeType)}>
-                      {formatTradeTypeBadge(trade.tradeChangeType)}
+                    <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
+                      {formatTradeTypeBadge(trade.tradeChangeType, trade.txFailed)}
                     </span>
                     <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
                       {trade.trade?.isLong ? 'Long' : 'Short'}

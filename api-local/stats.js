@@ -43,6 +43,7 @@ export default async function handler(req, res) {
           SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as total_volume
         FROM trades
         WHERE network = $1
+          AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND trade_change_type NOT IN (${EXCLUDED_TRADE_TYPES_SQL})
       `, [network]),
 
@@ -57,13 +58,13 @@ export default async function handler(req, res) {
       pool.query(`
         SELECT COUNT(DISTINCT trader) as unique_traders
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
       `, [network]),
 
       pool.query(`
         SELECT block_ts
         FROM trades
-        WHERE network = $1
+        WHERE network = $1 AND (tx_failed = FALSE OR tx_failed IS NULL)
         ORDER BY block_ts DESC
         LIMIT 1
       `, [network]),

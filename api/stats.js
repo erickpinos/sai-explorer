@@ -46,6 +46,7 @@ export default async function handler(req, res) {
           SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as total_volume
         FROM trades
         WHERE network = ${network}
+          AND (tx_failed = FALSE OR tx_failed IS NULL)
           AND trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
       `,
 
@@ -62,14 +63,14 @@ export default async function handler(req, res) {
       sql`
         SELECT COUNT(DISTINCT trader) as unique_traders
         FROM trades
-        WHERE network = ${network}
+        WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
       `,
 
       // Most recent trade timestamp
       sql`
         SELECT block_ts
         FROM trades
-        WHERE network = ${network}
+        WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
         ORDER BY block_ts DESC
         LIMIT 1
       `,

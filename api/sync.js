@@ -1,6 +1,7 @@
 import { sql } from '../shared/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
+import { getFailedTxHashes } from '../shared/evmReceipt.js';
 
 async function syncTrades(network) {
   console.log(`Syncing trades for ${network}...`);
@@ -55,27 +56,32 @@ async function syncTrades(network) {
 
     // Insert batch concurrently
     if (batch.length > 0) {
+      const failedHashes = await getFailedTxHashes(batch, network);
       const results = await Promise.allSettled(batch.map(t => sql`
         INSERT INTO trades (
           id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
           tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
           trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-          collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
+          collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol,
+          tx_failed
         ) VALUES (
           ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
           ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
           ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
           ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
           ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
-          ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol}
+          ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol},
+          ${failedHashes.has(t.evmTxHash)}
         )
         ON CONFLICT (id) DO UPDATE SET
           collateral_token_symbol = EXCLUDED.collateral_token_symbol,
           base_token_symbol = EXCLUDED.base_token_symbol,
-          evm_trader = EXCLUDED.evm_trader
+          evm_trader = EXCLUDED.evm_trader,
+          tx_failed = EXCLUDED.tx_failed
         WHERE trades.collateral_token_symbol IS NULL
           OR trades.base_token_symbol IS NULL
           OR trades.evm_trader IS NULL
+          OR trades.tx_failed != EXCLUDED.tx_failed
       `));
       newTradesCount += results.filter(r => r.status === 'fulfilled').length;
     }

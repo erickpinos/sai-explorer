@@ -27,7 +27,7 @@ export default async function handler(req, res) {
         MIN(block_ts) as first_trade_ts,
         MAX(block_ts) as last_trade_ts
       FROM trades
-      WHERE network = ${network}
+      WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
       GROUP BY trader, evm_trader
       ORDER BY total_volume DESC
       LIMIT 500
