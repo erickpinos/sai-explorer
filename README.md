@@ -156,7 +156,7 @@ Nibiru Chain (GraphQL) → Sync Engine → PostgreSQL → REST API → React Fro
 - **Dual addresses**: Every trader has a Bech32 (`nibi1...`) and EVM (`0x...`) address. The sync engine converts between them using `scripts/addressUtils.js`.
 - **Volume formula**: `ABS(collateral_amount × leverage / 1,000,000 × collateral_price)`. Excludes meta events (TP/SL updates, limit/stop order creation/cancellation). Canonical list defined in `shared/constants.js`.
 - **Network toggle**: Supports mainnet and testnet via React Context.
-- **Two API directories**: `api/` uses Vercel's `@vercel/postgres` for serverless deployment; `api-local/` uses `pg` Pool for the local Express server. Both must have identical business logic. Shared constants (excluded trade types, active vaults, GraphQL endpoints) live in `shared/constants.js`.
+- **Two API directories**: `api/` uses `@neondatabase/serverless` via `shared/db.js` for serverless deployment; `api-local/` uses `pg` Pool for the local Express server. Both must have identical business logic. Shared constants (excluded trade types, active vaults, GraphQL endpoints) live in `shared/constants.js`.
 
 ### API Endpoints
 

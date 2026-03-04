@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../shared/db.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

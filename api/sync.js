@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../shared/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 

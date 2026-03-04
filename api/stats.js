@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../shared/db.js';
 import { ACTIVE_VAULTS } from '../shared/constants.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';

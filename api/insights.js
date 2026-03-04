@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../shared/db.js';
 // PnL queries use != 'position_opened' (not the full exclusion list) because
 // only close/liquidation events realize PnL. This is intentional.
 

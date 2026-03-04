@@ -56,7 +56,7 @@ Two API directories that **must stay in sync**:
 
 | Directory | Environment | DB Client |
 |-----------|------------|-----------|
-| `api/` | Vercel serverless (production) | `@vercel/postgres` sql tagged template |
+| `api/` | Vercel serverless (production) | `@neondatabase/serverless` via `shared/db.js` |
 | `api-local/` | Local Express dev server | `pg` Pool from `scripts/db.js` |
 
 **Both must have identical business logic.** When changing any endpoint, update both files. Use `shared/` imports to minimize drift.

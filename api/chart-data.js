@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../shared/db.js';
 // NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {

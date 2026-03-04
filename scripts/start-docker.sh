@@ -6,10 +6,14 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-if [ "$(docker compose ps -q postgres 2>/dev/null)" = "" ]; then
+if docker ps --format '{{.Names}}' | grep -q '^sai-explorer-db$'; then
+  echo "Postgres container already running."
+elif docker ps -a --format '{{.Names}}' | grep -q '^sai-explorer-db$'; then
+  echo "Starting existing Postgres container..."
+  docker start sai-explorer-db
+  sleep 3
+else
   echo "Starting Postgres container..."
   docker compose up -d
   sleep 3
-else
-  echo "Postgres container already running."
 fi
