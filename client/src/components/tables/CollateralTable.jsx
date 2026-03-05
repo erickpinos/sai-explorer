@@ -6,12 +6,28 @@ import EmptyState from '../ui/EmptyState';
 import SortTh from '../ui/SortTh';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
+import SortDropdown from '../ui/SortDropdown';
+
+const SORT_OPTIONS = [
+  { key: 'tokenId', label: 'Index' },
+  { key: 'symbol', label: 'Symbol' },
+  { key: 'name', label: 'Name' },
+  { key: 'price', label: 'Price' },
+  { key: 'vaultCount', label: 'Vaults' },
+  { key: 'vaultTvl', label: 'Vault TVL' },
+  { key: 'marketCount', label: 'Markets' },
+  { key: 'totalOi', label: 'Total OI' },
+];
 
 const SORT_KEYS = {
-  tokenId: (c) => c.tokenId ?? 0,
-  symbol:  (c) => c.symbol || '',
-  name:    (c) => c.name || '',
-  price:   (c) => c.price || 0,
+  tokenId:    (c) => c.tokenId ?? 0,
+  symbol:     (c) => c.symbol || '',
+  name:       (c) => c.name || '',
+  price:      (c) => c.price || 0,
+  vaultCount: (c) => c.vaultCount || 0,
+  vaultTvl:   (c) => c.vaultTvl || 0,
+  marketCount:(c) => c.marketCount || 0,
+  totalOi:    (c) => c.totalOi || 0,
 };
 
 export default function CollateralTable() {
@@ -42,10 +58,10 @@ export default function CollateralTable() {
                 <Th col="symbol">Symbol</Th>
                 <Th col="name">Name</Th>
                 <Th col="price">Price (USD)</Th>
-                <th>Vaults</th>
-                <th>Vault TVL</th>
-                <th>Markets</th>
-                <th>Total OI</th>
+                <Th col="vaultCount">Vaults</Th>
+                <Th col="vaultTvl">Vault TVL</Th>
+                <Th col="marketCount">Markets</Th>
+                <Th col="totalOi">Total OI</Th>
                 <th>Logo</th>
               </tr>
             </thead>
@@ -70,6 +86,7 @@ export default function CollateralTable() {
             </tbody>
           </table>
         </div>
+      <SortDropdown options={SORT_OPTIONS} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
       <div className="profile-cards-mobile">
           {sorted.map((c, i) => (
             <div key={c.tokenId ?? i} className="profile-card">

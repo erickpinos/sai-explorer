@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
         const relatedMarkets = marketsByCollateral[tokenId] || [];
         const totalOi = relatedMarkets.reduce((sum, m) => {
-          return sum + ((m.oiLong || 0) + (m.oiShort || 0)) / 1e6;
+          return sum + ((m.oiLong || 0) + (m.oiShort || 0)) / 1e6 * price;
         }, 0);
 
         return {

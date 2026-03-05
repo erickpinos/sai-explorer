@@ -7,6 +7,18 @@ import EmptyState from '../ui/EmptyState';
 import SortTh from '../ui/SortTh';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
+import SortDropdown from '../ui/SortDropdown';
+
+const SORT_OPTIONS = [
+  { key: 'totalOi', label: 'Total OI' },
+  { key: 'symbol', label: 'Market' },
+  { key: 'price', label: 'Price' },
+  { key: 'priceChange', label: '24h Change' },
+  { key: 'oiLong', label: 'OI Long' },
+  { key: 'oiShort', label: 'OI Short' },
+  { key: 'oiMax', label: 'Max OI' },
+  { key: 'marketId', label: 'Market ID' },
+];
 
 const SORT_KEYS = {
   marketId:     (m) => m.marketId ?? 0,
@@ -89,6 +101,7 @@ export default function MarketsTable() {
             </tbody>
           </table>
         </div>
+      <SortDropdown options={SORT_OPTIONS} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
       <div className="profile-cards-mobile">
           {sorted.map((m, i) => {
             const symbol = m.baseToken?.symbol || (m.marketId != null ? String(m.marketId) : '-');

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 export function useViewToggle() {
   const [view, setView] = useState(() =>
-    window.matchMedia('(max-width: 767px)').matches ? 'cards' : 'auto'
+    window.matchMedia('(max-width: 767px)').matches ? 'cards' : 'table'
   );
 
   const viewClass = view === 'auto' ? '' : view === 'cards' ? 'view-cards' : 'view-table';
@@ -12,14 +12,14 @@ export function useViewToggle() {
       <div className="view-toggle">
         <button
           className={`view-toggle-btn ${view === 'table' ? 'active' : ''}`}
-          onClick={() => setView(view === 'table' ? 'auto' : 'table')}
+          onClick={() => setView('table')}
           title="Table view"
         >
           ☰
         </button>
         <button
           className={`view-toggle-btn ${view === 'cards' ? 'active' : ''}`}
-          onClick={() => setView(view === 'cards' ? 'auto' : 'cards')}
+          onClick={() => setView('cards')}
           title="Card view"
         >
           ▦

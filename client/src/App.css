@@ -1328,6 +1328,47 @@ td a:hover {
   color: #e1e1e6;
 }
 
+/* Sort dropdown (card view only) */
+.sort-dropdown {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  justify-content: flex-end;
+}
+.sort-dropdown-label {
+  color: #888;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.sort-dropdown-select {
+  background: #1a1a2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  color: #e1e1e6;
+  padding: 6px 10px;
+  font-size: 13px;
+  flex: 1;
+  max-width: 200px;
+}
+.sort-dropdown-dir {
+  background: #1a1a2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  color: #6366f1;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sort-dropdown-dir:hover {
+  background: #2a2a3e;
+}
+.view-cards .sort-dropdown { display: flex; }
+@media (max-width: 640px) {
+  .sort-dropdown { display: flex; }
+}
+
 /* Table and card views */
 .profile-table-desktop { display: block; }
 .profile-cards-mobile  { display: none; }

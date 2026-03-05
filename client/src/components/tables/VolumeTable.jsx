@@ -8,6 +8,7 @@ import EmptyState from '../ui/EmptyState';
 import UserProfileModal from '../modals/UserProfileModal';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
+import SortDropdown from '../ui/SortDropdown';
 
 const COLUMNS = [
   { key: 'totalVolume',  label: 'Total Volume' },
@@ -61,7 +62,7 @@ export default function VolumeTable() {
             </thead>
             <tbody>
               {sorted.map((u, i) => (
-                <tr key={u.trader}>
+                <tr key={`${u.trader}-${u.evmTrader || i}`}>
                   <td>{i + 1}</td>
                   <td>
                     <span
@@ -88,9 +89,10 @@ export default function VolumeTable() {
             </tbody>
           </table>
         </div>
+      <SortDropdown options={[{ key: 'trader', label: 'Trader' }, ...COLUMNS]} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
       <div className="profile-cards-mobile">
           {sorted.map((u, i) => (
-            <div key={u.trader} className="profile-card">
+            <div key={`${u.trader}-${u.evmTrader || i}`} className="profile-card">
               <div className="profile-card-header">
                 <div className="profile-card-badges">
                   <span className="profile-card-rank">#{i + 1}</span>

@@ -1,4 +1,6 @@
 import { sql } from '../shared/db.js';
+import { fetchGraphQL } from '../shared/graphql.js';
+import { cachedFetch } from '../shared/cache.js';
 // PnL queries use != 'position_opened' (not the full exclusion list) because
 // only close/liquidation events realize PnL. This is intentional.
 
@@ -191,6 +193,24 @@ export default async function handler(req, res) {
       `,
     ]);
 
+    // Fetch OI from GraphQL for long vs short sentiment
+    const [tokensRes, marketsRes] = await Promise.all([
+      cachedFetch(`insights:tokens:${network}`, () => fetchGraphQL(`{ oracle { tokenPricesUsd { token { id } priceUsd } } }`, network)),
+      cachedFetch(`insights:markets:${network}`, () => fetchGraphQL(`{ perp { borrowings { collateralToken { id } oiLong oiShort visible } } }`, network)),
+    ]);
+    const priceMap = {};
+    for (const t of (tokensRes.data?.oracle?.tokenPricesUsd || [])) {
+      priceMap[t.token?.id] = parseFloat(t.priceUsd || 0);
+    }
+    let totalOiLong = 0, totalOiShort = 0;
+    for (const m of (marketsRes.data?.perp?.borrowings || [])) {
+      if (m.visible === false) continue;
+      const price = priceMap[m.collateralToken?.id] || 1;
+      totalOiLong += (m.oiLong || 0) / 1e6 * price;
+      totalOiShort += (m.oiShort || 0) / 1e6 * price;
+    }
+    const totalOi = totalOiLong + totalOiShort;
+
     const longCount = parseInt(longVsShort.rows[0]?.long_count || 0);
     const shortCount = parseInt(longVsShort.rows[0]?.short_count || 0);
     const totalDirectional = longCount + shortCount;
@@ -208,10 +228,10 @@ export default async function handler(req, res) {
         tradeCount: parseInt(mostTradedMarket.rows[0].trade_count),
       } : null,
       longVsShort: {
-        longCount,
-        shortCount,
-        longPct: totalDirectional > 0 ? ((longCount / totalDirectional) * 100).toFixed(1) : 0,
-        shortPct: totalDirectional > 0 ? ((shortCount / totalDirectional) * 100).toFixed(1) : 0,
+        longOi: totalOiLong,
+        shortOi: totalOiShort,
+        longPct: totalOi > 0 ? ((totalOiLong / totalOi) * 100).toFixed(1) : 0,
+        shortPct: totalOi > 0 ? ((totalOiShort / totalOi) * 100).toFixed(1) : 0,
       },
       biggestWin: biggestWin.rows[0] ? {
         pnlPct: parseFloat(biggestWin.rows[0].realized_pnl_pct) * 100,
@@ -246,12 +266,14 @@ export default async function handler(req, res) {
           winRate: (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades)) > 0
             ? ((parseInt(longStats.winning_trades) / (parseInt(longStats.winning_trades) + parseInt(longStats.losing_trades))) * 100).toFixed(1)
             : 0,
+          tradeCount: longCount,
         } : null,
         short: shortStats ? {
           avgPnlPct: parseFloat((parseFloat(shortStats.avg_pnl_pct) * 100).toFixed(2)),
           winRate: (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades)) > 0
             ? ((parseInt(shortStats.winning_trades) / (parseInt(shortStats.winning_trades) + parseInt(shortStats.losing_trades))) * 100).toFixed(1)
             : 0,
+          tradeCount: shortCount,
         } : null,
       },
       mostProfitableMarket: mostProfitableMarket.rows[0] ? {

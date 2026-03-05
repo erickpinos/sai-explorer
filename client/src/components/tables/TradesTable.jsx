@@ -13,7 +13,17 @@ import { TRADES_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
 import { usePagination } from '../../hooks/usePagination';
+import SortDropdown from '../ui/SortDropdown';
 
+const SORT_OPTIONS = [
+  { key: 'time', label: 'Time' },
+  { key: 'type', label: 'Type' },
+  { key: 'market', label: 'Market' },
+  { key: 'direction', label: 'Direction' },
+  { key: 'leverage', label: 'Leverage' },
+  { key: 'collateral', label: 'Collateral' },
+  { key: 'pnl', label: 'PnL' },
+];
 
 const SORT_GETTERS = {
   time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
@@ -150,6 +160,7 @@ export default function TradesTable() {
             </tbody>
           </table>
         </div>
+      <SortDropdown options={SORT_OPTIONS} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
       <div className="profile-cards-mobile">
           {paginatedTrades.map((trade) => {
             const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
