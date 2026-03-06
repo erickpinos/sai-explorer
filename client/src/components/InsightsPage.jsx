@@ -35,8 +35,7 @@ export default function InsightsPage() {
   }
 
   const hasData = insights &&
-    insights.longVsShort &&
-    (parseFloat(insights.longVsShort.longOi) > 0 || parseFloat(insights.longVsShort.shortOi) > 0);
+    (insights.mostTradedMarket || insights.longVsShort || insights.pnlSummary);
 
   if (error || !insights || !hasData) {
     return (

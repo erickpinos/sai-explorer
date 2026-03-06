@@ -11,9 +11,9 @@ export default function Tabs({ activeTab, onTabChange }) {
     { id: TABS.TRADES, label: 'Perpetual Trades' },
     { id: TABS.DEPOSITS, label: 'LP Deposits' },
     { id: TABS.WITHDRAWS, label: 'Withdraw Requests' },
-    { id: TABS.VOLUME, label: 'User Stats' },
     { id: TABS.MARKETS, label: 'Markets' },
     { id: TABS.COLLATERAL, label: 'Collateral Indices' },
+    { id: TABS.VOLUME, label: 'User Stats' },
     { id: TABS.INSIGHTS, label: 'Insights' },
   ];
 
