@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function useViewToggle() {
-  const [view, setView] = useState(() =>
-    window.matchMedia('(max-width: 767px)').matches ? 'cards' : 'table'
-  );
+  const [view, setView] = useState('table');
+
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      setView('cards');
+    }
+  }, []);
 
   const viewClass = view === 'auto' ? '' : view === 'cards' ? 'view-cards' : 'view-table';
 
