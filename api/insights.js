@@ -2,6 +2,7 @@ import { sql } from '../shared/db.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
+import { checkRateLimit } from '../shared/rateLimit.js';
 // PnL queries use != 'position_opened' (not the full exclusion list) because
 // only close/liquidation events realize PnL. This is intentional.
 
@@ -17,6 +18,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkRateLimit(req, res)) return;
 
   try {
     const { network = 'mainnet' } = req.query;
