@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { NetworkProvider, useNetwork } from './hooks/useNetwork';
 import Header from './components/ui/Header';
@@ -6,7 +7,7 @@ import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
 import FunFacts from './components/ui/FunFacts';
 import LoadingSpinner from './components/ui/LoadingSpinner';
-import { TABS } from './utils/constants';
+import UserProfileModal from './components/modals/UserProfileModal';
 import './App.css';
 
 const TradesTable = lazy(() => import('./components/tables/TradesTable'));
@@ -17,13 +18,27 @@ const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
 const InsightsPage = lazy(() => import('./components/InsightsPage'));
 
+function UserProfileRoute() {
+  const { address } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const background = location.state?.background;
+
+  return (
+    <UserProfileModal
+      address={address}
+      onClose={() => background ? navigate(-1) : navigate('/trades')}
+    />
+  );
+}
+
 function AppContent() {
   const { network } = useNetwork();
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('sai_explorer_current_tab') || TABS.TRADES;
-  });
+  const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
   const [syncing, setSyncing] = useState(false);
+
+  const background = location.state?.background;
 
   const handleFetchNew = async () => {
     setSyncing(true);
@@ -38,7 +53,6 @@ function AppContent() {
         const result = await response.json();
         console.log('Sync completed:', result);
         toast.success(`Synced ${result.trades} trades, ${result.deposits} deposits, ${result.withdraws} withdraws`);
-        // Trigger refresh of all data
         setRefreshKey(prev => prev + 1);
       } else {
         toast.error('Sync failed. Check console for details.');
@@ -52,31 +66,11 @@ function AppContent() {
   };
 
   const handleRefetchAll = async () => {
-    // For now, just trigger the same sync
-    // In future, could call a different endpoint that does full re-index
     await handleFetchNew();
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case TABS.TRADES:
-        return <TradesTable key={`trades-${refreshKey}`} />;
-      case TABS.DEPOSITS:
-        return <DepositsTable key={`deposits-${refreshKey}`} />;
-      case TABS.WITHDRAWS:
-        return <WithdrawsTable key={`withdraws-${refreshKey}`} />;
-      case TABS.VOLUME:
-        return <VolumeTable key={`volume-${refreshKey}`} />;
-      case TABS.MARKETS:
-        return <MarketsTable key={`markets-${refreshKey}`} />;
-      case TABS.COLLATERAL:
-        return <CollateralTable key={`collateral-${refreshKey}`} />;
-      case TABS.INSIGHTS:
-        return <InsightsPage key={`insights-${refreshKey}`} />;
-      default:
-        return <TradesTable key={`trades-default-${refreshKey}`} />;
-    }
-  };
+  // When showing user modal, render the background tab (or /trades if navigated directly)
+  const contentLocation = background || (location.pathname.startsWith('/user/') ? { pathname: '/trades' } : null);
 
   return (
     <div className="app">
@@ -90,13 +84,23 @@ function AppContent() {
       <div className="container">
         <Stats key={`stats-${refreshKey}`} />
 
-        <FunFacts key={`funfacts-${refreshKey}`} onNavigateToInsights={setActiveTab} />
+        <FunFacts key={`funfacts-${refreshKey}`} />
 
-        <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <Tabs />
 
         <div className="content">
           <Suspense fallback={<LoadingSpinner />}>
-            {renderTabContent()}
+            <Routes location={contentLocation || location}>
+              <Route path="/" element={<Navigate to="/trades" replace />} />
+              <Route path="/trades" element={<TradesTable key={`trades-${refreshKey}`} />} />
+              <Route path="/deposits" element={<DepositsTable key={`deposits-${refreshKey}`} />} />
+              <Route path="/withdraws" element={<WithdrawsTable key={`withdraws-${refreshKey}`} />} />
+              <Route path="/volume" element={<VolumeTable key={`volume-${refreshKey}`} />} />
+              <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
+              <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
+              <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
+              <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
+            </Routes>
           </Suspense>
         </div>
       </div>
@@ -105,6 +109,10 @@ function AppContent() {
         <Toaster position="bottom-right" />
         <p>Sai Transaction Explorer - Blockchain transaction viewer</p>
       </footer>
+
+      <Routes>
+        <Route path="/user/:address" element={<UserProfileRoute />} />
+      </Routes>
     </div>
   );
 }

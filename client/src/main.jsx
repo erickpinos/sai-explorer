@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { PostHogProvider } from 'posthog-js/react'
 import './index.css'
 import App from './App.jsx'
@@ -15,12 +16,14 @@ const posthogOptions = {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {POSTHOG_KEY ? (
-      <PostHogProvider apiKey={POSTHOG_KEY} options={posthogOptions}>
+    <BrowserRouter>
+      {POSTHOG_KEY ? (
+        <PostHogProvider apiKey={POSTHOG_KEY} options={posthogOptions}>
+          <App />
+        </PostHogProvider>
+      ) : (
         <App />
-      </PostHogProvider>
-    ) : (
-      <App />
-    )}
+      )}
+    </BrowserRouter>
   </StrictMode>,
 )
