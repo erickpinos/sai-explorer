@@ -6,6 +6,7 @@ import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
 import FunFacts from './components/ui/FunFacts';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import { TABS } from './utils/constants';
 import './App.css';
 
@@ -57,24 +58,30 @@ function AppContent() {
     await handleFetchNew();
   };
 
+  const wrapTab = (key, child) => (
+    <ErrorBoundary key={key} title={`Failed to load ${activeTab} tab`}>
+      {child}
+    </ErrorBoundary>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case TABS.TRADES:
-        return <TradesTable key={`trades-${refreshKey}`} />;
+        return wrapTab(`trades-eb-${refreshKey}`, <TradesTable key={`trades-${refreshKey}`} />);
       case TABS.DEPOSITS:
-        return <DepositsTable key={`deposits-${refreshKey}`} />;
+        return wrapTab(`deposits-eb-${refreshKey}`, <DepositsTable key={`deposits-${refreshKey}`} />);
       case TABS.WITHDRAWS:
-        return <WithdrawsTable key={`withdraws-${refreshKey}`} />;
+        return wrapTab(`withdraws-eb-${refreshKey}`, <WithdrawsTable key={`withdraws-${refreshKey}`} />);
       case TABS.VOLUME:
-        return <VolumeTable key={`volume-${refreshKey}`} />;
+        return wrapTab(`volume-eb-${refreshKey}`, <VolumeTable key={`volume-${refreshKey}`} />);
       case TABS.MARKETS:
-        return <MarketsTable key={`markets-${refreshKey}`} />;
+        return wrapTab(`markets-eb-${refreshKey}`, <MarketsTable key={`markets-${refreshKey}`} />);
       case TABS.COLLATERAL:
-        return <CollateralTable key={`collateral-${refreshKey}`} />;
+        return wrapTab(`collateral-eb-${refreshKey}`, <CollateralTable key={`collateral-${refreshKey}`} />);
       case TABS.INSIGHTS:
-        return <InsightsPage key={`insights-${refreshKey}`} />;
+        return wrapTab(`insights-eb-${refreshKey}`, <InsightsPage key={`insights-${refreshKey}`} />);
       default:
-        return <TradesTable key={`trades-default-${refreshKey}`} />;
+        return wrapTab(`trades-default-eb-${refreshKey}`, <TradesTable key={`trades-default-${refreshKey}`} />);
     }
   };
 
@@ -88,9 +95,13 @@ function AppContent() {
       </div>
 
       <div className="container">
-        <Stats key={`stats-${refreshKey}`} />
+        <ErrorBoundary title="Failed to load stats">
+          <Stats key={`stats-${refreshKey}`} />
+        </ErrorBoundary>
 
-        <FunFacts key={`funfacts-${refreshKey}`} onNavigateToInsights={setActiveTab} />
+        <ErrorBoundary title="Failed to load fun facts">
+          <FunFacts key={`funfacts-${refreshKey}`} onNavigateToInsights={setActiveTab} />
+        </ErrorBoundary>
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
