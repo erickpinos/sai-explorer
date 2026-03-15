@@ -50,16 +50,16 @@ cd client && npm run lint
 
 ## Architecture
 
-### Dual API Handler Pattern (CRITICAL)
+### API Handler Pattern
 
-Two API directories that **must stay in sync**:
+`api/` contains all endpoint handlers and runs in **both** environments:
 
-| Directory | Environment | DB Client |
-|-----------|------------|-----------|
-| `api/` | Vercel serverless (production) | `@neondatabase/serverless` via `shared/db.js` |
-| `api-local/` | Local Express dev server | `pg` Pool from `scripts/db.js` |
+| Environment | DB Client |
+|------------|-----------|
+| Vercel serverless (production) | `@neondatabase/serverless` via `shared/db.js` |
+| Local Express dev server | `pg` Pool via `shared/db.js` (switches on absence of `VERCEL` env var) |
 
-**Both must have identical business logic.** When changing any endpoint, update both files. Use `shared/` imports to minimize drift.
+`shared/db.js` exports `sql` as a tagged-template function with `{rows}` return shape regardless of environment. **Only edit files in `api/`** — there is no `api-local/` directory.
 
 ### Data Flow
 
@@ -71,12 +71,11 @@ Sync is incremental: reads latest `block_ts`, fetches only newer records. `ON CO
 
 ### Key Directories
 
-- `api/` — Vercel serverless handlers
-- `api-local/` — Local Express handlers (mirrors `api/`)
-- `shared/` — Constants, GraphQL client, mappers, price utilities (shared between both API dirs)
+- `api/` — All endpoint handlers (used by both Vercel and local Express server)
+- `shared/` — Constants, GraphQL client, mappers, price utilities, unified db client
 - `scripts/` — DB setup, migrations, data indexing, address utilities
 - `client/src/` — React 19 + Vite 7 frontend
-- `server-local.js` — Express dev server wrapping `api-local/` handlers
+- `server-local.js` — Express dev server wrapping `api/` handlers
 
 ### Frontend
 
