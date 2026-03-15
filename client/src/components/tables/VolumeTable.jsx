@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useVolume } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../../utils/formatters';
 import { formatPnl } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
-import UserProfileModal from '../modals/UserProfileModal';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
 import SortDropdown from '../ui/SortDropdown';
@@ -27,9 +26,10 @@ const SortIcon = ({ col, sortCol, sortDir }) => {
 };
 
 export default function VolumeTable() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { network } = useNetwork();
   const { data, loading, error } = useVolume(network);
-  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const { toggle, viewClass } = useViewToggle();
 
   const { sorted, sortCol, sortDir, handleSort } = useSortedData(data?.users || [], 'totalVolume', 'desc', null);
@@ -68,7 +68,7 @@ export default function VolumeTable() {
                     <span
                       className="address-link"
                       title={u.evmTrader || u.trader}
-                      onClick={() => setSelectedUserAddress({ bech32: u.trader, evm: u.evmTrader })}
+                      onClick={() => navigate(`/user/${u.evmTrader || u.trader}`, { state: { background: location } })}
                       style={{ cursor: 'pointer' }}
                     >
                       {formatAddress(u.evmTrader || u.trader)}
@@ -98,7 +98,7 @@ export default function VolumeTable() {
                   <span className="profile-card-rank">#{i + 1}</span>
                   <span
                     className="address-link profile-card-market"
-                    onClick={() => setSelectedUserAddress({ bech32: u.trader, evm: u.evmTrader })}
+                    onClick={() => navigate(`/user/${u.evmTrader || u.trader}`, { state: { background: location } })}
                     style={{ cursor: 'pointer' }}
                     title={u.evmTrader || u.trader}
                   >
@@ -129,12 +129,6 @@ export default function VolumeTable() {
           ))}
         </div>
 
-      {selectedUserAddress && (
-        <UserProfileModal
-          address={selectedUserAddress}
-          onClose={() => setSelectedUserAddress(null)}
-        />
-      )}
     </div>
   );
 }

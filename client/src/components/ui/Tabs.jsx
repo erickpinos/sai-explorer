@@ -1,32 +1,27 @@
+import { NavLink } from 'react-router-dom';
 import { TABS } from '../../utils/constants';
-import { useState, useEffect } from 'react';
 
-export default function Tabs({ activeTab, onTabChange }) {
-  // Persist active tab to localStorage
-  useEffect(() => {
-    localStorage.setItem('sai_explorer_current_tab', activeTab);
-  }, [activeTab]);
+const tabs = [
+  { id: TABS.TRADES, label: 'Perpetual Trades', path: '/trades' },
+  { id: TABS.DEPOSITS, label: 'LP Deposits', path: '/deposits' },
+  { id: TABS.WITHDRAWS, label: 'Withdraw Requests', path: '/withdraws' },
+  { id: TABS.MARKETS, label: 'Markets', path: '/markets' },
+  { id: TABS.COLLATERAL, label: 'Collateral Indices', path: '/collateral' },
+  { id: TABS.VOLUME, label: 'User Stats', path: '/volume' },
+  { id: TABS.INSIGHTS, label: 'Insights', path: '/insights' },
+];
 
-  const tabs = [
-    { id: TABS.TRADES, label: 'Perpetual Trades' },
-    { id: TABS.DEPOSITS, label: 'LP Deposits' },
-    { id: TABS.WITHDRAWS, label: 'Withdraw Requests' },
-    { id: TABS.MARKETS, label: 'Markets' },
-    { id: TABS.COLLATERAL, label: 'Collateral Indices' },
-    { id: TABS.VOLUME, label: 'User Stats' },
-    { id: TABS.INSIGHTS, label: 'Insights' },
-  ];
-
+export default function Tabs() {
   return (
     <div className="tabs">
       {tabs.map((tab) => (
-        <button
+        <NavLink
           key={tab.id}
-          className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-          onClick={() => onTabChange(tab.id)}
+          to={tab.path}
+          className={({ isActive }) => `tab${isActive ? ' active' : ''}`}
         >
           {tab.label}
-        </button>
+        </NavLink>
       ))}
     </div>
   );
