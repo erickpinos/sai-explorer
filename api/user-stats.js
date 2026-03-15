@@ -1,4 +1,5 @@
 import { sql } from '../shared/db.js';
+import { validateNetwork } from '../shared/validateParams.js';
 // NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {
@@ -17,6 +18,7 @@ export default async function handler(req, res) {
     if (!address) {
       return res.status(400).json({ error: 'Address parameter required' });
     }
+    if (!validateNetwork(network, res)) return;
 
     const tradesResult = await sql`
       SELECT

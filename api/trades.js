@@ -1,5 +1,6 @@
 import { sql } from '../shared/db.js';
 import { mapTradeRow } from '../shared/mappers.js';
+import { validateNetwork, parsePagination } from '../shared/validateParams.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -17,6 +18,9 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet', limit = 1000, offset = 0 } = req.query;
+    if (!validateNetwork(network, res)) return;
+    const pagination = parsePagination(limit, offset, res);
+    if (!pagination) return;
 
     const result = await sql`
       SELECT
@@ -27,8 +31,8 @@ export default async function handler(req, res) {
       FROM trades
       WHERE network = ${network}
       ORDER BY block_ts DESC
-      LIMIT ${parseInt(limit)}
-      OFFSET ${parseInt(offset)}
+      LIMIT ${pagination.limit}
+      OFFSET ${pagination.offset}
     `;
 
     res.status(200).json(result.rows.map(mapTradeRow));

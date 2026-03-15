@@ -3,6 +3,7 @@ import { ACTIVE_VAULTS } from '../shared/constants.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';
 import { cachedFetch } from '../shared/cache.js';
+import { validateNetwork } from '../shared/validateParams.js';
 
 async function fetchLiveTvl(network) {
   return cachedFetch(`tvl:${network}`, async () => {
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
+    if (!validateNetwork(network, res)) return;
 
     // Run parallel queries for stats
     const [tradesStats, depositsStats, uniqueTraders, recentTrades, withdrawsStats, liveTvl] = await Promise.all([

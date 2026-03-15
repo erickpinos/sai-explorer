@@ -1,6 +1,7 @@
 import { ACTIVE_VAULTS } from '../shared/constants.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';
+import { validateNetwork } from '../shared/validateParams.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,6 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
+    if (!validateNetwork(network, res)) return;
 
     const [vaultsRes, pricesRes] = await Promise.all([
       fetchGraphQL(`{

@@ -1,5 +1,6 @@
 import { fetchGraphQL } from '../shared/graphql.js';
 import { cachedFetch } from '../shared/cache.js';
+import { validateNetwork } from '../shared/validateParams.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,6 +12,7 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
+    if (!validateNetwork(network, res)) return;
 
     const [tokensRes, vaultsRes, marketsRes] = await Promise.all([
       cachedFetch(`collateral:tokens:${network}`, () => fetchGraphQL(`{ oracle { tokenPricesUsd { token { id symbol name logoUrl } priceUsd } } }`, network)),

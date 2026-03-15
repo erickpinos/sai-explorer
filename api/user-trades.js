@@ -1,5 +1,6 @@
 import { sql } from '../shared/db.js';
 import { mapTradeRow } from '../shared/mappers.js';
+import { validateNetwork, parsePagination } from '../shared/validateParams.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,6 +18,9 @@ export default async function handler(req, res) {
     if (!address) {
       return res.status(400).json({ error: 'Address parameter required' });
     }
+    if (!validateNetwork(network, res)) return;
+    const pagination = parsePagination(limit, offset, res);
+    if (!pagination) return;
 
     const result = await sql`
       SELECT
@@ -28,8 +32,8 @@ export default async function handler(req, res) {
       WHERE network = ${network}
         AND (trader = ${address} OR evm_trader = ${address})
       ORDER BY block_ts DESC
-      LIMIT ${parseInt(limit)}
-      OFFSET ${parseInt(offset)}
+      LIMIT ${pagination.limit}
+      OFFSET ${pagination.offset}
     `;
 
     res.status(200).json(result.rows.map(mapTradeRow));

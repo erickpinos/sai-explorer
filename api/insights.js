@@ -1,6 +1,7 @@
 import { sql } from '../shared/db.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { cachedFetch } from '../shared/cache.js';
+import { validateNetwork } from '../shared/validateParams.js';
 // PnL queries use != 'position_opened' (not the full exclusion list) because
 // only close/liquidation events realize PnL. This is intentional.
 
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet' } = req.query;
+    if (!validateNetwork(network, res)) return;
 
     const [
       mostTradedMarket,

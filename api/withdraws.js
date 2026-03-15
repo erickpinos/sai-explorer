@@ -1,4 +1,5 @@
 import { sql } from '../shared/db.js';
+import { validateNetwork, parsePagination } from '../shared/validateParams.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -16,6 +17,9 @@ export default async function handler(req, res) {
 
   try {
     const { network = 'mainnet', limit = 1000, offset = 0 } = req.query;
+    if (!validateNetwork(network, res)) return;
+    const pagination = parsePagination(limit, offset, res);
+    if (!pagination) return;
 
     const result = await sql`
       SELECT
@@ -24,8 +28,8 @@ export default async function handler(req, res) {
       FROM withdraws
       WHERE network = ${network}
       ORDER BY id DESC
-      LIMIT ${parseInt(limit)}
-      OFFSET ${parseInt(offset)}
+      LIMIT ${pagination.limit}
+      OFFSET ${pagination.offset}
     `;
 
     // Transform to match frontend's expected format
