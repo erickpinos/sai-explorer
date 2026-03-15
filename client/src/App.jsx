@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { NetworkProvider, useNetwork } from './hooks/useNetwork';
 import Header from './components/ui/Header';
 import Stats from './components/ui/Stats';
@@ -36,15 +37,15 @@ function AppContent() {
       if (response.ok) {
         const result = await response.json();
         console.log('Sync completed:', result);
-        alert(`Synced ${result.trades} trades, ${result.deposits} deposits, ${result.withdraws} withdraws`);
+        toast.success(`Synced ${result.trades} trades, ${result.deposits} deposits, ${result.withdraws} withdraws`);
         // Trigger refresh of all data
         setRefreshKey(prev => prev + 1);
       } else {
-        alert('Sync failed. Check console for details.');
+        toast.error('Sync failed. Check console for details.');
       }
     } catch (error) {
       console.error('Sync error:', error);
-      alert('Sync failed: ' + error.message);
+      toast.error('Sync failed: ' + error.message);
     } finally {
       setSyncing(false);
     }
@@ -101,6 +102,7 @@ function AppContent() {
       </div>
 
       <footer className="footer">
+        <Toaster position="bottom-right" />
         <p>Sai Transaction Explorer - Blockchain transaction viewer</p>
       </footer>
     </div>
