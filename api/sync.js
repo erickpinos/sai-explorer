@@ -296,25 +296,22 @@ export default async function handler(req, res) {
 
   try {
     const startTime = Date.now();
+    const { network } = req.body || {};
 
-    // Sync both networks in parallel
-    const [mainnetResults, testnetResults] = await Promise.all([
-      Promise.all([
-        syncTrades('mainnet'),
-        syncDeposits('mainnet'),
-        syncWithdraws('mainnet')
-      ]),
-      Promise.all([
-        syncTrades('testnet'),
-        syncDeposits('testnet'),
-        syncWithdraws('testnet')
-      ])
-    ]);
+    // Sync both networks when no specific network requested (e.g. cron), else sync the specified one
+    const networks = !network || network === 'all' ? ['mainnet', 'testnet'] : [network];
 
-    const [mainnetBackfill, testnetBackfill] = await Promise.all([
-      backfillTradeSymbols('mainnet'),
-      backfillTradeSymbols('testnet')
-    ]);
+    const allResults = await Promise.all(
+      networks.map(async (net) => {
+        const [trades, deposits, withdraws] = await Promise.all([
+          syncTrades(net),
+          syncDeposits(net),
+          syncWithdraws(net)
+        ]);
+        const backfilled = await backfillTradeSymbols(net);
+        return { network: net, trades, deposits, withdraws, backfilled };
+      })
+    );
 
     const duration = Date.now() - startTime;
 
@@ -322,19 +319,18 @@ export default async function handler(req, res) {
       success: true,
       synced_at: new Date().toISOString(),
       duration_ms: duration,
-      mainnet: {
-        trades: mainnetResults[0],
-        deposits: mainnetResults[1],
-        withdraws: mainnetResults[2],
-        backfilled: mainnetBackfill
-      },
-      testnet: {
-        trades: testnetResults[0],
-        deposits: testnetResults[1],
-        withdraws: testnetResults[2],
-        backfilled: testnetBackfill
-      }
+      mainnet: allResults.find(r => r.network === 'mainnet') || { trades: 0, deposits: 0, withdraws: 0 },
+      testnet: allResults.find(r => r.network === 'testnet') || { trades: 0, deposits: 0, withdraws: 0 }
     };
+
+    // For single-network requests, also include flat format for frontend compatibility
+    if (network && network !== 'all') {
+      const single = allResults[0];
+      results.network = network;
+      results.trades = single.trades;
+      results.deposits = single.deposits;
+      results.withdraws = single.withdraws;
+    }
 
     console.log('Sync completed:', results);
     res.status(200).json(results);
