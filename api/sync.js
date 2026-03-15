@@ -230,7 +230,7 @@ async function syncDeposits(network) {
         )
         ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
       `));
-      newDepositsCount += results.filter(r => r.status === 'fulfilled').length;
+      newDepositsCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
     }
 
     if (reachedOld) break;
@@ -273,7 +273,7 @@ async function syncWithdraws(network) {
       )
       ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO NOTHING
     `));
-    newWithdrawsCount += results.filter(r => r.status === 'fulfilled').length;
+    newWithdrawsCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
 
     if (withdraws.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
