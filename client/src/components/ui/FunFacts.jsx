@@ -76,7 +76,7 @@ export default function FunFacts() {
   const facts = generateFunFacts(insights);
   if (facts.length === 0) return null;
 
-  const featuredFact = facts[Math.floor(Date.now() / 60000) % facts.length];
+  const featuredFact = facts[0];
 
   const handleDismiss = (e) => {
     e.stopPropagation();

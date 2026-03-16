@@ -4,6 +4,7 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';
 import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
+import { checkRateLimit } from '../shared/rateLimit.js';
 
 async function fetchLiveTvl(network) {
   return cachedFetch(`tvl:${network}`, async () => {
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkRateLimit(req, res)) return;
 
   try {
     const { network = 'mainnet' } = req.query;

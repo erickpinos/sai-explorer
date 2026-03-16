@@ -1,5 +1,6 @@
 import { sql } from '../shared/db.js';
 import { validateNetwork, parsePagination } from '../shared/validateParams.js';
+import { checkRateLimit } from '../shared/rateLimit.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -14,6 +15,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkRateLimit(req, res)) return;
 
   try {
     const { network = 'mainnet', limit = 1000, offset = 0 } = req.query;
