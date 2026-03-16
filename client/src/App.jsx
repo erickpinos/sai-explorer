@@ -8,6 +8,7 @@ import Tabs from './components/ui/Tabs';
 import FunFacts from './components/ui/FunFacts';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import './App.css';
 
 const TradesTable = lazy(() => import('./components/tables/TradesTable'));
@@ -82,9 +83,13 @@ function AppContent() {
       </div>
 
       <div className="container">
-        <Stats key={`stats-${refreshKey}`} />
+        <ErrorBoundary title="Failed to load stats">
+          <Stats key={`stats-${refreshKey}`} />
+        </ErrorBoundary>
 
-        <FunFacts key={`funfacts-${refreshKey}`} />
+        <ErrorBoundary title="Failed to load fun facts">
+          <FunFacts key={`funfacts-${refreshKey}`} />
+        </ErrorBoundary>
 
         <Tabs />
 

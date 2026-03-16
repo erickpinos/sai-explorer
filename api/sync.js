@@ -2,6 +2,7 @@ import { sql } from '../shared/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
+import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 
 async function syncTrades(network) {
   console.log(`Syncing trades for ${network}...`);
@@ -284,15 +285,17 @@ async function syncWithdraws(network) {
 }
 
 export default async function handler(req, res) {
-  // Verify this is a cron request (only in production)
-  if (process.env.VERCEL_ENV === 'production') {
-    const authHeader = req.headers.authorization;
+  // Require Authorization: Bearer <CRON_SECRET> on all Vercel environments.
+  // Locally (no VERCEL env var) the check is skipped for convenience.
+  if (process.env.VERCEL) {
     const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
+  if (!checkRateLimit(req, res, SYNC_MAX)) return;
 
   try {
     const startTime = Date.now();
