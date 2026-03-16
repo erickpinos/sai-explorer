@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTrades } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
@@ -7,7 +8,6 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import SortTh from '../ui/SortTh';
 import Pagination from '../ui/Pagination';
-import UserProfileModal from '../modals/UserProfileModal';
 import TradeDetailModal from '../modals/TradeDetailModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
@@ -42,9 +42,10 @@ const SORT_GETTERS = {
 };
 
 export default function TradesTable() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
-  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const { toggle, viewClass } = useViewToggle();
 
@@ -112,7 +113,7 @@ export default function TradesTable() {
                     <span
                       className="address-link"
                       title={trade.trade?.trader}
-                      onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/user/${trade.trade?.evmTrader || trade.trade?.trader}`, { state: { background: location } }); }}
                       style={{ cursor: 'pointer' }}
                     >
                       {formatAddress(trade.trade?.trader)}
@@ -122,7 +123,7 @@ export default function TradesTable() {
                     <span
                       className="address-link"
                       title={trade.trade?.evmTrader}
-                      onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/user/${trade.trade?.evmTrader || trade.trade?.trader}`, { state: { background: location } }); }}
                       style={{ cursor: 'pointer' }}
                     >
                       {formatAddress(trade.trade?.evmTrader)}
@@ -209,7 +210,7 @@ export default function TradesTable() {
                   <span className="profile-card-value">
                     <span
                       className="address-link"
-                      onClick={(e) => { e.stopPropagation(); setSelectedUserAddress({ bech32: trade.trade?.trader, evm: trade.trade?.evmTrader }); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/user/${trade.trade?.evmTrader || trade.trade?.trader}`, { state: { background: location } }); }}
                       style={{ cursor: 'pointer' }}
                     >
                       {formatAddress(trade.trade?.evmTrader || trade.trade?.trader)}
@@ -233,9 +234,6 @@ export default function TradesTable() {
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      {selectedUserAddress && (
-        <UserProfileModal address={selectedUserAddress} onClose={() => setSelectedUserAddress(null)} />
-      )}
 
       {selectedTrade && (
         <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />

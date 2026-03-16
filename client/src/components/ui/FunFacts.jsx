@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useInsights } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
-import { TABS } from '../../utils/constants';
 
 function generateFunFacts(insights) {
   const facts = [];
@@ -55,7 +55,8 @@ function generateFunFacts(insights) {
   return facts;
 }
 
-export default function FunFacts({ onNavigateToInsights }) {
+export default function FunFacts() {
+  const navigate = useNavigate();
   const { network } = useNetwork();
   const { data: insights, loading } = useInsights(network);
   const [dismissed, setDismissed] = useState(() => {
@@ -95,7 +96,7 @@ export default function FunFacts({ onNavigateToInsights }) {
         </div>
         <button
           className="fun-fact-link"
-          onClick={() => onNavigateToInsights(TABS.INSIGHTS)}
+          onClick={() => navigate('/insights')}
         >
           More Insights &rarr;
         </button>

@@ -1,10 +1,10 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../utils/formatters';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
-import UserProfileModal from './modals/UserProfileModal';
 import TradeDetailModal from './modals/TradeDetailModal';
 import InsightsTradeTable from './tables/InsightsTradeTable';
 
@@ -20,10 +20,13 @@ function InsightCard({ icon, title, value, detail, valueClass }) {
 }
 
 export default function InsightsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { network, config } = useNetwork();
   const { data: insights, loading, error } = useInsights(network);
-  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
+
+  const handleSelectUser = ({ bech32, evm }) => navigate(`/user/${evm || bech32}`, { state: { background: location } });
 
   if (loading) {
     return (
@@ -225,34 +228,31 @@ export default function InsightsPage() {
       {insights.topWins?.length > 0 && (
         <div id="biggest-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Wins</h3>
-          <InsightsTradeTable trades={insights.topWins} config={config} onSelectUser={setSelectedUserAddress} onSelectTrade={setSelectedTrade} />
+          <InsightsTradeTable trades={insights.topWins} config={config} onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topLosses?.length > 0 && (
         <div id="biggest-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Losses</h3>
-          <InsightsTradeTable trades={insights.topLosses} config={config} isLoss onSelectUser={setSelectedUserAddress} onSelectTrade={setSelectedTrade} />
+          <InsightsTradeTable trades={insights.topLosses} config={config} isLoss onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topPctWins?.length > 0 && (
         <div id="biggest-pct-wins" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Wins</h3>
-          <InsightsTradeTable trades={insights.topPctWins} config={config} isPct onSelectUser={setSelectedUserAddress} onSelectTrade={setSelectedTrade} />
+          <InsightsTradeTable trades={insights.topPctWins} config={config} isPct onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topPctLosses?.length > 0 && (
         <div id="biggest-pct-losses" style={{ marginTop: '2rem' }}>
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Losses</h3>
-          <InsightsTradeTable trades={insights.topPctLosses} config={config} isPct isLoss onSelectUser={setSelectedUserAddress} onSelectTrade={setSelectedTrade} />
+          <InsightsTradeTable trades={insights.topPctLosses} config={config} isPct isLoss onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
-      {selectedUserAddress && (
-        <UserProfileModal address={selectedUserAddress} onClose={() => setSelectedUserAddress(null)} />
-      )}
     </div>
   );
 }

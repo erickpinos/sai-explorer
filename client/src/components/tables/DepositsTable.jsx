@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDeposits } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress } from '../../utils/formatters';
@@ -6,15 +6,15 @@ import { nibiToHex } from '../../utils/addressUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import Pagination from '../ui/Pagination';
-import UserProfileModal from '../modals/UserProfileModal';
 import { DEPOSITS_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
 import { usePagination } from '../../hooks/usePagination';
 
 export default function DepositsTable() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { network } = useNetwork();
   const { data: deposits, loading, error } = useDeposits(network);
-  const [selectedUserAddress, setSelectedUserAddress] = useState(null);
   const { toggle, viewClass } = useViewToggle();
 
   const { page, setPage, paginatedData: paginatedDeposits, totalPages, startIndex } = usePagination(deposits || [], DEPOSITS_PER_PAGE);
@@ -59,10 +59,7 @@ export default function DepositsTable() {
                   <td>
                     <span
                       className="address-link"
-                      onClick={() => setSelectedUserAddress({
-                        bech32: deposit.depositor,
-                        evm: nibiToHex(deposit.depositor)
-                      })}
+                      onClick={() => navigate(`/user/${nibiToHex(deposit.depositor) || deposit.depositor}`, { state: { background: location } })}
                       style={{ cursor: 'pointer' }}
                       title={deposit.depositor}
                     >
@@ -149,7 +146,7 @@ export default function DepositsTable() {
                 <span className="profile-card-value">
                   <span
                     className="address-link"
-                    onClick={() => setSelectedUserAddress({ bech32: deposit.depositor, evm: nibiToHex(deposit.depositor) })}
+                    onClick={() => navigate(`/user/${nibiToHex(deposit.depositor) || deposit.depositor}`, { state: { background: location } })}
                     style={{ cursor: 'pointer' }}
                   >
                     {formatAddress(deposit.depositor)}
@@ -172,12 +169,6 @@ export default function DepositsTable() {
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      {selectedUserAddress && (
-        <UserProfileModal
-          address={selectedUserAddress}
-          onClose={() => setSelectedUserAddress(null)}
-        />
-      )}
     </div>
   );
 }
