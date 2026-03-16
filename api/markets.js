@@ -1,6 +1,7 @@
 import { fetchGraphQL } from '../shared/graphql.js';
 import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
+import { checkRateLimit } from '../shared/rateLimit.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,6 +10,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!checkRateLimit(req, res)) return;
 
   try {
     const { network = 'mainnet' } = req.query;
