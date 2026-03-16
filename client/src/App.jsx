@@ -8,6 +8,7 @@ import Tabs from './components/ui/Tabs';
 import FunFacts from './components/ui/FunFacts';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
+import TradeDetailModal from './components/modals/TradeDetailModal';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import './App.css';
 
@@ -28,6 +29,25 @@ function UserProfileRoute() {
   return (
     <UserProfileModal
       address={address}
+      onClose={() => background ? navigate(-1) : navigate('/trades')}
+    />
+  );
+}
+
+function TradeDetailRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const background = location.state?.background;
+  const trade = location.state?.trade;
+
+  if (!trade) {
+    navigate('/trades', { replace: true });
+    return null;
+  }
+
+  return (
+    <TradeDetailModal
+      trade={trade}
       onClose={() => background ? navigate(-1) : navigate('/trades')}
     />
   );
@@ -70,8 +90,12 @@ function AppContent() {
     await handleFetchNew();
   };
 
-  // When showing user modal, render the background tab (or /trades if navigated directly)
-  const contentLocation = background || (location.pathname.startsWith('/user/') ? { pathname: '/trades' } : null);
+  // When showing a modal, render the background tab (or /trades if navigated directly)
+  const contentLocation = background || (
+    (location.pathname.startsWith('/user/') || location.pathname.startsWith('/trade/'))
+      ? { pathname: '/trades' }
+      : null
+  );
 
   return (
     <div className="app">
@@ -105,6 +129,8 @@ function AppContent() {
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
               <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
+              <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
+              <Route path="*" element={<Navigate to="/trades" replace />} />
             </Routes>
           </Suspense>
         </div>
@@ -117,6 +143,7 @@ function AppContent() {
 
       <Routes>
         <Route path="/user/:address" element={<UserProfileRoute />} />
+        <Route path="/trade/:id" element={<TradeDetailRoute />} />
       </Routes>
     </div>
   );

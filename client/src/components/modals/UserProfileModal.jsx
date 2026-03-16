@@ -5,22 +5,56 @@ import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
 import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import SortTh from '../ui/SortTh';
+import { useSortedData } from '../../hooks/useSortedData';
+
+const TRADE_SORT_GETTERS = {
+  time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
+  type:       (t) => t.tradeChangeType || '',
+  market:     (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
+  direction:  (t) => t.trade?.isLong ? 1 : 0,
+  leverage:   (t) => parseFloat(t.trade?.leverage) || 0,
+  openPrice:  (t) => parseFloat(t.trade?.openPrice) || 0,
+  closePrice: (t) => parseFloat(t.trade?.closePrice) || 0,
+  collateral: (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice),
+  pnl:        (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
+};
+
+const DEPOSIT_SORT_GETTERS = {
+  time:   (d) => new Date(d.block_ts || 0).getTime(),
+  vault:  (d) => d.collateral_token_symbol || '',
+  amount: (d) => parseFloat(d.amount) || 0,
+  shares: (d) => parseFloat(d.shares) || 0,
+};
+
+const WITHDRAW_SORT_GETTERS = {
+  epoch:  (w) => parseFloat(w.unlock_epoch) || 0,
+  vault:  (w) => w.collateral_token_symbol || '',
+  shares: (w) => parseFloat(w.shares) || 0,
+};
 
 export default function UserProfileModal({ address, onClose }) {
   const { network, config } = useNetwork();
   const [activeTab, setActiveTab] = useState('trades');
 
-  if (!address) return null;
-
   // Extract addresses - address can be either a string or an object with bech32 and evm
-  const bech32Address = typeof address === 'string' ? address : address.bech32;
-  const evmAddress = typeof address === 'string' ? address : address.evm;
+  const bech32Address = typeof address === 'string' ? address : address?.bech32;
+  const evmAddress = typeof address === 'string' ? address : address?.evm;
   const apiAddress = evmAddress || bech32Address; // Use EVM address for API calls
 
   const { data: stats, loading: statsLoading } = useUserStats(apiAddress, network);
   const { data: trades, loading: tradesLoading } = useUserTrades(apiAddress, network);
   const { data: deposits, loading: depositsLoading } = useUserDeposits(apiAddress, network);
   const { data: withdraws, loading: withdrawsLoading } = useUserWithdraws(apiAddress, network);
+
+  const { sorted: sortedTrades, sortCol: tradeSortCol, sortDir: tradeSortDir, handleSort: handleTradeSort } =
+    useSortedData(trades, 'time', 'desc', TRADE_SORT_GETTERS);
+  const { sorted: sortedDeposits, sortCol: depositSortCol, sortDir: depositSortDir, handleSort: handleDepositSort } =
+    useSortedData(deposits, 'time', 'desc', DEPOSIT_SORT_GETTERS);
+  const { sorted: sortedWithdraws, sortCol: withdrawSortCol, sortDir: withdrawSortDir, handleSort: handleWithdrawSort } =
+    useSortedData(withdraws, 'epoch', 'desc', WITHDRAW_SORT_GETTERS);
+
+  if (!address) return null;
 
   const renderStats = () => (
     <div className="modal-stats">
@@ -58,7 +92,7 @@ export default function UserProfileModal({ address, onClose }) {
     if (tradesLoading) return <LoadingSpinner />;
     if (!trades || trades.length === 0) return <EmptyState message="No trades found" />;
 
-    const tradeList = trades.slice(0, 50);
+    const tradeList = sortedTrades.slice(0, 50);
 
     return (
       <>
@@ -67,17 +101,17 @@ export default function UserProfileModal({ address, onClose }) {
           <table>
             <thead>
               <tr>
-                <th>TIME</th>
-                <th>TYPE</th>
-                <th>MARKET</th>
-                <th>DIRECTION</th>
-                <th>LEVERAGE</th>
-                <th>OPEN PRICE</th>
-                <th>CLOSE PRICE</th>
-                <th>COLLATERAL</th>
-                <th>PNL</th>
-              <th>TX Hash</th>
-              <th>EVM TX Hash</th>
+                <SortTh col="time" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>TIME</SortTh>
+                <SortTh col="type" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>TYPE</SortTh>
+                <SortTh col="market" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>MARKET</SortTh>
+                <SortTh col="direction" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>DIRECTION</SortTh>
+                <SortTh col="leverage" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>LEVERAGE</SortTh>
+                <SortTh col="openPrice" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>OPEN PRICE</SortTh>
+                <SortTh col="closePrice" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>CLOSE PRICE</SortTh>
+                <SortTh col="collateral" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>COLLATERAL</SortTh>
+                <SortTh col="pnl" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>PNL</SortTh>
+                <th>TX Hash</th>
+                <th>EVM TX Hash</th>
               </tr>
             </thead>
             <tbody>
@@ -184,7 +218,7 @@ export default function UserProfileModal({ address, onClose }) {
     if (depositsLoading) return <LoadingSpinner />;
     if (!deposits || deposits.length === 0) return <EmptyState message="No deposits found" />;
 
-    const depositList = deposits.slice(0, 50);
+    const depositList = sortedDeposits.slice(0, 50);
 
     return (
       <>
@@ -193,10 +227,10 @@ export default function UserProfileModal({ address, onClose }) {
           <table>
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Vault</th>
-                <th>Amount</th>
-                <th>Shares</th>
+                <SortTh col="time" sortCol={depositSortCol} sortDir={depositSortDir} onSort={handleDepositSort}>Time</SortTh>
+                <SortTh col="vault" sortCol={depositSortCol} sortDir={depositSortDir} onSort={handleDepositSort}>Vault</SortTh>
+                <SortTh col="amount" sortCol={depositSortCol} sortDir={depositSortDir} onSort={handleDepositSort}>Amount</SortTh>
+                <SortTh col="shares" sortCol={depositSortCol} sortDir={depositSortDir} onSort={handleDepositSort}>Shares</SortTh>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +271,7 @@ export default function UserProfileModal({ address, onClose }) {
     if (withdrawsLoading) return <LoadingSpinner />;
     if (!withdraws || withdraws.length === 0) return <EmptyState message="No withdrawals found" />;
 
-    const withdrawList = withdraws.slice(0, 50);
+    const withdrawList = sortedWithdraws.slice(0, 50);
 
     return (
       <>
@@ -246,9 +280,9 @@ export default function UserProfileModal({ address, onClose }) {
           <table>
             <thead>
               <tr>
-                <th>Unlock Epoch</th>
-                <th>Vault</th>
-                <th>Shares</th>
+                <SortTh col="epoch" sortCol={withdrawSortCol} sortDir={withdrawSortDir} onSort={handleWithdrawSort}>Unlock Epoch</SortTh>
+                <SortTh col="vault" sortCol={withdrawSortCol} sortDir={withdrawSortDir} onSort={handleWithdrawSort}>Vault</SortTh>
+                <SortTh col="shares" sortCol={withdrawSortCol} sortDir={withdrawSortDir} onSort={handleWithdrawSort}>Shares</SortTh>
                 <th>Auto Redeem</th>
               </tr>
             </thead>

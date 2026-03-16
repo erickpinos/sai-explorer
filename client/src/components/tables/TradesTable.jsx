@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTrades } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
@@ -8,7 +8,6 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import SortTh from '../ui/SortTh';
 import Pagination from '../ui/Pagination';
-import TradeDetailModal from '../modals/TradeDetailModal';
 import { TRADES_PER_PAGE } from '../../utils/constants';
 import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
@@ -46,7 +45,6 @@ export default function TradesTable() {
   const location = useLocation();
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
-  const [selectedTrade, setSelectedTrade] = useState(null);
   const { toggle, viewClass } = useViewToggle();
 
   const { sorted, sortCol, sortDir, handleSort: sortData } = useSortedData(trades, 'time', 'desc', SORT_GETTERS);
@@ -99,7 +97,7 @@ export default function TradesTable() {
                   !parseFloat(trade.realizedPnlCollateral)
                 ) ? 'limit_order_cancelled' : trade.tradeChangeType;
                 return (
-                <tr key={trade.id} className="clickable-row" onClick={() => setSelectedTrade(trade)}>
+                <tr key={trade.id} className="clickable-row" onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}>
                   <td>{formatDate(trade.block?.block_ts)}</td>
                   <td>
                     <span className={getBadgeClass(displayType, trade.txFailed)}>
@@ -166,7 +164,7 @@ export default function TradesTable() {
           {paginatedTrades.map((trade) => {
             const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
             return (
-              <div key={trade.id} className="profile-card clickable-row" onClick={() => setSelectedTrade(trade)}>
+              <div key={trade.id} className="profile-card clickable-row" onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}>
                 <div className="profile-card-header">
                   <div className="profile-card-badges">
                     <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
@@ -235,9 +233,6 @@ export default function TradesTable() {
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
 
-      {selectedTrade && (
-        <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />
-      )}
     </div>
   );
 }

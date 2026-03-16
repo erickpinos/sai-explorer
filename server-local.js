@@ -5,7 +5,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { pool } from './scripts/db.js';
-import { rateLimitMiddleware } from './shared/rateLimit.js';
 import tradesHandler from './api/trades.js';
 import depositsHandler from './api/deposits.js';
 import withdrawsHandler from './api/withdraws.js';
@@ -34,8 +33,6 @@ const PORT = process.env.PORT || process.env.API_PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/api', rateLimitMiddleware());
-
 // Wrap Vercel-style handlers for Express
 function wrapHandler(handler) {
   return async (req, res) => {
@@ -109,7 +106,7 @@ async function autoSync() {
     console.log('\n🔄 Auto-sync: fetching new data (mainnet + testnet)...');
     const startTime = Date.now();
 
-    const fakeReq = { body: {}, method: 'POST' };
+    const fakeReq = { body: {}, method: 'POST', headers: {}, socket: {} };
     let result;
     const fakeRes = {
       setHeader: () => {},

@@ -508,6 +508,7 @@ h1 {
   transition: all 0.2s;
   flex: 0 1 auto;
   min-width: fit-content;
+  text-decoration: none;
 }
 
 .tab:hover {

@@ -41,7 +41,14 @@ function TvlBreakdownModal({ network, onClose }) {
                   <tr key={vault.address}>
                     <td>{i + 1}</td>
                     <td>
-                      <span className="mono">{truncateAddress(vault.address)}</span>
+                      <a
+                        className="mono"
+                        href={`https://${network === 'testnet' ? 'testnet.' : ''}nibiscan.io/token/${vault.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {truncateAddress(vault.address)}
+                      </a>
                       {vault.deprecated && <span className="deprecated-tag"> (deprecated)</span>}
                     </td>
                     <td>{vault.token}</td>
