@@ -1,5 +1,6 @@
 import { sql } from '../shared/db.js';
 import { validateNetwork } from '../shared/validateParams.js';
+import { checkRateLimit } from '../shared/rateLimit.js';
 // NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {
@@ -11,6 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkRateLimit(req, res)) return;
 
   try {
     const { network = 'mainnet', address } = req.query;

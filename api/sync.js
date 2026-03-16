@@ -2,6 +2,7 @@ import { sql } from '../shared/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
+import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 
 async function syncTrades(network) {
   console.log(`Syncing trades for ${network}...`);
@@ -293,6 +294,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
+  if (!checkRateLimit(req, res, SYNC_MAX)) return;
 
   try {
     const startTime = Date.now();
