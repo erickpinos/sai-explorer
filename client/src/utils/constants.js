@@ -22,6 +22,7 @@ export const TABS = {
   COLLATERAL: 'collateral',
   ACTIVITY: 'activity',
   INSIGHTS: 'insights',
+  DB: 'db',
 };
 
 export const TRADES_PER_PAGE = 50;

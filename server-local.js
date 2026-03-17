@@ -10,6 +10,7 @@ import depositsHandler from './api/deposits.js';
 import withdrawsHandler from './api/withdraws.js';
 import statsHandler from './api/stats.js';
 import syncHandler from './api/sync.js';
+import clearHandler from './api/clear.js';
 import insightsHandler from './api/insights.js';
 import tvlBreakdownHandler from './api/tvl-breakdown.js';
 import userStatsHandler from './api/user-stats.js';
@@ -59,6 +60,7 @@ app.get('/api/markets', wrapHandler(marketsHandler));
 app.get('/api/collateral', wrapHandler(collateralHandler));
 app.get('/api/chart-data', wrapHandler(chartDataHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
+app.post('/api/clear', wrapHandler(clearHandler));
 
 // User-specific routes
 app.get('/api/user-stats', wrapHandler(userStatsHandler));
