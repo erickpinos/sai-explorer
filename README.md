@@ -51,7 +51,7 @@ Open http://localhost:5173
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) >= 18.0.0
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Linux) or [PostgreSQL 16+](https://www.postgresql.org/download/windows/) (Windows)
 
 ### Step-by-Step
 
@@ -135,6 +135,58 @@ POSTGRES_URL=postgres://saiexplorer:localdev123@127.0.0.1:5433/sai_explorer
 ```
 
 Port 5433 is used to avoid conflicts with any local Postgres installation (which typically uses 5432).
+
+### Windows Setup
+
+Docker Desktop requires virtualization which may not be available. Use a local PostgreSQL installation instead.
+
+**1. Install PostgreSQL**
+
+Download and install [PostgreSQL 16+](https://www.postgresql.org/download/windows/) via the EDB installer. It includes pgAdmin 4 (a browser-based UI).
+
+**2. Create the database**
+
+Open pgAdmin 4 from the Start menu, connect to your local server, then:
+
+- Right-click **Login/Group Roles** → Create → Login/Group Role
+  - Name: `saiexplorer`
+  - Definition tab → Password: `localdev123`
+  - Privileges tab → enable **Can login?**
+  - Save
+- Right-click **Databases** → Create → Database
+  - Name: `sai_explorer`, Owner: `saiexplorer`
+  - Save
+
+**3. Set environment variable**
+
+Create `.env.local` in the project root:
+
+```
+POSTGRES_URL=postgres://saiexplorer:localdev123@127.0.0.1:5432/sai_explorer
+```
+
+Note: local PostgreSQL uses port `5432` (not `5433`).
+
+**4. Set up tables and start**
+
+```bash
+npm run setup-db
+npm run index-data   # optional, 10-30 min
+```
+
+**5. Start the dev servers**
+
+`npm run dev:local` uses `sh` and won't work on Windows. Run the two services separately:
+
+```bash
+# Terminal 1
+npm run dev:api
+
+# Terminal 2 (once API is running)
+npm run dev
+```
+
+Open http://localhost:5000
 
 ---
 
