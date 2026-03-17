@@ -9,6 +9,7 @@ const tabs = [
   { id: TABS.COLLATERAL, label: 'Collateral Indices', path: '/collateral' },
   { id: TABS.VOLUME, label: 'User Stats', path: '/volume' },
   { id: TABS.INSIGHTS, label: 'Insights', path: '/insights' },
+  { id: TABS.PRICES, label: 'Price History', path: '/prices' },
   ...(import.meta.env.DEV ? [{ id: TABS.DB, label: 'DB Tools', path: '/db-tools' }] : []),
 ];
 

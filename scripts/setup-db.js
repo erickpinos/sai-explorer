@@ -148,6 +148,18 @@ async function setupDatabase() {
     `);
     console.log('✓ Created metadata table');
 
+    // Create coingecko_prices table (persistent historical price cache)
+    await query(`
+      CREATE TABLE IF NOT EXISTS coingecko_prices (
+        coin_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        price_usd NUMERIC NOT NULL,
+        fetched_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (coin_id, date)
+      )
+    `);
+    console.log('✓ Created coingecko_prices table');
+
     console.log('\n✅ Database schema created successfully!');
     process.exit(0);
   } catch (error) {
