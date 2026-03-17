@@ -1,29 +1,34 @@
 import { useState, useEffect } from 'react';
 
+const STORAGE_KEY = 'sai-view-preference';
+
 export function useViewToggle() {
-  const [view, setView] = useState('table');
+  const [view, setView] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'table' || saved === 'cards') return saved;
+    return window.matchMedia('(max-width: 767px)').matches ? 'cards' : 'table';
+  });
 
-  useEffect(() => {
-    if (window.matchMedia('(max-width: 767px)').matches) {
-      setView('cards');
-    }
-  }, []);
+  const setViewAndSave = (v) => {
+    setView(v);
+    localStorage.setItem(STORAGE_KEY, v);
+  };
 
-  const viewClass = view === 'auto' ? '' : view === 'cards' ? 'view-cards' : 'view-table';
+  const viewClass = view === 'cards' ? 'view-cards' : 'view-table';
 
   const toggle = (
     <div className="view-toggle-bar">
       <div className="view-toggle">
         <button
           className={`view-toggle-btn ${view === 'table' ? 'active' : ''}`}
-          onClick={() => setView('table')}
+          onClick={() => setViewAndSave('table')}
           title="Table view"
         >
           ☰
         </button>
         <button
           className={`view-toggle-btn ${view === 'cards' ? 'active' : ''}`}
-          onClick={() => setView('cards')}
+          onClick={() => setViewAndSave('cards')}
           title="Card view"
         >
           ▦
