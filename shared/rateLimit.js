@@ -40,7 +40,8 @@ export function checkRateLimit(req, res, maxRequests = DEFAULT_MAX) {
     lastCleanup = now;
   }
 
-  const ip = getClientIp(req);
+  // Bucket by IP + endpoint path so sync limits don't bleed into general limits
+  const ip = `${getClientIp(req)}:${req.path || req.url || ''}`;
   const cutoff = now - WINDOW_MS;
   const timestamps = (requests.get(ip) || []).filter(t => t > cutoff);
 

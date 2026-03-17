@@ -4,19 +4,21 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 
-async function syncTrades(network) {
+async function syncTrades(network, { full = false } = {}) {
   console.log(`Syncing trades for ${network}...`);
 
-  // Get most recent trade timestamp from DB
-  const lastTrade = await sql`
-    SELECT block_ts FROM trades
-    WHERE network = ${network}
-    ORDER BY block_ts DESC
-    LIMIT 1
-  `;
-
-  const sinceTimestamp = lastTrade.rows[0]?.block_ts;
-  const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+  let sinceDate = null;
+  if (!full) {
+    // Get most recent trade timestamp from DB
+    const lastTrade = await sql`
+      SELECT block_ts FROM trades
+      WHERE network = ${network}
+      ORDER BY block_ts DESC
+      LIMIT 1
+    `;
+    const sinceTimestamp = lastTrade.rows[0]?.block_ts;
+    sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+  }
 
   // Fetch new trades from blockchain API
   const PAGE_SIZE = 100;
@@ -174,19 +176,21 @@ async function backfillTradeSymbols(network) {
   return updatedCount;
 }
 
-async function syncDeposits(network) {
+async function syncDeposits(network, { full = false } = {}) {
   console.log(`Syncing deposits for ${network}...`);
 
-  // Get most recent deposit timestamp from DB
-  const lastDeposit = await sql`
-    SELECT block_ts FROM deposits
-    WHERE network = ${network}
-    ORDER BY block_ts DESC
-    LIMIT 1
-  `;
-
-  const sinceTimestamp = lastDeposit.rows[0]?.block_ts;
-  const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+  let sinceDate = null;
+  if (!full) {
+    // Get most recent deposit timestamp from DB
+    const lastDeposit = await sql`
+      SELECT block_ts FROM deposits
+      WHERE network = ${network}
+      ORDER BY block_ts DESC
+      LIMIT 1
+    `;
+    const sinceTimestamp = lastDeposit.rows[0]?.block_ts;
+    sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+  }
 
   const PAGE_SIZE = 100;
   let offset = 0;
@@ -243,7 +247,7 @@ async function syncDeposits(network) {
   return newDepositsCount;
 }
 
-async function syncWithdraws(network) {
+async function syncWithdraws(network, { full: _full = false } = {}) {
   console.log(`Syncing withdraws for ${network}...`);
 
   const PAGE_SIZE = 100;
@@ -295,23 +299,23 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
-  if (!checkRateLimit(req, res, SYNC_MAX)) return;
+  if (process.env.VERCEL && !checkRateLimit(req, res, SYNC_MAX)) return;
 
   try {
     const startTime = Date.now();
-    const { network } = req.body || {};
+    const { network, table, full } = req.body || {};
+    const opts = { full: full === true };
 
     // Sync both networks when no specific network requested (e.g. cron), else sync the specified one
     const networks = !network || network === 'all' ? ['mainnet', 'testnet'] : [network];
 
     const allResults = await Promise.all(
       networks.map(async (net) => {
-        const [trades, deposits, withdraws] = await Promise.all([
-          syncTrades(net),
-          syncDeposits(net),
-          syncWithdraws(net)
-        ]);
-        const backfilled = await backfillTradeSymbols(net);
+        let trades = 0, deposits = 0, withdraws = 0;
+        if (!table || table === 'trades')    trades    = await syncTrades(net, opts);
+        if (!table || table === 'deposits')  deposits  = await syncDeposits(net, opts);
+        if (!table || table === 'withdraws') withdraws = await syncWithdraws(net, opts);
+        const backfilled = (!table || table === 'trades') ? await backfillTradeSymbols(net) : 0;
         return { network: net, trades, deposits, withdraws, backfilled };
       })
     );
