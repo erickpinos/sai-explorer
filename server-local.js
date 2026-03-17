@@ -145,7 +145,10 @@ const server = app.listen(PORT, () => {
   autoSync();
   const syncInterval = setInterval(autoSync, SYNC_INTERVAL_MS);
 
+  let shuttingDown = false;
   const shutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     clearInterval(syncInterval);
     server.close();
     pool.end();
