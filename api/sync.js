@@ -7,29 +7,29 @@ import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 async function syncTrades(network, { full = false } = {}) {
   console.log(`Syncing trades for ${network}...`);
 
-  let sinceDate = null;
+  // Use keeper's sequential ID as watermark — immune to out-of-order block_ts insertions.
+  // Fetch ascending (oldest first) starting just before lastId so a small overlap
+  // catches any records the keeper registered late with an earlier block_ts.
+  const BUFFER = 20;
+  const PAGE_SIZE = 100;
+  let newTradesCount = 0;
+
+  let lastId = 0;
   if (!full) {
-    // Get most recent trade timestamp from DB
-    const lastTrade = await sql`
-      SELECT block_ts FROM trades
-      WHERE network = ${network}
-      ORDER BY block_ts DESC
-      LIMIT 1
+    const result = await sql`
+      SELECT COALESCE(MAX(id::int), 0) AS max_id FROM trades WHERE network = ${network}
     `;
-    const sinceTimestamp = lastTrade.rows[0]?.block_ts;
-    sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+    lastId = parseInt(result.rows[0].max_id);
   }
 
-  // Fetch new trades from blockchain API
-  const PAGE_SIZE = 100;
-  let offset = 0;
-  let newTradesCount = 0;
-  const MAX_PAGES = 10;
+  let offset = Math.max(0, lastId - BUFFER);
+  // Keep fetching as long as the last page contained new records
+  let maxOffset = offset + PAGE_SIZE;
 
-  while (offset < MAX_PAGES * PAGE_SIZE) {
+  while (offset <= maxOffset) {
     const res = await fetchGraphQL(`{
       perp {
-        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: false) {
           id tradeChangeType realizedPnlPct realizedPnlCollateral
           txHash evmTxHash collateralPrice
           block { block block_ts }
@@ -45,22 +45,11 @@ async function syncTrades(network, { full = false } = {}) {
     const trades = res.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    // Collect new trades, stop at old data
-    const batch = [];
-    let reachedOld = false;
-    for (const t of trades) {
-      if (sinceDate && new Date(t.block.block_ts) <= sinceDate) {
-        console.log(`Reached old trades at ${t.block.block_ts}, stopping`);
-        reachedOld = true;
-        break;
-      }
-      batch.push(t);
-    }
+    const newTrades = trades.filter(t => t.id > lastId);
 
-    // Insert batch concurrently
-    if (batch.length > 0) {
-      const failedHashes = await getFailedTxHashes(batch, network);
-      const results = await Promise.allSettled(batch.map(t => sql`
+    if (newTrades.length > 0) {
+      const failedHashes = await getFailedTxHashes(newTrades, network);
+      const results = await Promise.allSettled(newTrades.map(t => sql`
         INSERT INTO trades (
           id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
           tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
@@ -87,9 +76,11 @@ async function syncTrades(network, { full = false } = {}) {
           OR trades.tx_failed != EXCLUDED.tx_failed
       `));
       newTradesCount += results.filter(r => r.status === 'fulfilled').length;
+      // Extend the search window — there may be more pages ahead
+      maxOffset = offset + PAGE_SIZE;
+      console.log(`Found ${newTrades.length} new trades at offset ${offset} (ids ${Math.min(...newTrades.map(t=>t.id))}–${Math.max(...newTrades.map(t=>t.id))})`);
     }
 
-    if (reachedOld) break;
     if (trades.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }

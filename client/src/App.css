@@ -589,10 +589,82 @@ th.sorted .sort-icon {
   color: #6366f1;
 }
 
+/* Draggable column headers */
+th.draggable-th {
+  cursor: grab;
+  user-select: none;
+}
+
+th.draggable-th.sortable {
+  cursor: pointer;
+}
+
+th.draggable-th.col-dragging {
+  opacity: 0.4;
+}
+
+th.draggable-th.col-drag-over {
+  border-left: 2px solid #6366f1;
+  background: #1e1e30;
+}
+
+.col-drag-handle {
+  display: inline-block;
+  margin-right: 5px;
+  opacity: 0.25;
+  font-size: 12px;
+  cursor: grab;
+  vertical-align: middle;
+}
+
+th.draggable-th:hover .col-drag-handle {
+  opacity: 0.6;
+}
+
+.reset-cols-btn {
+  background: none;
+  border: 1px solid #3a3a4a;
+  color: #888;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reset-cols-btn:hover {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.lock-view-btn--locked {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+/* Column resize handle */
+.col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1;
+}
+
+.col-resize-handle:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
 td {
   padding: 14px 16px;
   border-top: 1px solid #2a2a3a;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 tr:hover td {

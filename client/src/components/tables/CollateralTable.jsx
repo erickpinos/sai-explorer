@@ -3,124 +3,118 @@ import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
-import SortTh from '../ui/SortTh';
-import { useViewToggle } from '../ui/ViewToggle';
 import { useSortedData } from '../../hooks/useSortedData';
-import SortDropdown from '../ui/SortDropdown';
+import DataTable from './DataTable';
 
 const SORT_OPTIONS = [
-  { key: 'tokenId', label: 'Index' },
-  { key: 'symbol', label: 'Symbol' },
-  { key: 'name', label: 'Name' },
-  { key: 'price', label: 'Price' },
+  { key: 'tokenId',    label: 'Index' },
+  { key: 'symbol',     label: 'Symbol' },
+  { key: 'name',       label: 'Name' },
+  { key: 'price',      label: 'Price' },
   { key: 'vaultCount', label: 'Vaults' },
-  { key: 'vaultTvl', label: 'Vault TVL' },
-  { key: 'marketCount', label: 'Markets' },
-  { key: 'totalOi', label: 'Total OI' },
+  { key: 'vaultTvl',   label: 'Vault TVL' },
+  { key: 'marketCount',label: 'Markets' },
+  { key: 'totalOi',    label: 'Total OI' },
 ];
 
-const SORT_KEYS = {
-  tokenId:    (c) => c.tokenId ?? 0,
-  symbol:     (c) => c.symbol || '',
-  name:       (c) => c.name || '',
-  price:      (c) => c.price || 0,
-  vaultCount: (c) => c.vaultCount || 0,
-  vaultTvl:   (c) => c.vaultTvl || 0,
-  marketCount:(c) => c.marketCount || 0,
-  totalOi:    (c) => c.totalOi || 0,
+const SORT_GETTERS = {
+  tokenId:     (c) => c.tokenId ?? 0,
+  symbol:      (c) => c.symbol || '',
+  name:        (c) => c.name || '',
+  price:       (c) => c.price || 0,
+  vaultCount:  (c) => c.vaultCount || 0,
+  vaultTvl:    (c) => c.vaultTvl || 0,
+  marketCount: (c) => c.marketCount || 0,
+  totalOi:     (c) => c.totalOi || 0,
 };
+
+const DEFAULT_COLUMNS = [
+  { key: 'tokenId',    label: 'Index',      sortable: true },
+  { key: 'symbol',     label: 'Symbol',     sortable: true },
+  { key: 'name',       label: 'Name',       sortable: true },
+  { key: 'price',      label: 'Price (USD)', sortable: true },
+  { key: 'vaultCount', label: 'Vaults',     sortable: true },
+  { key: 'vaultTvl',   label: 'Vault TVL',  sortable: true },
+  { key: 'marketCount',label: 'Markets',    sortable: true },
+  { key: 'totalOi',    label: 'Total OI',   sortable: true },
+  { key: 'logo',       label: 'Logo',       sortable: false },
+];
+
+function renderCell(key, c) {
+  switch (key) {
+    case 'tokenId':    return <td><strong>{c.tokenId != null ? c.tokenId : '-'}</strong></td>;
+    case 'symbol':     return <td><strong>{c.symbol}</strong></td>;
+    case 'name':       return <td>{c.name}</td>;
+    case 'price':      return <td>${formatNumber(c.price, 6)}</td>;
+    case 'vaultCount': return <td>{c.vaultCount}</td>;
+    case 'vaultTvl':   return <td>${formatNumber(c.vaultTvl, 2)}</td>;
+    case 'marketCount':return <td>{c.marketCount}</td>;
+    case 'totalOi':    return <td>${formatNumber(c.totalOi, 2)}</td>;
+    case 'logo':       return <td>{c.logoUrl ? <img src={c.logoUrl} alt={c.symbol} className="collateral-logo" /> : '-'}</td>;
+    default:           return <td>-</td>;
+  }
+}
+
+function renderMobileCard(c, i) {
+  return (
+    <div key={c.tokenId ?? i} className="profile-card">
+      <div className="profile-card-header">
+        <div className="profile-card-badges">
+          {c.logoUrl && <img src={c.logoUrl} alt={c.symbol} className="collateral-logo" style={{ width: '20px', height: '20px' }} />}
+          <span className="profile-card-market">{c.symbol}</span>
+          <span style={{ color: '#888', fontSize: '12px' }}>{c.name}</span>
+        </div>
+        <span className="profile-card-time">Index {c.tokenId}</span>
+      </div>
+      <div className="profile-card-row">
+        <span className="profile-card-label">Price</span>
+        <span className="profile-card-value">${formatNumber(c.price, 6)}</span>
+        <span className="profile-card-label">Vaults</span>
+        <span className="profile-card-value">{c.vaultCount}</span>
+      </div>
+      <div className="profile-card-row">
+        <span className="profile-card-label">TVL</span>
+        <span className="profile-card-value">${formatNumber(c.vaultTvl, 2)}</span>
+        <span className="profile-card-label">Total OI</span>
+        <span className="profile-card-value">${formatNumber(c.totalOi, 2)}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function CollateralTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useCollateral(network);
-  const { toggle, viewClass } = useViewToggle();
-
-  const { sorted, sortCol, sortDir, handleSort } = useSortedData(data?.collateralIndices || [], null, 'asc', SORT_KEYS);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
-  if (!sorted.length) return <EmptyState message="No collateral indices found" />;
+  if (!data?.collateralIndices?.length) return <EmptyState message="No collateral indices found" />;
 
-  const Th = ({ col, children }) => (
-    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
+  const activeIndices = data.activeIndices || [];
+  const footer = (
+    <div className="collateral-footer">
+      <h4>Discovered Collateral Indices</h4>
+      <p>Active indices: {activeIndices.join(', ')}</p>
+      <p className="collateral-footer-note">
+        These indices were found by querying vaults and markets on the current network.
+      </p>
+    </div>
   );
 
-  const activeIndices = data?.activeIndices || [];
-
   return (
-    <div className={viewClass}>
-      <div className="table-info">{sorted.length} indices{toggle}</div>
-      <div className="table-wrapper profile-table-desktop">
-          <table>
-            <thead>
-              <tr>
-                <Th col="tokenId">Index</Th>
-                <Th col="symbol">Symbol</Th>
-                <Th col="name">Name</Th>
-                <Th col="price">Price (USD)</Th>
-                <Th col="vaultCount">Vaults</Th>
-                <Th col="vaultTvl">Vault TVL</Th>
-                <Th col="marketCount">Markets</Th>
-                <Th col="totalOi">Total OI</Th>
-                <th>Logo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((c, i) => (
-                <tr key={c.tokenId ?? i}>
-                  <td><strong>{c.tokenId != null ? c.tokenId : '-'}</strong></td>
-                  <td><strong>{c.symbol}</strong></td>
-                  <td>{c.name}</td>
-                  <td>${formatNumber(c.price, 6)}</td>
-                  <td>{c.vaultCount}</td>
-                  <td>${formatNumber(c.vaultTvl, 2)}</td>
-                  <td>{c.marketCount}</td>
-                  <td>${formatNumber(c.totalOi, 2)}</td>
-                  <td>
-                    {c.logoUrl
-                      ? <img src={c.logoUrl} alt={c.symbol} className="collateral-logo" />
-                      : '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      <SortDropdown options={SORT_OPTIONS} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-      <div className="profile-cards-mobile">
-          {sorted.map((c, i) => (
-            <div key={c.tokenId ?? i} className="profile-card">
-              <div className="profile-card-header">
-                <div className="profile-card-badges">
-                  {c.logoUrl && <img src={c.logoUrl} alt={c.symbol} className="collateral-logo" style={{ width: '20px', height: '20px' }} />}
-                  <span className="profile-card-market">{c.symbol}</span>
-                  <span style={{ color: '#888', fontSize: '12px' }}>{c.name}</span>
-                </div>
-                <span className="profile-card-time">Index {c.tokenId}</span>
-              </div>
-              <div className="profile-card-row">
-                <span className="profile-card-label">Price</span>
-                <span className="profile-card-value">${formatNumber(c.price, 6)}</span>
-                <span className="profile-card-label">Vaults</span>
-                <span className="profile-card-value">{c.vaultCount}</span>
-              </div>
-              <div className="profile-card-row">
-                <span className="profile-card-label">TVL</span>
-                <span className="profile-card-value">${formatNumber(c.vaultTvl, 2)}</span>
-                <span className="profile-card-label">Total OI</span>
-                <span className="profile-card-value">${formatNumber(c.totalOi, 2)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-      <div className="collateral-footer">
-        <h4>Discovered Collateral Indices</h4>
-        <p>Active indices: {activeIndices.join(', ')}</p>
-        <p className="collateral-footer-note">
-          These indices were found by querying vaults and markets on the current network.
-        </p>
-      </div>
-    </div>
+    <DataTable
+      tableKey="collateral"
+      data={data.collateralIndices}
+      columns={DEFAULT_COLUMNS}
+      renderCell={renderCell}
+      renderMobileCard={renderMobileCard}
+      sortGetters={SORT_GETTERS}
+      defaultSortCol={null}
+      defaultSortDir="asc"
+      sortOptions={SORT_OPTIONS}
+      getRowKey={(c, i) => c.tokenId ?? i}
+      infoText={(total) => `${total} indices`}
+      footer={footer}
+    />
   );
 }

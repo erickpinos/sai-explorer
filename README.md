@@ -121,10 +121,24 @@ npm run index-data    # load historical blockchain data
 npm run docker:up     # start Postgres container
 npm run docker:down   # stop Postgres container
 npm run docker:logs   # tail Postgres logs
-
-# Test a production build locally (with database)
-npm run dev:api & npm run build && npm run preview
 ```
+
+### Test a production build locally (Mac)
+
+Run all commands from the **project root** (not `client/`):
+
+```bash
+# 1. Make sure Docker + DB are running
+npm run docker:up
+
+# 2. Build the frontend
+npm run build
+
+# 3. Start the API server (serves the built client on port 3001)
+npm run dev:api
+```
+
+Open http://localhost:3001
 
 ### Environment Variables
 
