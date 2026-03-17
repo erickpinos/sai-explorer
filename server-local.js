@@ -22,6 +22,7 @@ import marketsHandler from './api/markets.js';
 import collateralHandler from './api/collateral.js';
 import chartDataHandler from './api/chart-data.js';
 import coingeckoPricesHandler from './api/coingecko-prices.js';
+import backfillHandler from './api/backfill.js';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -63,6 +64,7 @@ app.get('/api/chart-data', wrapHandler(chartDataHandler));
 app.get('/api/coingecko-prices', wrapHandler(coingeckoPricesHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
 app.post('/api/clear', wrapHandler(clearHandler));
+app.get('/api/backfill', backfillHandler); // dev-only: full historical backfill via SSE
 
 // User-specific routes
 app.get('/api/user-stats', wrapHandler(userStatsHandler));

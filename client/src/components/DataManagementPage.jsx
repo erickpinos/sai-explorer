@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useNetwork } from '../hooks/useNetwork';
 import { useStats } from '../hooks/useApi';
@@ -26,6 +26,54 @@ export default function DataManagementPage({ setRefreshKey }) {
   const [rows, setRows] = useState(() =>
     Object.fromEntries(DATA_TABLES.map(t => [t.key, initialRowState()]))
   );
+
+  const [backfill, setBackfill] = useState({ running: false, log: [] });
+  const esRef = useRef(null);
+
+  function startBackfill() {
+    if (esRef.current) esRef.current.close();
+    setBackfill({ running: true, log: ['Connecting...'] });
+
+    const es = new EventSource('/api/backfill');
+    esRef.current = es;
+
+    es.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+      if (event.type === 'progress') {
+        setBackfill(prev => {
+          const last = prev.log[prev.log.length - 1];
+          const line = `  ${event.network} ${event.table}: page ${event.page}, ${event.total} total`;
+          // Update last line if it's the same table/network, otherwise append
+          if (last && last.startsWith(`  ${event.network} ${event.table}`)) {
+            return { ...prev, log: [...prev.log.slice(0, -1), line] };
+          }
+          return { ...prev, log: [...prev.log, line] };
+        });
+      } else if (event.type === 'log') {
+        setBackfill(prev => ({ ...prev, log: [...prev.log, event.message] }));
+      } else if (event.type === 'complete') {
+        setBackfill(prev => ({ running: false, log: [...prev.log, event.message] }));
+        toast.success('Full backfill complete');
+        setRefreshKey(prev => prev + 1);
+        refetchStats();
+        es.close();
+      } else if (event.type === 'error') {
+        setBackfill(prev => ({ running: false, log: [...prev.log, `Error: ${event.message}`] }));
+        toast.error(event.message);
+        es.close();
+      }
+    };
+
+    es.onerror = () => {
+      setBackfill(prev => ({ running: false, log: [...prev.log, 'Connection lost'] }));
+      es.close();
+    };
+  }
+
+  function stopBackfill() {
+    if (esRef.current) esRef.current.close();
+    setBackfill(prev => ({ running: false, log: [...prev.log, 'Cancelled'] }));
+  }
 
   function updateRow(table, patch) {
     setRows(prev => ({ ...prev, [table]: { ...prev[table], ...patch } }));
@@ -150,7 +198,7 @@ export default function DataManagementPage({ setRefreshKey }) {
                   disabled={row.loading}
                   onClick={() => handleRefetchAll(key)}
                 >
-                  {row.loading ? 'Working...' : 'Re-Fetch All'}
+                  {row.loading ? 'Working...' : 'Fetch Most Recent 1,000'}
                 </button>
 
                 {!row.confirmClear ? (
@@ -189,8 +237,54 @@ export default function DataManagementPage({ setRefreshKey }) {
         })}
       </div>
 
+      {import.meta.env.DEV && (
+        <div className="insight-card" style={{ marginTop: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div>
+              <strong style={{ color: '#e1e1e6', fontSize: '14px' }}>Full Historical Backfill</strong>
+              <span style={{ marginLeft: '8px', fontSize: '12px', color: '#f59e0b', background: '#2a1f00', padding: '2px 6px', borderRadius: '4px' }}>dev only</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="debug-tools-item"
+                style={{ width: 'auto', borderRadius: '8px', border: '1px solid #2a2a3a' }}
+                disabled={backfill.running}
+                onClick={startBackfill}
+              >
+                {backfill.running ? 'Running...' : 'Start Full Backfill'}
+              </button>
+              {backfill.running && (
+                <button
+                  className="debug-tools-item debug-tools-item-danger"
+                  style={{ width: 'auto', borderRadius: '8px', border: '1px solid #2a2a3a' }}
+                  onClick={stopBackfill}
+                >
+                  Stop
+                </button>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', color: '#888', marginBottom: backfill.log.length ? '10px' : 0 }}>
+            Equivalent to <code>npm run index-data</code> — fetches all historical records (up to 20,000 per table) with no page cap. Takes 10–30 min. Mainnet only.
+          </div>
+          {backfill.log.length > 0 && (
+            <pre style={{
+              margin: 0, padding: '10px', background: '#0d0d1a', borderRadius: '6px',
+              fontSize: '12px', color: '#a0a0b0', maxHeight: '200px', overflowY: 'auto',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
+              {backfill.log.join('\n')}
+            </pre>
+          )}
+        </div>
+      )}
+
       <div className="insight-card" style={{ marginTop: '24px', fontSize: '13px', color: '#888' }}>
         <strong style={{ color: '#aaa' }}>Auto-sync:</strong> An incremental "fetch new" for all three tables across both mainnet and testnet runs automatically every 5 minutes — via the Express server on startup and on an interval locally, and via a Vercel cron job in production.
+      </div>
+
+      <div className="insight-card" style={{ marginTop: '12px', fontSize: '13px', color: '#888' }}>
+        <strong style={{ color: '#aaa' }}>Sync limits:</strong> Both buttons are capped at 1,000 records per run (10 pages × 100). <em>Fetch New</em> only pulls records newer than the latest in the DB. <em>Fetch Most Recent 1,000</em> ignores that cutoff and re-fetches the most recent 1,000 records from scratch — useful to backfill missing fields, but not a full historical sync. For a complete historical backfill, use the Full Historical Backfill button above (dev only) or run <code>npm run index-data</code> from the CLI.
       </div>
 
       <div className="insight-card" style={{ marginTop: '12px' }}>

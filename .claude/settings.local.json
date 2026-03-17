@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)",
+      "Bash(node --trace-deprecation -e \"require\\(''''./shared/db.js''''\\)\")",
+      "Bash(node --trace-deprecation server-local.js)",
+      "Bash(node --trace-deprecation -e \":*)",
+      "Bash(node -e \":*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(grep -rn url.parseb node_modules/ --include=*.js -l)"
+    ]
+  }
+}

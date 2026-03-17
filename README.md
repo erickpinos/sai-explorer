@@ -311,9 +311,19 @@ npm run setup-db
 vercel link
 ```
 
-### Backfilling the production database
+### Fresh Vercel deployment
 
-If the Vercel DB is missing historical data (e.g. after a fresh deploy), pull the production env vars and run the full indexer against it:
+After deploying to Vercel for the first time (or after wiping the database), the production DB will be empty. The cron job syncs incrementally and is capped at 1,000 records per run — it will never backfill historical data on its own.
+
+**Step 1 — Create the database tables**
+
+```bash
+vercel env pull .env.vercel.local
+set -a && source .env.vercel.local && set +a && node scripts/setup-db.js
+rm .env.vercel.local
+```
+
+**Step 2 — Run the full historical backfill** (10–30 min)
 
 ```bash
 vercel env pull .env.vercel.local
@@ -321,7 +331,9 @@ set -a && source .env.vercel.local && set +a && node scripts/initial-index.js
 rm .env.vercel.local
 ```
 
-> `setup-db` uses `CREATE TABLE IF NOT EXISTS` — it never drops data, so it's safe to run on production without re-indexing.
+This is equivalent to `npm run index-data` but pointed at the production database instead of the local one. After it finishes, the cron job takes over for incremental updates.
+
+> `setup-db` uses `CREATE TABLE IF NOT EXISTS` — it never drops data, so it's safe to re-run on a populated database.
 
 ---
 
