@@ -99,7 +99,7 @@ function AppContent() {
               <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
               <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
-              <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
+              {import.meta.env.DEV && <Route path="/price-history" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />}
               {import.meta.env.DEV && <Route path="/db-tools" element={<DataManagementPage setRefreshKey={setRefreshKey} />} />}
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />

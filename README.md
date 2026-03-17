@@ -121,6 +121,9 @@ npm run index-data    # load historical blockchain data
 npm run docker:up     # start Postgres container
 npm run docker:down   # stop Postgres container
 npm run docker:logs   # tail Postgres logs
+
+# Test a production build locally (with database)
+npm run dev:api & npm run build && npm run preview
 ```
 
 ### Environment Variables
