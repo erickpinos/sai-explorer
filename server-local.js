@@ -21,6 +21,7 @@ import volumeHandler from './api/volume.js';
 import marketsHandler from './api/markets.js';
 import collateralHandler from './api/collateral.js';
 import chartDataHandler from './api/chart-data.js';
+import coingeckoPricesHandler from './api/coingecko-prices.js';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -59,6 +60,7 @@ app.get('/api/volume', wrapHandler(volumeHandler));
 app.get('/api/markets', wrapHandler(marketsHandler));
 app.get('/api/collateral', wrapHandler(collateralHandler));
 app.get('/api/chart-data', wrapHandler(chartDataHandler));
+app.get('/api/coingecko-prices', wrapHandler(coingeckoPricesHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
 app.post('/api/clear', wrapHandler(clearHandler));
 

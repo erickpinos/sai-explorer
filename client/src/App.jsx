@@ -20,6 +20,7 @@ const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
 const InsightsPage = lazy(() => import('./components/InsightsPage'));
 const DataManagementPage = lazy(() => import('./components/DataManagementPage'));
+const CoinGeckoPricesTable = lazy(() => import('./components/tables/CoinGeckoPricesTable'));
 
 function UserProfileRoute() {
   const { address } = useParams();
@@ -98,6 +99,7 @@ function AppContent() {
               <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
               <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
+              <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
               {import.meta.env.DEV && <Route path="/db-tools" element={<DataManagementPage setRefreshKey={setRefreshKey} />} />}
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
