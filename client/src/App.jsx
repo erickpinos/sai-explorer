@@ -9,6 +9,7 @@ import FunFacts from './components/ui/FunFacts';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
 import TradeDetailModal from './components/modals/TradeDetailModal';
+import VaultDetailModal from './components/modals/VaultDetailModal';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import './App.css';
 
@@ -19,6 +20,8 @@ const VolumeTable = lazy(() => import('./components/tables/VolumeTable'));
 const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
 const InsightsPage = lazy(() => import('./components/InsightsPage'));
+const LpVaultsTable = lazy(() => import('./components/tables/LpVaultsTable'));
+const CoinGeckoPricesTable = lazy(() => import('./components/tables/CoinGeckoPricesTable'));
 
 function UserProfileRoute() {
   const { address } = useParams();
@@ -49,6 +52,25 @@ function TradeDetailRoute() {
     <TradeDetailModal
       trade={trade}
       onClose={() => background ? navigate(-1) : navigate('/trades')}
+    />
+  );
+}
+
+function VaultDetailRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const background = location.state?.background;
+  const vault = location.state?.vault;
+
+  if (!vault) {
+    navigate('/vaults', { replace: true });
+    return null;
+  }
+
+  return (
+    <VaultDetailModal
+      vault={vault}
+      onClose={() => background ? navigate(-1) : navigate('/vaults')}
     />
   );
 }
@@ -92,9 +114,11 @@ function AppContent() {
 
   // When showing a modal, render the background tab (or /trades if navigated directly)
   const contentLocation = background || (
-    (location.pathname.startsWith('/user/') || location.pathname.startsWith('/trade/'))
-      ? { pathname: '/trades' }
-      : null
+    location.pathname.startsWith('/vault/')
+      ? { pathname: '/vaults' }
+      : (location.pathname.startsWith('/user/') || location.pathname.startsWith('/trade/'))
+        ? { pathname: '/trades' }
+        : null
   );
 
   return (
@@ -128,8 +152,11 @@ function AppContent() {
               <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
               <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
+              <Route path="/vaults" element={<LpVaultsTable key={`vaults-${refreshKey}`} />} />
+              <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
+              <Route path="/vault/:address" element={<Navigate to="/vaults" replace />} />
               <Route path="*" element={<Navigate to="/trades" replace />} />
             </Routes>
           </Suspense>
@@ -144,6 +171,7 @@ function AppContent() {
       <Routes>
         <Route path="/user/:address" element={<UserProfileRoute />} />
         <Route path="/trade/:id" element={<TradeDetailRoute />} />
+        <Route path="/vault/:address" element={<VaultDetailRoute />} />
       </Routes>
     </div>
   );

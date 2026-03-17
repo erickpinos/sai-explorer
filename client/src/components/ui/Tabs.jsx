@@ -9,6 +9,8 @@ const tabs = [
   { id: TABS.COLLATERAL, label: 'Collateral Indices', path: '/collateral' },
   { id: TABS.VOLUME, label: 'User Stats', path: '/volume' },
   { id: TABS.INSIGHTS, label: 'Insights', path: '/insights' },
+  { id: TABS.VAULTS, label: 'LP Vaults', path: '/vaults' },
+  { id: TABS.PRICES, label: 'Price History', path: '/prices' },
 ];
 
 export default function Tabs() {

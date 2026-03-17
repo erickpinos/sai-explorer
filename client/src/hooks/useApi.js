@@ -74,6 +74,10 @@ export function useCollateral(network) {
   return useApi('collateral', network);
 }
 
+export function useLpVaults(network) {
+  return useApi('lp-vaults', network);
+}
+
 export function useChartData(network, days = '28') {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
