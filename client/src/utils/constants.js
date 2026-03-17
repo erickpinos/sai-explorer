@@ -24,6 +24,7 @@ export const TABS = {
   INSIGHTS: 'insights',
   DB: 'db',
   PRICES: 'prices',
+  FEES: 'fees',
 };
 
 export const TRADES_PER_PAGE = 50;
