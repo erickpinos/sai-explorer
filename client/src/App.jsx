@@ -143,6 +143,7 @@ function AppContent() {
         <Route path="/user/:address" element={<UserProfileRoute />} />
         <Route path="/trade/:id" element={<TradeDetailRoute />} />
         <Route path="/vault/:address" element={<VaultDetailRoute />} />
+        <Route path="*" element={null} />
       </Routes>
     </div>
   );
