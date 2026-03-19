@@ -114,6 +114,8 @@ http://localhost:5173
 npm run dev:local     # start Express API + Vite frontend
 npm run dev:api       # start Express API only
 npm run dev           # start Vite frontend only
+npm run build         # build frontend to client/dist/
+npm run preview       # serve built frontend (port 4173)
 
 npm run setup-db      # create database tables
 npm run index-data    # load historical blockchain data
