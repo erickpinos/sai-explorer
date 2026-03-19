@@ -28,7 +28,7 @@ export default function CoinGeckoPricesTable() {
           {prices.map((row) => (
             <tr key={`${row.coin_id}-${row.date}`}>
               <td style={{ fontFamily: 'monospace' }}>{row.coin_id}</td>
-              <td>{row.date}</td>
+              <td>{(() => { const [d, m, y] = row.date.split('-'); return new Date(y, m - 1, d).toLocaleDateString(); })()}</td>
               <td style={{ textAlign: 'right', fontWeight: 600 }}>${formatNumber(row.price_usd, 6)}</td>
               <td style={{ textAlign: 'right', color: '#888', fontSize: '12px' }}>
                 {new Date(row.fetched_at).toLocaleString()}
