@@ -23,6 +23,7 @@ export const TABS = {
   ACTIVITY: 'activity',
   INSIGHTS: 'insights',
   VAULTS: 'vaults',
+  DB: 'db',
   PRICES: 'prices',
 };
 

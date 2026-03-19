@@ -4,30 +4,32 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 
-async function syncTrades(network) {
+async function syncTrades(network, { full = false } = {}) {
   console.log(`Syncing trades for ${network}...`);
 
-  // Get most recent trade timestamp from DB
-  const lastTrade = await sql`
-    SELECT block_ts FROM trades
-    WHERE network = ${network}
-    ORDER BY block_ts DESC
-    LIMIT 1
-  `;
-
-  const sinceTimestamp = lastTrade.rows[0]?.block_ts;
-  const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
-
-  // Fetch new trades from blockchain API
+  // Use keeper's sequential ID as watermark — immune to out-of-order block_ts insertions.
+  // Fetch ascending (oldest first) starting just before lastId so a small overlap
+  // catches any records the keeper registered late with an earlier block_ts.
+  const BUFFER = 20;
   const PAGE_SIZE = 100;
-  let offset = 0;
   let newTradesCount = 0;
-  const MAX_PAGES = 10;
 
-  while (offset < MAX_PAGES * PAGE_SIZE) {
+  let lastId = 0;
+  if (!full) {
+    const result = await sql`
+      SELECT COALESCE(MAX(id::int), 0) AS max_id FROM trades WHERE network = ${network}
+    `;
+    lastId = parseInt(result.rows[0].max_id);
+  }
+
+  let offset = Math.max(0, lastId - BUFFER);
+  // Keep fetching as long as the last page contained new records
+  let maxOffset = offset + PAGE_SIZE;
+
+  while (offset <= maxOffset) {
     const res = await fetchGraphQL(`{
       perp {
-        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: true) {
+        tradeHistory(limit: ${PAGE_SIZE}, offset: ${offset}, order_desc: false) {
           id tradeChangeType realizedPnlPct realizedPnlCollateral
           txHash evmTxHash collateralPrice
           block { block block_ts }
@@ -43,22 +45,14 @@ async function syncTrades(network) {
     const trades = res.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    // Collect new trades, stop at old data
-    const batch = [];
-    let reachedOld = false;
-    for (const t of trades) {
-      if (sinceDate && new Date(t.block.block_ts) <= sinceDate) {
-        console.log(`Reached old trades at ${t.block.block_ts}, stopping`);
-        reachedOld = true;
-        break;
-      }
-      batch.push(t);
-    }
+    // Insert all records in the fetch window — the buffer range may contain IDs
+    // that are < lastId but were missing (e.g. late keeper registration). ON CONFLICT
+    // handles already-existing records. Only extend the window for truly new IDs.
+    const trulyNewTrades = trades.filter(t => t.id > lastId);
 
-    // Insert batch concurrently
-    if (batch.length > 0) {
-      const failedHashes = await getFailedTxHashes(batch, network);
-      const results = await Promise.allSettled(batch.map(t => sql`
+    if (trades.length > 0) {
+      const failedHashes = await getFailedTxHashes(trades, network);
+      const results = await Promise.allSettled(trades.map(t => sql`
         INSERT INTO trades (
           id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
           tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
@@ -87,13 +81,91 @@ async function syncTrades(network) {
       newTradesCount += results.filter(r => r.status === 'fulfilled').length;
     }
 
-    if (reachedOld) break;
+    if (trulyNewTrades.length > 0) {
+      // Extend the search window — there may be more pages ahead
+      maxOffset = offset + PAGE_SIZE;
+      console.log(`Found ${trulyNewTrades.length} new trades at offset ${offset} (ids ${Math.min(...trulyNewTrades.map(t=>t.id))}–${Math.max(...trulyNewTrades.map(t=>t.id))})`);
+    }
+
     if (trades.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
 
   console.log(`Synced ${newTradesCount} new trades for ${network}`);
   return newTradesCount;
+}
+
+// After each sync, check the last GAP_WINDOW IDs for holes and fetch any missing ones.
+// IDs are sequential so offset = id - 1 maps directly to the GraphQL position.
+async function fillTradeGaps(network) {
+  const GAP_WINDOW = 200;
+
+  const gapResult = await sql`
+    WITH bounds AS (
+      SELECT GREATEST(1, MAX(id::int) - ${GAP_WINDOW}) AS lo, MAX(id::int) AS hi
+      FROM trades WHERE network = ${network}
+    )
+    SELECT s.id
+    FROM bounds, generate_series(bounds.lo, bounds.hi) s(id)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM trades WHERE network = ${network} AND id::int = s.id
+    )
+    ORDER BY s.id
+  `;
+
+  const gapIds = gapResult.rows.map(r => parseInt(r.id));
+  if (gapIds.length === 0) return 0;
+
+  console.log(`Found ${gapIds.length} gap IDs for ${network}: ${gapIds.join(', ')}`);
+
+  let filled = 0;
+  for (const gapId of gapIds) {
+    const res = await fetchGraphQL(`{
+      perp {
+        tradeHistory(limit: 1, offset: ${gapId - 1}, order_desc: false) {
+          id tradeChangeType realizedPnlPct realizedPnlCollateral
+          txHash evmTxHash collateralPrice
+          block { block block_ts }
+          trade {
+            id trader tradeType isLong isOpen leverage openPrice closePrice
+            collateralAmount openCollateralAmount tp sl
+            perpBorrowing { marketId baseToken { symbol } collateralToken { symbol } }
+          }
+        }
+      }
+    }`, network);
+
+    const trades = res.data?.perp?.tradeHistory || [];
+    const t = trades[0];
+    if (!t || t.id !== gapId) {
+      console.log(`Gap ID ${gapId} not yet in GraphQL — skipping`);
+      continue;
+    }
+
+    const failedHashes = await getFailedTxHashes([t], network);
+    await sql`
+      INSERT INTO trades (
+        id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
+        tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
+        trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
+        collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol,
+        tx_failed
+      ) VALUES (
+        ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
+        ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
+        ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
+        ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
+        ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
+        ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol},
+        ${failedHashes.has(t.evmTxHash)}
+      )
+      ON CONFLICT (id) DO NOTHING
+    `;
+    console.log(`Filled gap ID ${gapId} for ${network}`);
+    filled++;
+  }
+
+  return filled;
 }
 
 async function backfillTradeSymbols(network) {
@@ -174,7 +246,7 @@ async function backfillTradeSymbols(network) {
   return updatedCount;
 }
 
-async function syncDeposits(network) {
+async function syncDeposits(network, { full = false } = {}) {
   console.log(`Syncing deposits for ${network}...`);
 
   // Per-vault checkpoints: only skip deposits already stored for each specific vault.
@@ -249,7 +321,7 @@ async function syncDeposits(network) {
   return newDepositsCount;
 }
 
-async function syncWithdraws(network) {
+async function syncWithdraws(network, { full: _full = false } = {}) {
   console.log(`Syncing withdraws for ${network}...`);
 
   const PAGE_SIZE = 100;
@@ -341,27 +413,26 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
-  if (!checkRateLimit(req, res, SYNC_MAX)) return;
+  if (process.env.VERCEL && !checkRateLimit(req, res, SYNC_MAX)) return;
 
   try {
     const startTime = Date.now();
-    const { network } = req.body || {};
+    const { network, table, full } = req.body || {};
+    const opts = { full: full === true };
 
     // Sync both networks when no specific network requested (e.g. cron), else sync the specified one
     const networks = !network || network === 'all' ? ['mainnet', 'testnet'] : [network];
 
     const allResults = await Promise.all(
       networks.map(async (net) => {
-        const [trades, deposits, withdraws] = await Promise.all([
-          syncTrades(net),
-          syncDeposits(net),
-          syncWithdraws(net)
-        ]);
-        const [backfilled, vaultPrices] = await Promise.all([
-          backfillTradeSymbols(net),
-          syncVaultSharePrices(net),
-        ]);
-        return { network: net, trades, deposits, withdraws, backfilled, vaultPrices };
+        let trades = 0, deposits = 0, withdraws = 0;
+        if (!table || table === 'trades')    trades    = await syncTrades(net, opts);
+        if (!table || table === 'deposits')  deposits  = await syncDeposits(net, opts);
+        if (!table || table === 'withdraws') withdraws = await syncWithdraws(net, opts);
+        const backfilled = (!table || table === 'trades') ? await backfillTradeSymbols(net) : 0;
+        const gaps = (!table || table === 'trades') ? await fillTradeGaps(net) : 0;
+        const vaultPrices = await syncVaultSharePrices(net);
+        return { network: net, trades, deposits, withdraws, backfilled, gaps, vaultPrices };
       })
     );
 

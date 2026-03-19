@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
-import { NetworkProvider, useNetwork } from './hooks/useNetwork';
+import { Toaster } from 'react-hot-toast';
+import { NetworkProvider } from './hooks/useNetwork';
 import Header from './components/ui/Header';
 import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
@@ -21,6 +21,7 @@ const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
 const InsightsPage = lazy(() => import('./components/InsightsPage'));
 const LpVaultsTable = lazy(() => import('./components/tables/LpVaultsTable'));
+const DataManagementPage = lazy(() => import('./components/DataManagementPage'));
 const CoinGeckoPricesTable = lazy(() => import('./components/tables/CoinGeckoPricesTable'));
 
 function UserProfileRoute() {
@@ -76,41 +77,10 @@ function VaultDetailRoute() {
 }
 
 function AppContent() {
-  const { network } = useNetwork();
   const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [syncing, setSyncing] = useState(false);
 
   const background = location.state?.background;
-
-  const handleFetchNew = async () => {
-    setSyncing(true);
-    try {
-      const response = await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ network })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Sync completed:', result);
-        toast.success(`Synced ${result.trades} trades, ${result.deposits} deposits, ${result.withdraws} withdraws`);
-        setRefreshKey(prev => prev + 1);
-      } else {
-        toast.error('Sync failed. Check console for details.');
-      }
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast.error('Sync failed: ' + error.message);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleRefetchAll = async () => {
-    await handleFetchNew();
-  };
 
   // When showing a modal, render the background tab (or /trades if navigated directly)
   const contentLocation = background || (
@@ -123,7 +93,7 @@ function AppContent() {
 
   return (
     <div className="app">
-      <Header onFetchNew={handleFetchNew} onRefetchAll={handleRefetchAll} syncing={syncing} />
+      <Header />
 
       <div className="disclaimer-banner">
         Values shown are estimates. For official stats, visit{' '}
@@ -154,6 +124,7 @@ function AppContent() {
               <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
               <Route path="/vaults" element={<LpVaultsTable key={`vaults-${refreshKey}`} />} />
               <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
+              {import.meta.env.DEV && <Route path="/db-tools" element={<DataManagementPage setRefreshKey={setRefreshKey} />} />}
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
               <Route path="/vault/:address" element={<Navigate to="/vaults" replace />} />

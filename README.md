@@ -51,7 +51,7 @@ Open http://localhost:5173
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) >= 18.0.0
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Linux) or [PostgreSQL 16+](https://www.postgresql.org/download/windows/) (Windows)
 
 ### Step-by-Step
 
@@ -125,20 +125,22 @@ npm run docker:down   # stop Postgres container
 npm run docker:logs   # tail Postgres logs
 ```
 
-### Testing the production build locally
+### Test a production build locally (Mac)
+
+Run all commands from the **project root** (not `client/`):
 
 ```bash
-npm run build         # build client/dist/
-npm run docker:up     # ensure Postgres is running
-npm run dev:api       # API on :3001
-npm run preview       # serve built frontend on :4173
+# 1. Make sure Docker + DB are running
+npm run docker:up
+
+# 2. Build the frontend
+npm run build
+
+# 3. Start the API server (serves the built client on port 3001)
+npm run dev:api
 ```
 
-Or use Vercel CLI to run API handlers as actual serverless functions:
-
-```bash
-npx vercel dev        # requires vercel login and vercel link
-```
+Open http://localhost:3001
 
 ### Environment Variables
 
@@ -149,6 +151,58 @@ POSTGRES_URL=postgres://saiexplorer:localdev123@127.0.0.1:5433/sai_explorer
 ```
 
 Port 5433 is used to avoid conflicts with any local Postgres installation (which typically uses 5432).
+
+### Windows Setup
+
+Docker Desktop requires virtualization which may not be available. Use a local PostgreSQL installation instead.
+
+**1. Install PostgreSQL**
+
+Download and install [PostgreSQL 16+](https://www.postgresql.org/download/windows/) via the EDB installer. It includes pgAdmin 4 (a browser-based UI).
+
+**2. Create the database**
+
+Open pgAdmin 4 from the Start menu, connect to your local server, then:
+
+- Right-click **Login/Group Roles** → Create → Login/Group Role
+  - Name: `saiexplorer`
+  - Definition tab → Password: `localdev123`
+  - Privileges tab → enable **Can login?**
+  - Save
+- Right-click **Databases** → Create → Database
+  - Name: `sai_explorer`, Owner: `saiexplorer`
+  - Save
+
+**3. Set environment variable**
+
+Create `.env.local` in the project root:
+
+```
+POSTGRES_URL=postgres://saiexplorer:localdev123@127.0.0.1:5432/sai_explorer
+```
+
+Note: local PostgreSQL uses port `5432` (not `5433`).
+
+**4. Set up tables and start**
+
+```bash
+npm run setup-db
+npm run index-data   # optional, 10-30 min
+```
+
+**5. Start the dev servers**
+
+`npm run dev:local` uses `sh` and won't work on Windows. Run the two services separately:
+
+```bash
+# Terminal 1
+npm run dev:api
+
+# Terminal 2 (once API is running)
+npm run dev
+```
+
+Open http://localhost:5000
 
 ---
 
@@ -273,9 +327,19 @@ npm run setup-db
 vercel link
 ```
 
-### Backfilling the production database
+### Fresh Vercel deployment
 
-If the Vercel DB is missing historical data (e.g. after a fresh deploy), pull the production env vars and run the full indexer against it:
+After deploying to Vercel for the first time (or after wiping the database), the production DB will be empty. The cron job syncs incrementally and is capped at 1,000 records per run — it will never backfill historical data on its own.
+
+**Step 1 — Create the database tables**
+
+```bash
+vercel env pull .env.vercel.local
+set -a && source .env.vercel.local && set +a && node scripts/setup-db.js
+rm .env.vercel.local
+```
+
+**Step 2 — Run the full historical backfill** (10–30 min)
 
 ```bash
 vercel env pull .env.vercel.local
@@ -283,7 +347,9 @@ set -a && source .env.vercel.local && set +a && node scripts/initial-index.js
 rm .env.vercel.local
 ```
 
-> `setup-db` uses `CREATE TABLE IF NOT EXISTS` — it never drops data, so it's safe to run on production without re-indexing.
+This is equivalent to `npm run index-data` but pointed at the production database instead of the local one. After it finishes, the cron job takes over for incremental updates.
+
+> `setup-db` uses `CREATE TABLE IF NOT EXISTS` — it never drops data, so it's safe to re-run on a populated database.
 
 ---
 

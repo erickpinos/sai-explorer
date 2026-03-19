@@ -10,6 +10,7 @@ import depositsHandler from './api/deposits.js';
 import withdrawsHandler from './api/withdraws.js';
 import statsHandler from './api/stats.js';
 import syncHandler from './api/sync.js';
+import clearHandler from './api/clear.js';
 import insightsHandler from './api/insights.js';
 import tvlBreakdownHandler from './api/tvl-breakdown.js';
 import userStatsHandler from './api/user-stats.js';
@@ -22,6 +23,7 @@ import collateralHandler from './api/collateral.js';
 import chartDataHandler from './api/chart-data.js';
 import lpVaultsHandler from './api/lp-vaults.js';
 import coingeckoPricesHandler from './api/coingecko-prices.js';
+import backfillHandler from './api/backfill.js';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -63,6 +65,8 @@ app.get('/api/chart-data', wrapHandler(chartDataHandler));
 app.get('/api/lp-vaults', wrapHandler(lpVaultsHandler));
 app.get('/api/coingecko-prices', wrapHandler(coingeckoPricesHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
+app.post('/api/clear', wrapHandler(clearHandler));
+app.get('/api/backfill', backfillHandler); // dev-only: full historical backfill via SSE
 
 // User-specific routes
 app.get('/api/user-stats', wrapHandler(userStatsHandler));
@@ -147,7 +151,10 @@ const server = app.listen(PORT, () => {
   autoSync();
   const syncInterval = setInterval(autoSync, SYNC_INTERVAL_MS);
 
+  let shuttingDown = false;
   const shutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     clearInterval(syncInterval);
     server.close();
     pool.end();

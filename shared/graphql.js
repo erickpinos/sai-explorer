@@ -7,5 +7,12 @@ export async function fetchGraphQL(query, network) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   });
-  return res.json();
+  if (!res.ok) {
+    throw new Error(`GraphQL HTTP error: ${res.status} ${res.statusText} from ${endpoint}`);
+  }
+  const json = await res.json();
+  if (json.errors) {
+    console.error('GraphQL errors:', JSON.stringify(json.errors));
+  }
+  return json;
 }

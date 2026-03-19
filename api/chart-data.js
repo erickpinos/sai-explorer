@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       ? null
       : new Date(Date.now() - parseInt(days) * 24 * 60 * 60 * 1000);
 
-    const [tradesResult, depositsResult] = await Promise.all([
+    const [tradesResult, depositsResult, volumeByAssetResult, tradesByAssetResult] = await Promise.all([
       cutoff
         ? sql`
           SELECT
@@ -64,6 +64,52 @@ export default async function handler(req, res) {
           GROUP BY DATE(block_ts)
           ORDER BY day ASC
         `,
+
+      cutoff
+        ? sql`
+          SELECT
+            DATE(block_ts) as day,
+            COALESCE(base_token_symbol, 'OTHER') as asset,
+            SUM(CASE WHEN trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
+                THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
+          FROM trades
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL) AND block_ts >= ${cutoff.toISOString()}
+          GROUP BY DATE(block_ts), COALESCE(base_token_symbol, 'OTHER')
+          ORDER BY day ASC
+        `
+        : sql`
+          SELECT
+            DATE(block_ts) as day,
+            COALESCE(base_token_symbol, 'OTHER') as asset,
+            SUM(CASE WHEN trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
+                THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1)) ELSE 0 END) as volume
+          FROM trades
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
+          GROUP BY DATE(block_ts), COALESCE(base_token_symbol, 'OTHER')
+          ORDER BY day ASC
+        `,
+
+      cutoff
+        ? sql`
+          SELECT
+            DATE(block_ts) as day,
+            COALESCE(base_token_symbol, 'OTHER') as asset,
+            COUNT(*) FILTER (WHERE trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')) as trade_count
+          FROM trades
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL) AND block_ts >= ${cutoff.toISOString()}
+          GROUP BY DATE(block_ts), COALESCE(base_token_symbol, 'OTHER')
+          ORDER BY day ASC
+        `
+        : sql`
+          SELECT
+            DATE(block_ts) as day,
+            COALESCE(base_token_symbol, 'OTHER') as asset,
+            COUNT(*) FILTER (WHERE trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')) as trade_count
+          FROM trades
+          WHERE network = ${network} AND (tx_failed = FALSE OR tx_failed IS NULL)
+          GROUP BY DATE(block_ts), COALESCE(base_token_symbol, 'OTHER')
+          ORDER BY day ASC
+        `,
     ]);
 
     const dateMap = {};
@@ -92,7 +138,19 @@ export default async function handler(req, res) {
       volume: dateMap[d].volume,
     }));
 
-    res.status(200).json({ activity, volumeByDay });
+    const volumeByDayByAsset = volumeByAssetResult.rows.map(row => ({
+      date: new Date(row.day).toISOString().split('T')[0],
+      asset: row.asset,
+      volume: parseFloat(row.volume || 0),
+    }));
+
+    const tradesByDayByAsset = tradesByAssetResult.rows.map(row => ({
+      date: new Date(row.day).toISOString().split('T')[0],
+      asset: row.asset,
+      trades: parseInt(row.trade_count || 0),
+    }));
+
+    res.status(200).json({ activity, volumeByDay, volumeByDayByAsset, tradesByDayByAsset });
   } catch (error) {
     console.error('Error fetching chart data:', error);
     res.status(500).json({ error: 'Failed to fetch chart data', details: error.message });

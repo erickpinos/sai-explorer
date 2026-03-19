@@ -1,7 +1,7 @@
 import { EVM_RPC_ENDPOINTS } from './constants.js';
 
 const CHUNK_SIZE = 10;
-const CHUNK_DELAY_MS = 1000;
+const CHUNK_DELAY_MS = 200;
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
