@@ -143,7 +143,111 @@ export default async function handler(req, res) {
         );
       }
 
-      vaults.push({ ...v, collateralPrice, historicalPrice });
+      // Build unified share price history: sync snapshots + calc from deposits
+      let sharePriceHistory = [];
+      let apyWindows = {};
+      if (v.address) {
+        // Calc entries from deposits (amount/shares)
+        const { rows: depositRows } = await sql`
+          SELECT
+            block_ts AS ts,
+            amount::float / NULLIF(shares, 0) AS share_price,
+            tx_hash, evm_tx_hash
+          FROM deposits
+          WHERE vault_address = ${v.address}
+            AND network = ${network}
+            AND shares > 0
+            AND amount > 0
+          ORDER BY block_ts ASC
+        `;
+
+        // Sync snapshot entries
+        const { rows: syncRows } = await sql`
+          SELECT recorded_at AS ts, share_price
+          FROM vault_share_prices
+          WHERE vault_address = ${v.address}
+            AND network = ${network}
+          ORDER BY recorded_at ASC
+        `;
+
+        // Merge and sort all known points
+        const known = [
+          ...depositRows
+            .filter(r => r.share_price != null)
+            .map(r => ({ ts: new Date(r.ts), sharePrice: r.share_price, source: 'calc', txHash: r.tx_hash, evmTxHash: r.evm_tx_hash })),
+          ...syncRows
+            .map(r => ({ ts: new Date(r.ts), sharePrice: r.share_price, source: 'sync' })),
+        ].sort((a, b) => a.ts - b.ts);
+
+        // Fill in daily estimates (flat carry-forward) between known points
+        if (known.length > 0) {
+          const endDay = new Date();
+          endDay.setUTCHours(0, 0, 0, 0);
+
+          // Group known entries by UTC date string
+          const knownByDay = {};
+          for (const p of known) {
+            const day = p.ts.toISOString().slice(0, 10);
+            if (!knownByDay[day]) knownByDay[day] = [];
+            knownByDay[day].push(p);
+          }
+
+          const startDay = new Date(known[0].ts);
+          startDay.setUTCHours(0, 0, 0, 0);
+
+          const dailyHistory = [];
+          let lastKnownPrice = null;
+
+          for (let d = new Date(startDay); d <= endDay; d.setUTCDate(d.getUTCDate() + 1)) {
+            const dayStr = d.toISOString().slice(0, 10);
+            if (knownByDay[dayStr]) {
+              // Push all known entries for this day (no est needed)
+              for (const entry of knownByDay[dayStr]) {
+                dailyHistory.push(entry);
+                lastKnownPrice = entry.sharePrice;
+              }
+            } else if (lastKnownPrice !== null) {
+              // Use UTC noon so est entries render as the correct local date in all timezones
+              // (UTC midnight would display as the previous day for UTC- users)
+              dailyHistory.push({ ts: new Date(d.getTime() + 12 * 60 * 60 * 1000), sharePrice: lastKnownPrice, source: 'est' });
+            }
+          }
+
+          sharePriceHistory = dailyHistory.map(p => ({
+            ts: p.ts,
+            sharePrice: p.sharePrice,
+            source: p.source,
+            txHash: p.txHash || null,
+            evmTxHash: p.evmTxHash || null,
+          }));
+        }
+
+        // Compute APY windows using the daily history
+        const endPrice = v.sharePrice;
+        const nowTs = Date.now();
+        for (const days of [7, 14, 30, 90]) {
+          if (sharePriceHistory.length === 0) continue;
+          const target = nowTs - days * 24 * 60 * 60 * 1000;
+          const candidates = sharePriceHistory.filter(p => new Date(p.ts).getTime() <= target);
+          // Fall back to oldest available entry when history doesn't reach the full window
+          const partial = candidates.length === 0;
+          const startEntry = partial ? sharePriceHistory[0] : candidates[candidates.length - 1];
+          const actualDays = (nowTs - new Date(startEntry.ts).getTime()) / (24 * 60 * 60 * 1000);
+          const ratio = endPrice / startEntry.sharePrice;
+          apyWindows[`${days}d`] = {
+            apy: (Math.pow(ratio, 365 / (partial ? actualDays : days)) - 1) * 100,
+            startPrice: startEntry.sharePrice,
+            startTs: startEntry.ts,
+            startSource: startEntry.source,
+            endPrice,
+            days,
+            partial,
+            actualDays,
+          };
+        }
+      }
+
+      vaults.push({ ...v, collateralPrice, historicalPrice, sharePriceHistory, apyWindows });
     }
 
     res.status(200).json({ vaults, epochDurationDays, epochDurationHours });

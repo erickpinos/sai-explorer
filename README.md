@@ -114,6 +114,8 @@ http://localhost:5173
 npm run dev:local     # start Express API + Vite frontend
 npm run dev:api       # start Express API only
 npm run dev           # start Vite frontend only
+npm run build         # build frontend to client/dist/
+npm run preview       # serve built frontend (port 4173)
 
 npm run setup-db      # create database tables
 npm run index-data    # load historical blockchain data
@@ -121,6 +123,21 @@ npm run index-data    # load historical blockchain data
 npm run docker:up     # start Postgres container
 npm run docker:down   # stop Postgres container
 npm run docker:logs   # tail Postgres logs
+```
+
+### Testing the production build locally
+
+```bash
+npm run build         # build client/dist/
+npm run docker:up     # ensure Postgres is running
+npm run dev:api       # API on :3001
+npm run preview       # serve built frontend on :4173
+```
+
+Or use Vercel CLI to run API handlers as actual serverless functions:
+
+```bash
+npx vercel dev        # requires vercel login and vercel link
 ```
 
 ### Environment Variables

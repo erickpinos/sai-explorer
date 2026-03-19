@@ -148,6 +148,23 @@ async function setupDatabase() {
     `);
     console.log('✓ Created metadata table');
 
+    // Create vault_share_prices table (periodic sync snapshots)
+    await query(`
+      CREATE TABLE IF NOT EXISTS vault_share_prices (
+        id SERIAL PRIMARY KEY,
+        network TEXT NOT NULL,
+        vault_address TEXT NOT NULL,
+        share_price FLOAT NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        source TEXT NOT NULL DEFAULT 'sync',
+        UNIQUE(network, vault_address, recorded_at)
+      )
+    `);
+    await query('CREATE INDEX IF NOT EXISTS idx_vault_share_prices_vault ON vault_share_prices(network, vault_address, recorded_at DESC)');
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_vault_share_prices_daily
+      ON vault_share_prices(network, vault_address, DATE_TRUNC('day', recorded_at AT TIME ZONE 'UTC'))`);
+    console.log('✓ Created vault_share_prices table');
+
     // Create coingecko_prices table (persistent historical price cache)
     await query(`
       CREATE TABLE IF NOT EXISTS coingecko_prices (

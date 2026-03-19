@@ -177,21 +177,20 @@ async function backfillTradeSymbols(network) {
 async function syncDeposits(network) {
   console.log(`Syncing deposits for ${network}...`);
 
-  // Get most recent deposit timestamp from DB
-  const lastDeposit = await sql`
-    SELECT block_ts FROM deposits
-    WHERE network = ${network}
-    ORDER BY block_ts DESC
-    LIMIT 1
+  // Per-vault checkpoints: only skip deposits already stored for each specific vault.
+  // A global checkpoint silently misses early deposits from vaults added after the last backfill.
+  const { rows: vaultTs } = await sql`
+    SELECT vault_address, MAX(block_ts) AS latest_ts
+    FROM deposits
+    WHERE network = ${network} AND vault_address IS NOT NULL
+    GROUP BY vault_address
   `;
-
-  const sinceTimestamp = lastDeposit.rows[0]?.block_ts;
-  const sinceDate = sinceTimestamp ? new Date(sinceTimestamp) : null;
+  const vaultCheckpoints = new Map(vaultTs.map(r => [r.vault_address, new Date(r.latest_ts)]));
 
   const PAGE_SIZE = 100;
   let offset = 0;
   let newDepositsCount = 0;
-  const MAX_PAGES = 10;
+  const MAX_PAGES = 50; // Large enough to reach old deposits for newly-added vaults
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
     const res = await fetchGraphQL(`{
@@ -208,14 +207,18 @@ async function syncDeposits(network) {
     if (deposits.length === 0) break;
 
     const batch = [];
-    let reachedOld = false;
+    // allStale = true when every deposit in the page is older than its vault's checkpoint.
+    // Once true, deeper pages (older) can't have anything new either.
+    let allStale = true;
+
     for (const d of deposits) {
-      if (sinceDate && new Date(d.block.block_ts) <= sinceDate) {
-        console.log(`Reached old deposits at ${d.block.block_ts}, stopping`);
-        reachedOld = true;
-        break;
+      const checkpoint = vaultCheckpoints.get(d.vault?.address);
+      const depositTs = new Date(d.block.block_ts);
+      if (checkpoint === undefined || depositTs > checkpoint) {
+        // New vault (no checkpoint yet) OR deposit is newer than vault's checkpoint
+        batch.push(d);
+        allStale = false;
       }
-      batch.push(d);
     }
 
     if (batch.length > 0) {
@@ -234,7 +237,10 @@ async function syncDeposits(network) {
       newDepositsCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
     }
 
-    if (reachedOld) break;
+    if (allStale) {
+      console.log(`All deposits in page are stale for their vaults, stopping`);
+      break;
+    }
     if (deposits.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -284,6 +290,46 @@ async function syncWithdraws(network) {
   return newWithdrawsCount;
 }
 
+async function syncVaultSharePrices(network) {
+  // Only snapshot once per day, at or after 8am UTC
+  if (new Date().getUTCHours() !== 0) return 0; // 8pm EDT = 00:00 UTC
+
+  const { rows: existing } = await sql`
+    SELECT 1 FROM vault_share_prices
+    WHERE network = ${network}
+      AND recorded_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')
+      AND recorded_at <  DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC') + INTERVAL '1 day'
+    LIMIT 1
+  `;
+  if (existing.length > 0) {
+    console.log(`Vault share prices already snapshotted today for ${network}, skipping`);
+    return 0;
+  }
+
+  const res = await fetchGraphQL(`{
+    lp {
+      vaults {
+        address
+        sharePrice
+      }
+    }
+  }`, network);
+  const vaults = res.data?.lp?.vaults || [];
+  const now = new Date().toISOString();
+  let count = 0;
+  for (const v of vaults) {
+    if (!v.address || v.sharePrice == null) continue;
+    const result = await sql`
+      INSERT INTO vault_share_prices (network, vault_address, share_price, recorded_at, source)
+      VALUES (${network}, ${v.address}, ${v.sharePrice}, ${now}, 'sync')
+      ON CONFLICT DO NOTHING
+    `;
+    count += result.rowCount || 0;
+  }
+  console.log(`Snapshotted ${count} vault share prices for ${network}`);
+  return count;
+}
+
 export default async function handler(req, res) {
   // Require Authorization: Bearer <CRON_SECRET> on all Vercel environments.
   // Locally (no VERCEL env var) the check is skipped for convenience.
@@ -311,8 +357,11 @@ export default async function handler(req, res) {
           syncDeposits(net),
           syncWithdraws(net)
         ]);
-        const backfilled = await backfillTradeSymbols(net);
-        return { network: net, trades, deposits, withdraws, backfilled };
+        const [backfilled, vaultPrices] = await Promise.all([
+          backfillTradeSymbols(net),
+          syncVaultSharePrices(net),
+        ]);
+        return { network: net, trades, deposits, withdraws, backfilled, vaultPrices };
       })
     );
 

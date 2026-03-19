@@ -96,7 +96,6 @@ export default function LpVaultsTable() {
               <th>Trader Losses</th>
               <th>Open PnL (epoch)</th>
               <th>Epoch</th>
-              <th>Epoch Duration (Days)</th>
             </tr>
           </thead>
           <tbody>
@@ -130,7 +129,6 @@ export default function LpVaultsTable() {
                   <td>${formatNumber(v.traderLossesUsd, 2)}</td>
                   <td>${formatNumber(v.openPnlUsd, 2)}</td>
                   <td>{v.currentEpoch ?? '-'}</td>
-                  <td>{v.epochDurationDays ?? '-'}</td>
                 </tr>
               );
             })}
@@ -181,10 +179,6 @@ export default function LpVaultsTable() {
                 <span className="profile-card-label">Epoch</span>
                 <span className="profile-card-value">{v.currentEpoch ?? '-'}</span>
               </div>
-              <div className="profile-card-row">
-                <span className="profile-card-label">epochDurationDays</span>
-                <span className="profile-card-value">{v.epochDurationDays ?? '-'}</span>
-              </div>
             </div>
           );
         })}
@@ -193,9 +187,8 @@ export default function LpVaultsTable() {
       <div className="markets-note">
         <span className="markets-note-icon">ℹ</span>
         <span>
-          APY = (NetProfit / TVL) × (365 / epochDurationDays).
-          A negative APY means <strong>Liabilities</strong> (open trader profits) exceed
-          cumulative vault revenue. As profitable trader positions close, APY recovers.
+          APY = ((share_price_now / share_price_30d_ago)^(365/30) − 1) × 100.
+          A negative APY means the vault share price has declined over the last 30 days.
         </span>
       </div>
 
