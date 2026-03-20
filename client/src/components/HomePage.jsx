@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTrades } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
@@ -9,6 +10,7 @@ import InsightsGrid from './InsightsGrid';
 import LoadingSpinner from './ui/LoadingSpinner';
 import EmptyState from './ui/EmptyState';
 import DataTable from './tables/DataTable';
+import TradeDetailModal from './modals/TradeDetailModal';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
 
@@ -22,8 +24,9 @@ const TRADES_SORT_OPTIONS = [
   { key: 'market',     label: 'Market' },
   { key: 'direction',  label: 'Direction' },
   { key: 'leverage',   label: 'Leverage' },
-  { key: 'collateral', label: 'Collateral' },
-  { key: 'pnl',        label: 'PnL' },
+  { key: 'collateral',   label: 'Collateral' },
+  { key: 'positionSize', label: 'Position Size' },
+  { key: 'pnl',          label: 'PnL' },
 ];
 
 const TRADES_COLUMNS = [
@@ -39,6 +42,7 @@ const TRADES_COLUMNS = [
   { key: 'openPrice',      label: 'Open Price',      sortable: true },
   { key: 'closePrice',     label: 'Close Price',     sortable: true },
   { key: 'collateral',     label: 'Collateral',      sortable: true },
+  { key: 'positionSize',   label: 'Position Size',   sortable: true },
   { key: 'pnl',            label: 'PNL',             sortable: true },
   { key: 'txHash',         label: 'TX Hash',         sortable: false },
   { key: 'evmTxHash',      label: 'EVM TX Hash',     sortable: false },
@@ -56,6 +60,7 @@ const TRADES_SORT_GETTERS = {
   openPrice:      (t) => parseFloat(t.trade?.openPrice) || 0,
   closePrice:     (t) => parseFloat(t.trade?.closePrice) || 0,
   collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice),
+  positionSize:   (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice) * (parseFloat(t.trade?.leverage) || 1),
   pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
   collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
 };
@@ -65,6 +70,7 @@ function TradesPreview({ network }) {
   const location = useLocation();
   const { config } = useNetwork();
   const { data, loading, error } = useTrades(network);
+  const [selectedTrade, setSelectedTrade] = useState(null);
 
   if (loading) return (
     <div className="preview-section">
@@ -159,8 +165,15 @@ function TradesPreview({ network }) {
         return <td>{formatPrice(trade.trade?.openPrice || 0)}</td>;
       case 'closePrice':
         return <td>{parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}</td>;
-      case 'collateral':
-        return <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</td>;
+      case 'collateral': {
+        const collUsd = toUsd(trade.trade?.collateralAmount, trade.collateralPrice);
+        return <td>${formatNumber(collUsd, collUsd < 0.01 ? 6 : 2)}</td>;
+      }
+      case 'positionSize': {
+        const collUsd = toUsd(trade.trade?.collateralAmount, trade.collateralPrice);
+        const posSize = collUsd * (parseFloat(trade.trade?.leverage) || 1);
+        return <td>${formatNumber(posSize, posSize < 0.01 ? 6 : 2)}</td>;
+      }
       case 'pnl':
         return (
           <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
@@ -195,7 +208,7 @@ function TradesPreview({ network }) {
   const renderMobileCard = (trade, i) => {
     const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
     return (
-      <div key={trade.id || i} className="profile-card clickable-row" onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}>
+      <div key={trade.id || i} className="profile-card clickable-row" onClick={() => setSelectedTrade(trade)}>
         <div className="profile-card-header">
           <div className="profile-card-badges">
             <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
@@ -275,7 +288,10 @@ function TradesPreview({ network }) {
         defaultSortDir="desc"
         sortOptions={TRADES_SORT_OPTIONS}
         hideLock
+        onRowClick={(trade) => setSelectedTrade(trade)}
+        getRowKey={(trade) => trade.id}
       />
+      {selectedTrade && <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />}
     </div>
   );
 }

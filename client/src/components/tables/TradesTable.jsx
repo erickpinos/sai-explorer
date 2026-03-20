@@ -14,8 +14,9 @@ const SORT_OPTIONS = [
   { key: 'market',     label: 'Market' },
   { key: 'direction',  label: 'Direction' },
   { key: 'leverage',   label: 'Leverage' },
-  { key: 'collateral', label: 'Collateral' },
-  { key: 'pnl',        label: 'PnL' },
+  { key: 'collateral',   label: 'Collateral' },
+  { key: 'positionSize', label: 'Position Size' },
+  { key: 'pnl',          label: 'PnL' },
 ];
 
 const SORT_GETTERS = {
@@ -30,6 +31,7 @@ const SORT_GETTERS = {
   openPrice:      (t) => parseFloat(t.trade?.openPrice) || 0,
   closePrice:     (t) => parseFloat(t.trade?.closePrice) || 0,
   collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount),
+  positionSize:   (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount) * (parseFloat(t.trade?.leverage) || 1),
   pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
   collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
   devNote:        (t) => t.devNote || '',
@@ -48,6 +50,7 @@ const DEFAULT_COLUMNS = [
   { key: 'openPrice',      label: 'Open Price',      sortable: true },
   { key: 'closePrice',     label: 'Close Price',     sortable: true },
   { key: 'collateral',     label: 'Collateral',      sortable: true },
+  { key: 'positionSize',   label: 'Position Size',   sortable: true },
   { key: 'pnl',            label: 'PNL',             sortable: true },
   { key: 'txHash',         label: 'TX Hash',         sortable: false },
   { key: 'evmTxHash',      label: 'EVM TX Hash',     sortable: false },
@@ -135,8 +138,15 @@ export default function TradesTable() {
         return <td>{formatPrice(trade.trade?.openPrice || 0)}</td>;
       case 'closePrice':
         return <td>{parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}</td>;
-      case 'collateral':
-        return <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount), 2)}</td>;
+      case 'collateral': {
+        const collUsd = toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount);
+        return <td>${formatNumber(collUsd, collUsd < 0.01 ? 6 : 2)}</td>;
+      }
+      case 'positionSize': {
+        const collUsd = toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount);
+        const posSize = collUsd * (parseFloat(trade.trade?.leverage) || 1);
+        return <td>${formatNumber(posSize, posSize < 0.01 ? 6 : 2)}</td>;
+      }
       case 'pnl':
         return (
           <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
