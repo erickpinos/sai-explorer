@@ -1,17 +1,16 @@
 import { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { TAB_LABELS } from './utils/constants';
 import { Toaster } from 'react-hot-toast';
 import { NetworkProvider } from './hooks/useNetwork';
 import Header from './components/ui/Header';
-import Stats from './components/ui/Stats';
 import Tabs from './components/ui/Tabs';
-import FunFacts from './components/ui/FunFacts';
+import Breadcrumbs from './components/ui/Breadcrumbs';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
 import TradeDetailModal from './components/modals/TradeDetailModal';
 import VaultDetailModal from './components/modals/VaultDetailModal';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import HomePage from './components/HomePage';
 import './App.css';
 
 const TradesTable = lazy(() => import('./components/tables/TradesTable'));
@@ -82,6 +81,7 @@ function AppContent() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const background = location.state?.background;
+  const isHome = location.pathname === '/';
 
   // When showing a modal, render the background tab (or /trades if navigated directly)
   const contentLocation = background || (
@@ -102,24 +102,20 @@ function AppContent() {
       </div>
 
       <div className="container">
-        <ErrorBoundary title="Failed to load stats">
-          <Stats key={`stats-${refreshKey}`} />
-        </ErrorBoundary>
+        {/* Desktop tab bar — only shown on sub-pages */}
+        {!isHome && <Tabs />}
 
-        <ErrorBoundary title="Failed to load fun facts">
-          <FunFacts key={`funfacts-${refreshKey}`} />
-        </ErrorBoundary>
-
-        <Tabs />
-
-        {TAB_LABELS[location.pathname] && (
-          <h2 className="page-title">{TAB_LABELS[location.pathname]}</h2>
-        )}
+        {/* Breadcrumbs — only shown on sub-pages */}
+        {!isHome && <Breadcrumbs />}
 
         <div className="content">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes location={contentLocation || location}>
-              <Route path="/" element={<Navigate to="/trades" replace />} />
+              <Route path="/" element={
+                <ErrorBoundary title="Failed to load home">
+                  <HomePage key={`home-${refreshKey}`} />
+                </ErrorBoundary>
+              } />
               <Route path="/trades" element={<TradesTable key={`trades-${refreshKey}`} />} />
               <Route path="/deposits" element={<DepositsTable key={`deposits-${refreshKey}`} />} />
               <Route path="/withdraws" element={<WithdrawsTable key={`withdraws-${refreshKey}`} />} />
@@ -133,7 +129,7 @@ function AppContent() {
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
               <Route path="/vault/:address" element={<Navigate to="/vaults" replace />} />
-              <Route path="*" element={<Navigate to="/trades" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>
