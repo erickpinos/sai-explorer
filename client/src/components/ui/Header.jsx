@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BarChart2, Menu, X } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useNetwork } from '../../hooks/useNetwork';
 import { TABS } from '../../utils/constants';
 
@@ -41,10 +41,10 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <div className="logo">
+        <Link to="/" className="logo">
           <span className="logo-icon"><BarChart2 size={28} strokeWidth={1.75} /></span>
           <h1>Sai Transaction Explorer</h1>
-        </div>
+        </Link>
         <div className="header-controls">
           <select
             id="network-select"
