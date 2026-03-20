@@ -1,8 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTrades } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
-import { formatDate, formatAddress } from '../utils/formatters';
-import { getBadgeClass, formatTradeTypeBadge, formatPnl, toUsd } from '../utils/tradeHelpers';
+import { formatDate, formatAddress, formatNumber, formatPrice } from '../utils/formatters';
+import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../utils/tradeHelpers';
 import Stats from './ui/Stats';
 import FunFacts from './ui/FunFacts';
 import InsightsGrid from './InsightsGrid';
@@ -21,28 +21,49 @@ const TRADES_SORT_OPTIONS = [
   { key: 'type',       label: 'Type' },
   { key: 'market',     label: 'Market' },
   { key: 'direction',  label: 'Direction' },
+  { key: 'leverage',   label: 'Leverage' },
+  { key: 'collateral', label: 'Collateral' },
   { key: 'pnl',        label: 'PnL' },
 ];
 
 const TRADES_COLUMNS = [
-  { key: 'time',      label: 'Time',      sortable: true },
-  { key: 'type',      label: 'Type',      sortable: true },
-  { key: 'market',    label: 'Market',    sortable: true },
-  { key: 'direction', label: 'Direction', sortable: true },
-  { key: 'pnl',       label: 'PnL',       sortable: true },
+  { key: 'time',           label: 'Time',            sortable: true },
+  { key: 'type',           label: 'Type',            sortable: true },
+  { key: 'marketId',       label: 'Market ID',       sortable: true },
+  { key: 'market',         label: 'Market',          sortable: true },
+  { key: 'collateralType', label: 'Collateral Type', sortable: true },
+  { key: 'trader',         label: 'Trader',          sortable: true },
+  { key: 'evmAddress',     label: 'EVM Address',     sortable: true },
+  { key: 'direction',      label: 'Direction',       sortable: true },
+  { key: 'leverage',       label: 'Leverage',        sortable: true },
+  { key: 'openPrice',      label: 'Open Price',      sortable: true },
+  { key: 'closePrice',     label: 'Close Price',     sortable: true },
+  { key: 'collateral',     label: 'Collateral',      sortable: true },
+  { key: 'pnl',            label: 'PNL',             sortable: true },
+  { key: 'txHash',         label: 'TX Hash',         sortable: false },
+  { key: 'evmTxHash',      label: 'EVM TX Hash',     sortable: false },
 ];
 
 const TRADES_SORT_GETTERS = {
-  time:      (t) => new Date(t.block?.block_ts || 0).getTime(),
-  type:      (t) => t.txFailed ? `failed_${t.tradeChangeType || ''}` : (t.tradeChangeType || ''),
-  market:    (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
-  direction: (t) => t.trade?.isLong ? 1 : 0,
-  pnl:       (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
+  time:           (t) => new Date(t.block?.block_ts || 0).getTime(),
+  type:           (t) => t.txFailed ? `failed_${t.tradeChangeType || ''}` : (t.tradeChangeType || ''),
+  market:         (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
+  marketId:       (t) => t.trade?.perpBorrowing?.marketId ?? 0,
+  trader:         (t) => t.trade?.trader || '',
+  evmAddress:     (t) => t.trade?.evmTrader || '',
+  direction:      (t) => t.trade?.isLong ? 1 : 0,
+  leverage:       (t) => parseFloat(t.trade?.leverage) || 0,
+  openPrice:      (t) => parseFloat(t.trade?.openPrice) || 0,
+  closePrice:     (t) => parseFloat(t.trade?.closePrice) || 0,
+  collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice),
+  pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
+  collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
 };
 
 function TradesPreview({ network }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { config } = useNetwork();
   const { data, loading, error } = useTrades(network);
 
   if (loading) return (
@@ -68,37 +89,104 @@ function TradesPreview({ network }) {
   if (!rows.length) return null;
 
   const renderCell = (key, trade) => {
+    const displayType = (
+      trade.trade?.tradeType === 'limit' &&
+      trade.tradeChangeType?.toLowerCase().includes('closed') &&
+      !parseFloat(trade.trade?.closePrice) &&
+      !parseFloat(trade.realizedPnlCollateral)
+    ) ? 'limit_order_cancelled' : trade.tradeChangeType;
+
     switch (key) {
       case 'time':
         return <td>{formatDate(trade.block?.block_ts)}</td>;
       case 'type':
         return (
           <td>
-            <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
-              {formatTradeTypeBadge(trade.tradeChangeType, trade.txFailed)}
+            <span className={getBadgeClass(displayType, trade.txFailed)}>
+              {formatTradeTypeBadge(displayType, trade.txFailed)}
             </span>
           </td>
         );
+      case 'marketId':
+        return <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>;
       case 'market':
         return <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>;
+      case 'collateralType':
+        return (
+          <td>
+            <span className="badge badge-purple" style={{ fontSize: '11px' }}>
+              {trade.trade?.perpBorrowing?.collateralToken?.symbol || '-'}
+            </span>
+          </td>
+        );
+      case 'trader':
+        return (
+          <td>
+            <span
+              className="address-link"
+              title={trade.trade?.trader}
+              onClick={(e) => { e.stopPropagation(); navigate(`/user/${trade.trade?.evmTrader || trade.trade?.trader}`, { state: { background: location } }); }}
+              style={{ cursor: 'pointer' }}
+            >
+              {formatAddress(trade.trade?.trader)}
+            </span>
+          </td>
+        );
+      case 'evmAddress':
+        return (
+          <td>
+            <span
+              className="address-link"
+              title={trade.trade?.evmTrader}
+              onClick={(e) => { e.stopPropagation(); navigate(`/user/${trade.trade?.evmTrader || trade.trade?.trader}`, { state: { background: location } }); }}
+              style={{ cursor: 'pointer' }}
+            >
+              {formatAddress(trade.trade?.evmTrader)}
+            </span>
+          </td>
+        );
       case 'direction':
         return (
           <td>
-            {trade.trade?.isLong != null ? (
-              <span className={trade.trade.isLong ? 'badge badge-green' : 'badge badge-red'}>
-                {trade.trade.isLong ? 'Long' : 'Short'}
-              </span>
+            <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+              {trade.trade?.isLong ? 'Long' : 'Short'}
+            </span>
+          </td>
+        );
+      case 'leverage':
+        return <td>{formatNumber(trade.trade?.leverage, 1)}x</td>;
+      case 'openPrice':
+        return <td>{formatPrice(trade.trade?.openPrice || 0)}</td>;
+      case 'closePrice':
+        return <td>{parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}</td>;
+      case 'collateral':
+        return <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</td>;
+      case 'pnl':
+        return (
+          <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
+            {formatPnl(toUsd(trade.realizedPnlCollateral, trade.collateralPrice))}
+          </td>
+        );
+      case 'txHash':
+        return (
+          <td onClick={(e) => e.stopPropagation()}>
+            {trade.txHash ? (
+              <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                {shortenHash(trade.txHash)}
+              </a>
             ) : '-'}
           </td>
         );
-      case 'pnl': {
-        const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
+      case 'evmTxHash':
         return (
-          <td className={pnl > 0 ? 'pnl-positive' : pnl < 0 ? 'pnl-negative' : ''}>
-            {pnl !== 0 ? formatPnl(pnl) : '-'}
+          <td onClick={(e) => e.stopPropagation()}>
+            {trade.evmTxHash ? (
+              <a href={`${config.explorerEvmTx}${trade.evmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                {shortenHash(trade.evmTxHash)}
+              </a>
+            ) : '-'}
           </td>
         );
-      }
       default:
         return <td>-</td>;
     }
@@ -107,29 +195,39 @@ function TradesPreview({ network }) {
   const renderMobileCard = (trade, i) => {
     const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
     return (
-      <div
-        key={trade.id || i}
-        className="profile-card clickable-row"
-        onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}
-      >
+      <div key={trade.id || i} className="profile-card clickable-row" onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}>
         <div className="profile-card-header">
           <div className="profile-card-badges">
             <span className={getBadgeClass(trade.tradeChangeType, trade.txFailed)}>
               {formatTradeTypeBadge(trade.tradeChangeType, trade.txFailed)}
             </span>
-            {trade.trade?.isLong != null && (
-              <span className={trade.trade.isLong ? 'badge badge-green' : 'badge badge-red'}>
-                {trade.trade.isLong ? 'Long' : 'Short'}
-              </span>
-            )}
+            <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
+              {trade.trade?.isLong ? 'Long' : 'Short'}
+            </span>
+            <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {trade.trade?.perpBorrowing?.marketId ?? '-'}</span>
             <span className="profile-card-market">{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</span>
+            <span className="badge badge-purple" style={{ fontSize: '11px' }}>{trade.trade?.perpBorrowing?.collateralToken?.symbol || '-'}</span>
           </div>
           <span className="profile-card-time">{formatDate(trade.block?.block_ts)}</span>
+        </div>
+        <div className="profile-card-row">
+          <span className="profile-card-label">Leverage</span>
+          <span className="profile-card-value">{formatNumber(trade.trade?.leverage, 1)}x</span>
+          <span className="profile-card-label">Collateral</span>
+          <span className="profile-card-value">${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</span>
+        </div>
+        <div className="profile-card-row">
+          <span className="profile-card-label">Open</span>
+          <span className="profile-card-value">${formatNumber(trade.trade?.openPrice || 0, 2)}</span>
+          <span className="profile-card-label">Close</span>
+          <span className="profile-card-value">
+            {trade.trade?.closePrice ? `$${formatNumber(trade.trade.closePrice, 2)}` : '-'}
+          </span>
         </div>
         {pnl !== 0 && (
           <div className="profile-card-row">
             <span className="profile-card-label">PnL</span>
-            <span className={`profile-card-value ${pnl > 0 ? 'pnl-positive' : 'pnl-negative'}`}>
+            <span className={pnl > 0 ? 'pnl-positive profile-card-value' : 'pnl-negative profile-card-value'}>
               {formatPnl(pnl)}
             </span>
           </div>
@@ -145,6 +243,16 @@ function TradesPreview({ network }) {
               {formatAddress(trade.trade?.evmTrader || trade.trade?.trader)}
             </span>
           </span>
+          {trade.txHash && (
+            <>
+              <span className="profile-card-label">TX</span>
+              <span className="profile-card-value" onClick={(e) => e.stopPropagation()}>
+                <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                  {shortenHash(trade.txHash)}
+                </a>
+              </span>
+            </>
+          )}
         </div>
       </div>
     );
