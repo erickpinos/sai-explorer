@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -161,15 +162,21 @@ export default function ActivityChart() {
     <div className="chart-section">
       <div className="chart-header">
         <h3 className="chart-title">Daily Activity</h3>
-        <select
-          className="chart-period-select"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-        >
-          {PERIODS.map(p => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
+        <div className="chart-period-select-wrap">
+          <span className="chart-period-select-label">
+            {PERIODS.find(p => p.value === period)?.label}
+            <ChevronDown size={13} className="chart-period-select-chevron" />
+          </span>
+          <select
+            className="chart-period-select"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            {PERIODS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading && <div className="chart-loading">Loading...</div>}

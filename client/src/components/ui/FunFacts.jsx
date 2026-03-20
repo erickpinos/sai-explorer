@@ -77,8 +77,6 @@ export default function FunFacts() {
   const facts = generateFunFacts(insights);
   if (facts.length === 0) return null;
 
-  const featuredFact = facts[0];
-
   const handleDismiss = (e) => {
     e.stopPropagation();
     setDismissed(true);
@@ -89,26 +87,23 @@ export default function FunFacts() {
 
   return (
     <div className="fun-facts">
-      <div className="fun-fact-card">
-        <div className="fun-fact-icon"><Lightbulb size={24} /></div>
-        <div className="fun-fact-content">
-          <div className="fun-fact-text">{featuredFact.text}</div>
-          <div className="fun-fact-detail">{featuredFact.detail}</div>
-        </div>
-        <button
-          className="fun-fact-link"
-          onClick={() => navigate('/insights')}
-        >
-          More Insights &rarr;
-        </button>
-        <button
-          className="fun-fact-dismiss"
-          onClick={handleDismiss}
-          title="Dismiss"
-        >
-          <X size={16} />
-        </button>
+      <button className="fun-fact-dismiss" onClick={handleDismiss} title="Dismiss">
+        <X size={16} />
+      </button>
+      <div className="fun-facts-grid">
+        {facts.map((fact, i) => (
+          <div key={i} className="fun-fact-card">
+            <div className="fun-fact-icon"><Lightbulb size={20} /></div>
+            <div className="fun-fact-content">
+              <div className="fun-fact-text">{fact.text}</div>
+              <div className="fun-fact-detail">{fact.detail}</div>
+            </div>
+          </div>
+        ))}
       </div>
+      <button className="fun-fact-link" onClick={() => navigate('/insights')}>
+        More Insights &rarr;
+      </button>
     </div>
   );
 }

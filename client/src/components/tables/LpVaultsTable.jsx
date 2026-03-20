@@ -37,7 +37,7 @@ function shortAddress(addr) {
 export default function LpVaultsTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useLpVaults(network);
-  const { toggle, viewClass } = useViewToggle();
+  const { toggle, viewClass } = useViewToggle('lp-vaults');
   const navigate = useNavigate();
   const location = useLocation();
 

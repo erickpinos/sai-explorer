@@ -24,9 +24,10 @@ export default function DataTable({
   getRowKey,
   infoText,
   footer,
+  hideLock = false,
 }) {
   const tableRef = useRef(null);
-  const { toggle, viewClass } = useViewToggle();
+  const { toggle, viewClass } = useViewToggle(tableKey);
   const { locked, toggleLock } = useLockView(tableKey);
   const { columns, moveColumn, resetColumns } = useColumnOrder(tableKey, defaultColumns);
   const { widths, setWidth, setAllWidths, resetWidths } = useColumnWidths(tableKey);
@@ -69,7 +70,7 @@ export default function DataTable({
       <div className="table-info">
         {resolvedInfoText}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {!locked && (
+          {!hideLock && !locked && (
             <button
               className="reset-cols-btn"
               onClick={() => { resetColumns(); resetWidths(); }}
@@ -78,13 +79,15 @@ export default function DataTable({
               ↺ Columns
             </button>
           )}
-          <button
-            className={`reset-cols-btn${locked ? ' lock-view-btn--locked' : ''}`}
-            onClick={toggleLock}
-            title={locked ? 'Unlock view' : 'Lock view'}
-          >
-            {locked ? '⊠ Locked' : '⊠ Unlocked'}
-          </button>
+          {!hideLock && (
+            <button
+              className={`reset-cols-btn${locked ? ' lock-view-btn--locked' : ''}`}
+              onClick={toggleLock}
+              title={locked ? 'Unlock view' : 'Lock view'}
+            >
+              {locked ? '⊠ Locked' : '⊠ Unlocked'}
+            </button>
+          )}
           {toggle}
         </div>
       </div>

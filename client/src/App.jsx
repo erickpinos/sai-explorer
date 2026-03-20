@@ -3,14 +3,13 @@ import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 're
 import { Toaster } from 'react-hot-toast';
 import { NetworkProvider } from './hooks/useNetwork';
 import Header from './components/ui/Header';
-import Stats from './components/ui/Stats';
-import Tabs from './components/ui/Tabs';
-import FunFacts from './components/ui/FunFacts';
+import Breadcrumbs from './components/ui/Breadcrumbs';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
 import TradeDetailModal from './components/modals/TradeDetailModal';
 import VaultDetailModal from './components/modals/VaultDetailModal';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import HomePage from './components/HomePage';
 import './App.css';
 
 const TradesTable = lazy(() => import('./components/tables/TradesTable'));
@@ -19,7 +18,6 @@ const WithdrawsTable = lazy(() => import('./components/tables/WithdrawsTable'));
 const VolumeTable = lazy(() => import('./components/tables/VolumeTable'));
 const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
-const InsightsPage = lazy(() => import('./components/InsightsPage'));
 const LpVaultsTable = lazy(() => import('./components/tables/LpVaultsTable'));
 const DataManagementPage = lazy(() => import('./components/DataManagementPage'));
 const CoinGeckoPricesTable = lazy(() => import('./components/tables/CoinGeckoPricesTable'));
@@ -81,6 +79,7 @@ function AppContent() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const background = location.state?.background;
+  const isHome = location.pathname === '/';
 
   // When showing a modal, render the background tab (or /trades if navigated directly)
   const contentLocation = background || (
@@ -101,34 +100,30 @@ function AppContent() {
       </div>
 
       <div className="container">
-        <ErrorBoundary title="Failed to load stats">
-          <Stats key={`stats-${refreshKey}`} />
-        </ErrorBoundary>
-
-        <ErrorBoundary title="Failed to load fun facts">
-          <FunFacts key={`funfacts-${refreshKey}`} />
-        </ErrorBoundary>
-
-        <Tabs />
+        {/* Breadcrumbs — only shown on sub-pages */}
+        {!isHome && <Breadcrumbs />}
 
         <div className="content">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes location={contentLocation || location}>
-              <Route path="/" element={<Navigate to="/trades" replace />} />
+              <Route path="/" element={
+                <ErrorBoundary title="Failed to load home">
+                  <HomePage key={`home-${refreshKey}`} />
+                </ErrorBoundary>
+              } />
               <Route path="/trades" element={<TradesTable key={`trades-${refreshKey}`} />} />
               <Route path="/deposits" element={<DepositsTable key={`deposits-${refreshKey}`} />} />
               <Route path="/withdraws" element={<WithdrawsTable key={`withdraws-${refreshKey}`} />} />
               <Route path="/volume" element={<VolumeTable key={`volume-${refreshKey}`} />} />
               <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
-              <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
               <Route path="/vaults" element={<LpVaultsTable key={`vaults-${refreshKey}`} />} />
               <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
               {import.meta.env.DEV && <Route path="/db-tools" element={<DataManagementPage setRefreshKey={setRefreshKey} />} />}
               <Route path="/user/:address" element={<Navigate to="/trades" replace />} />
               <Route path="/trade/:id" element={<Navigate to="/trades" replace />} />
               <Route path="/vault/:address" element={<Navigate to="/vaults" replace />} />
-              <Route path="*" element={<Navigate to="/trades" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>

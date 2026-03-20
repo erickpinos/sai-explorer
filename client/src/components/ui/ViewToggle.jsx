@@ -1,18 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { List, LayoutGrid } from 'lucide-react';
 
-const STORAGE_KEY = 'sai-view-preference';
+const STORAGE_KEY_PREFIX = 'sai-view-preference';
+const mq = window.matchMedia('(max-width: 767px)');
 
-export function useViewToggle() {
+export function useViewToggle(tableKey) {
+  const storageKey = tableKey ? `${STORAGE_KEY_PREFIX}-${tableKey}` : STORAGE_KEY_PREFIX;
+
+  const saved = localStorage.getItem(storageKey);
+  const manualRef = useRef(saved === 'table' || saved === 'cards');
+
   const [view, setView] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'table' || saved === 'cards') return saved;
-    return window.matchMedia('(max-width: 767px)').matches ? 'cards' : 'table';
+    if (manualRef.current) return saved;
+    return mq.matches ? 'cards' : 'table';
   });
 
+  useEffect(() => {
+    const handler = (e) => {
+      manualRef.current = false;
+      localStorage.removeItem(storageKey);
+      setView(e.matches ? 'cards' : 'table');
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const setViewAndSave = (v) => {
+    manualRef.current = true;
     setView(v);
-    localStorage.setItem(STORAGE_KEY, v);
+    localStorage.setItem(storageKey, v);
   };
 
   const viewClass = view === 'cards' ? 'view-cards' : 'view-table';
@@ -24,6 +40,7 @@ export function useViewToggle() {
           className={`view-toggle-btn ${view === 'table' ? 'active' : ''}`}
           onClick={() => setViewAndSave('table')}
           title="Table view"
+          aria-label="Table view"
         >
           <List size={16} />
         </button>
@@ -31,6 +48,7 @@ export function useViewToggle() {
           className={`view-toggle-btn ${view === 'cards' ? 'active' : ''}`}
           onClick={() => setViewAndSave('cards')}
           title="Card view"
+          aria-label="Card view"
         >
           <LayoutGrid size={16} />
         </button>
