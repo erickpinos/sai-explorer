@@ -15,6 +15,7 @@ export default function SortDropdown({ options, sortCol, sortDir, onSort }) {
         className="sort-dropdown-dir"
         onClick={() => onSort(sortCol)}
         title={sortDir === 'desc' ? 'Descending' : 'Ascending'}
+        aria-label={sortDir === 'desc' ? 'Sort descending' : 'Sort ascending'}
       >
         {sortDir === 'desc' ? '▼' : '▲'}
       </button>

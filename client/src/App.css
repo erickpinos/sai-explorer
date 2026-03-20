@@ -691,6 +691,11 @@ th.draggable-th:hover .col-drag-handle {
   border-color: #6366f1;
 }
 
+/* Hide column management controls when in card view — they only apply to the table */
+.view-cards .reset-cols-btn {
+  display: none;
+}
+
 /* Column resize handle */
 .col-resize-handle {
   position: absolute;
@@ -1567,6 +1572,8 @@ td a:hover {
   font-size: 13px;
   color: #e2e8f0;
   font-weight: 500;
+  word-break: break-all;
+  min-width: 0;
 }
 
 .profile-card-rank {

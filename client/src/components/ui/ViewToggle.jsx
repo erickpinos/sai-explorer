@@ -24,6 +24,7 @@ export function useViewToggle() {
           className={`view-toggle-btn ${view === 'table' ? 'active' : ''}`}
           onClick={() => setViewAndSave('table')}
           title="Table view"
+          aria-label="Table view"
         >
           <List size={16} />
         </button>
@@ -31,6 +32,7 @@ export function useViewToggle() {
           className={`view-toggle-btn ${view === 'cards' ? 'active' : ''}`}
           onClick={() => setViewAndSave('cards')}
           title="Card view"
+          aria-label="Card view"
         >
           <LayoutGrid size={16} />
         </button>
