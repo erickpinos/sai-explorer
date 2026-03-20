@@ -20,7 +20,7 @@ function InsightCard({ icon, title, value, detail, valueClass }) {
   );
 }
 
-export default function InsightsPage() {
+export default function InsightsPage({ embedded = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { network, config } = useNetwork();
@@ -57,22 +57,26 @@ export default function InsightsPage() {
 
   return (
     <div className="insights-page">
-      <div className="insights-header">
-        <h2 className="insights-title">Platform Insights</h2>
-        <p className="insights-subtitle">Interesting patterns and stats from the trading data</p>
-      </div>
+      {!embedded && (
+        <>
+          <div className="insights-header">
+            <h2 className="insights-title">Platform Insights</h2>
+            <p className="insights-subtitle">Interesting patterns and stats from the trading data</p>
+          </div>
 
-      <div className="chart-nav">
-        <span className="chart-nav-label">Sections:</span>
-        <a href="#daily-activity" className="chart-nav-link">Daily Activity</a>
-        <a href="#daily-volume" className="chart-nav-link">Daily Volume</a>
-        <a href="#platform-stats" className="chart-nav-link">Platform Stats</a>
-        <a href="#pnl-summary" className="chart-nav-link">PnL Summary</a>
-        <a href="#biggest-wins" className="chart-nav-link">Biggest Wins</a>
-        <a href="#biggest-losses" className="chart-nav-link">Biggest Losses</a>
-        <a href="#biggest-pct-wins" className="chart-nav-link">Top % Wins</a>
-        <a href="#biggest-pct-losses" className="chart-nav-link">Top % Losses</a>
-      </div>
+          <div className="chart-nav">
+            <span className="chart-nav-label">Sections:</span>
+            <a href="#daily-activity" className="chart-nav-link">Daily Activity</a>
+            <a href="#daily-volume" className="chart-nav-link">Daily Volume</a>
+            <a href="#platform-stats" className="chart-nav-link">Platform Stats</a>
+            <a href="#pnl-summary" className="chart-nav-link">PnL Summary</a>
+            <a href="#biggest-wins" className="chart-nav-link">Biggest Wins</a>
+            <a href="#biggest-losses" className="chart-nav-link">Biggest Losses</a>
+            <a href="#biggest-pct-wins" className="chart-nav-link">Top % Wins</a>
+            <a href="#biggest-pct-losses" className="chart-nav-link">Top % Losses</a>
+          </div>
+        </>
+      )}
 
       <div id="daily-activity" style={{ marginBottom: '2rem' }}>
         <ActivityChart />

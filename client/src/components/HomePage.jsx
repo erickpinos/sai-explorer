@@ -10,7 +10,7 @@ import EmptyState from './ui/EmptyState';
 import DataTable from './tables/DataTable';
 import InsightsPage from './InsightsPage';
 
-const PREVIEW_COUNT = 20;
+const PREVIEW_COUNT = 10;
 
 // ─── Trades Preview ───────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ function TradesPreview({ network }) {
   if (loading) return (
     <div className="preview-section">
       <div className="preview-header">
-        <h3 className="preview-title">Recent Trades</h3>
+        <h3 className="section-title">Recent Trades</h3>
         <Link to="/trades" className="preview-view-all">View all →</Link>
       </div>
       <LoadingSpinner />
@@ -56,7 +56,7 @@ function TradesPreview({ network }) {
   if (error) return (
     <div className="preview-section">
       <div className="preview-header">
-        <h3 className="preview-title">Recent Trades</h3>
+        <h3 className="section-title">Recent Trades</h3>
       </div>
       <EmptyState message={`Error: ${error}`} />
     </div>
@@ -151,7 +151,7 @@ function TradesPreview({ network }) {
   return (
     <div className="preview-section">
       <div className="preview-header">
-        <h3 className="preview-title">Recent Trades</h3>
+        <h3 className="section-title">Recent Trades</h3>
         <Link to="/trades" className="preview-view-all">View all →</Link>
       </div>
       <DataTable
@@ -164,7 +164,6 @@ function TradesPreview({ network }) {
         defaultSortCol="time"
         defaultSortDir="desc"
         sortOptions={TRADES_SORT_OPTIONS}
-        infoText={(total) => `${total} trades`}
       />
     </div>
   );
@@ -178,9 +177,12 @@ export default function HomePage() {
   return (
     <>
       <Stats />
-      <FunFacts />
       <TradesPreview network={network} />
-      <InsightsPage />
+      <div className="home-section">
+        <h3 className="section-title">Insights</h3>
+        <FunFacts />
+        <InsightsPage embedded />
+      </div>
     </>
   );
 }

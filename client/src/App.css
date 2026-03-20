@@ -674,10 +674,18 @@ h1 {
   align-items: baseline;
 }
 
-.preview-title {
+.section-title {
   font-size: 16px;
   font-weight: 600;
   color: #e2e8f0;
+  margin: 0;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .preview-view-all {
