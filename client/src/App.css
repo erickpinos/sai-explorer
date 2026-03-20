@@ -1496,9 +1496,6 @@ td a:hover {
   background: #2a2a3e;
 }
 .view-cards .sort-dropdown { display: flex; }
-@media (max-width: 640px) {
-  .sort-dropdown { display: flex; }
-}
 
 /* Table and card views */
 .profile-table-desktop { display: block; }
