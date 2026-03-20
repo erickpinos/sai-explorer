@@ -7,7 +7,7 @@ export function useColumnWidths(tableKey) {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch { /* ignore */ }
     return {};
   });
 
@@ -16,7 +16,7 @@ export function useColumnWidths(tableKey) {
       const next = { ...prev, [colKey]: width };
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch (e) {}
+      } catch { /* ignore */ }
       return next;
     });
   }, [storageKey]);
@@ -24,7 +24,7 @@ export function useColumnWidths(tableKey) {
   const resetWidths = useCallback(() => {
     try {
       localStorage.removeItem(storageKey);
-    } catch (e) {}
+    } catch { /* ignore */ }
     setWidths({});
   }, [storageKey]);
 
@@ -33,7 +33,7 @@ export function useColumnWidths(tableKey) {
       const next = { ...prev, ...map };
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch (e) {}
+      } catch { /* ignore */ }
       return next;
     });
   }, [storageKey]);

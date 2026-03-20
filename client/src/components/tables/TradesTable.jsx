@@ -174,7 +174,7 @@ export default function TradesTable() {
     }
   };
 
-  const renderMobileCard = (trade, i) => {
+  const renderMobileCard = (trade) => {
     const pnl = toUsd(trade.realizedPnlCollateral, trade.collateralPrice);
     return (
       <div key={trade.id} className="profile-card clickable-row" onClick={() => navigate(`/trade/${trade.id}`, { state: { background: location, trade } })}>

@@ -347,7 +347,6 @@ const sym = vault.collateralToken?.symbol || '-';
                     ...[...vault.sharePriceHistory].reverse()
                   ].map((p, i) => {
                     const isEst = p.source === 'est';
-                    const isCalc = p.source === 'calc';
                     const srcColors = { calc: '#fbbf24', sync: '#60a5fa', est: '#444', api: '#fff' };
                     const tagColor = srcColors[p.source] || '#888';
                     const textColor = isEst ? '#888' : '#fff';

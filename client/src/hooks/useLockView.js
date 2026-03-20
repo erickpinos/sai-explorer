@@ -7,7 +7,7 @@ export function useLockView(tableKey) {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved !== null) return saved === 'true';
-    } catch (e) {}
+    } catch { /* ignore */ }
     return true; // default: locked
   });
 
@@ -17,7 +17,7 @@ export function useLockView(tableKey) {
       try {
         if (next) localStorage.setItem(storageKey, 'true');
         else localStorage.removeItem(storageKey);
-      } catch (e) {}
+      } catch { /* ignore */ }
       return next;
     });
   }, [storageKey]);

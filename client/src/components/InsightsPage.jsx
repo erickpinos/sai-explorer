@@ -25,7 +25,7 @@ export default function InsightsPage() {
   const location = useLocation();
   const { network, config } = useNetwork();
   const { data: insights, loading, error } = useInsights(network);
-  const [selectedTrade, setSelectedTrade] = useState(null);
+  const [, setSelectedTrade] = useState(null);
 
   const handleSelectUser = ({ bech32, evm }) => navigate(`/user/${evm || bech32}`, { state: { background: location } });
 
