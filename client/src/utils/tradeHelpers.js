@@ -42,8 +42,9 @@ export const shortenHash = (hash, chars = 4) => {
   return `${hash.slice(0, chars)}...${hash.slice(-chars)}`;
 };
 
-export const toUsd = (microAmount, collateralPrice) => {
-  const raw = (parseFloat(microAmount) || 0) / 1000000;
+export const toUsd = (microAmount, collateralPrice, fallbackMicroAmount) => {
+  const amount = parseFloat(microAmount) || 0;
+  const raw = (amount !== 0 ? amount : (parseFloat(fallbackMicroAmount) || 0)) / 1000000;
   const price = parseFloat(collateralPrice) || 1;
   return raw * price;
 };

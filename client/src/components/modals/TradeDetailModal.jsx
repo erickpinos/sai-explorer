@@ -29,9 +29,11 @@ export default function TradeDetailModal({ trade, onClose }) {
     rawPnl = pnlUsd;
     pnlPct = parseFloat(trade.pnlPct) || 0;
   } else {
-    rawCollateral = (parseFloat(t.collateralAmount) || 0) / 1000000;
+    const collAmt = parseFloat(t.collateralAmount) || 0;
+    const openCollAmt = parseFloat(t.openCollateralAmount) || 0;
+    rawCollateral = (collAmt !== 0 ? collAmt : openCollAmt) / 1000000;
     collateralUsd = rawCollateral * collPrice;
-    rawOpenCollateral = (parseFloat(t.openCollateralAmount) || 0) / 1000000;
+    rawOpenCollateral = openCollAmt / 1000000;
     openCollateralUsd = rawOpenCollateral * collPrice;
     rawPnl = (parseFloat(trade.realizedPnlCollateral) || 0) / 1000000;
     pnlUsd = rawPnl * collPrice;
@@ -80,25 +82,25 @@ export default function TradeDetailModal({ trade, onClose }) {
               <h3 className="trade-detail-section-title">Position Info</h3>
               <div className="trade-detail-rows">
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Market</span>
+                  <span className="trade-detail-label">Market <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value"><strong>{marketSymbol}</strong></span>
                 </div>
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Market ID</span>
+                    <span className="trade-detail-label">Market ID <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">{pb.marketId != null ? pb.marketId : '-'}</span>
                   </div>
                 )}
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Collateral Type</span>
+                    <span className="trade-detail-label">Collateral Type <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">
                       <span className="badge badge-purple" style={{ fontSize: '11px' }}>{collSymbol}</span>
                     </span>
                   </div>
                 )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Direction</span>
+                  <span className="trade-detail-label">Direction <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value">
                     <span className={tradeIsLong ? 'badge badge-green' : 'badge badge-red'}>
                       {tradeIsLong ? 'Long' : 'Short'}
@@ -106,18 +108,18 @@ export default function TradeDetailModal({ trade, onClose }) {
                   </span>
                 </div>
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Leverage</span>
+                  <span className="trade-detail-label">Leverage <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value">{formatNumber(tradeLeverage, 1)}x</span>
                 </div>
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Order Type</span>
+                    <span className="trade-detail-label">Order Type <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value" style={{ textTransform: 'capitalize' }}>{t.tradeType || '-'}</span>
                   </div>
                 )}
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Status</span>
+                    <span className="trade-detail-label">Status <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">{t.isOpen ? 'Open' : 'Closed'}</span>
                   </div>
                 )}
@@ -129,13 +131,13 @@ export default function TradeDetailModal({ trade, onClose }) {
               <div className="trade-detail-rows">
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Open Price</span>
+                    <span className="trade-detail-label">Open Price <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">{formatPrice(t.openPrice || 0)}</span>
                   </div>
                 )}
                 {!isInsightTrade && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Close Price</span>
+                    <span className="trade-detail-label">Close Price <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">
                       {parseFloat(t.closePrice) > 0 ? formatPrice(t.closePrice) : '-'}
                     </span>
@@ -143,18 +145,18 @@ export default function TradeDetailModal({ trade, onClose }) {
                 )}
                 {hasTp && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Take Profit</span>
+                    <span className="trade-detail-label">Take Profit <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">{formatPrice(t.tp)}</span>
                   </div>
                 )}
                 {hasSl && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Stop Loss</span>
+                    <span className="trade-detail-label">Stop Loss <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value">{formatPrice(t.sl)}</span>
                   </div>
                 )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Time</span>
+                  <span className="trade-detail-label">Time <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value">{formatDate(tradeTimestamp)}</span>
                 </div>
               </div>
@@ -163,19 +165,37 @@ export default function TradeDetailModal({ trade, onClose }) {
             <div className="trade-detail-section">
               <h3 className="trade-detail-section-title">Collateral</h3>
               <div className="trade-detail-rows">
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">collateralAmount <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
+                    <span className="trade-detail-value">{formatNumber(parseFloat(t.collateralAmount) || 0, 0)}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">openCollateralAmount <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
+                    <span className="trade-detail-value">{formatNumber(parseFloat(t.openCollateralAmount) || 0, 0)}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">collateralPrice <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
+                    <span className="trade-detail-value">{formatNumber(collPrice, 6)}</span>
+                  </div>
+                )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">{isInsightTrade ? 'Collateral' : 'Current Collateral'}</span>
-                  <span className="trade-detail-value"><strong>${formatNumber(collateralUsd, 2)}</strong></span>
+                  <span className="trade-detail-label">{isInsightTrade ? 'Collateral' : 'Collateral Value'} <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
+                  <span className="trade-detail-value"><strong>${formatNumber(collateralUsd, collateralUsd < 0.01 ? 6 : 2)}</strong></span>
                 </div>
                 {openCollateralUsd > 0 && openCollateralUsd !== collateralUsd && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Opening Collateral</span>
+                    <span className="trade-detail-label">Opening Collateral <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
                     <span className="trade-detail-value">${formatNumber(openCollateralUsd, 2)}</span>
                   </div>
                 )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Position Size</span>
-                  <span className="trade-detail-value">${formatNumber(isInsightTrade ? (trade.positionSize || 0) : collateralUsd * (parseFloat(tradeLeverage) || 1), 2)}</span>
+                  <span className="trade-detail-label">Position Size <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
+                  <span className="trade-detail-value">${formatNumber(isInsightTrade ? (trade.positionSize || 0) : collateralUsd * (parseFloat(tradeLeverage) || 1), collateralUsd < 0.01 ? 6 : 2)}</span>
                 </div>
               </div>
             </div>
@@ -185,14 +205,14 @@ export default function TradeDetailModal({ trade, onClose }) {
                 <h3 className="trade-detail-section-title">Profit & Loss</h3>
                 <div className="trade-detail-rows">
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Realized PnL</span>
+                    <span className="trade-detail-label">Realized PnL <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
                     <span className={`trade-detail-value ${pnlUsd > 0 ? 'pnl-positive' : 'pnl-negative'}`}>
                       <strong>{pnlUsd > 0 ? '+' : ''}${formatNumber(pnlUsd, 2)}</strong>
                     </span>
                   </div>
                   {pnlPct !== 0 && (
                     <div className="trade-detail-row">
-                      <span className="trade-detail-label">PnL %</span>
+                      <span className="trade-detail-label">PnL % <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                       <span className={`trade-detail-value ${pnlPct > 0 ? 'pnl-positive' : 'pnl-negative'}`}>
                         {pnlPct > 0 ? '+' : ''}{formatNumber(pnlPct, 2)}%
                       </span>
@@ -206,7 +226,7 @@ export default function TradeDetailModal({ trade, onClose }) {
               <h3 className="trade-detail-section-title">Addresses</h3>
               <div className="trade-detail-rows">
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Trader (Bech32)</span>
+                  <span className="trade-detail-label">Trader (Bech32) <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value trade-detail-mono">
                     <a href={`https://nibiru.explorers.guru/account/${tradeTrader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                       {tradeTrader || '-'}
@@ -214,7 +234,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                   </span>
                 </div>
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Trader (EVM)</span>
+                  <span className="trade-detail-label">Trader (EVM) <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                   <span className="trade-detail-value trade-detail-mono">
                     <a href={`https://nibiscan.io/address/${tradeEvmTrader}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                       {tradeEvmTrader || '-'}
@@ -223,7 +243,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                 </div>
                 {tradeTxHash && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">TX Hash</span>
+                    <span className="trade-detail-label">TX Hash <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value trade-detail-mono">
                       <a href={`${config.explorerTx}${tradeTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                         {shortenHash(tradeTxHash, 6)}
@@ -233,7 +253,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                 )}
                 {tradeEvmTxHash && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">EVM TX Hash</span>
+                    <span className="trade-detail-label">EVM TX Hash <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
                     <span className="trade-detail-value trade-detail-mono">
                       <a href={`${config.explorerEvmTx}${tradeEvmTxHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
                         {shortenHash(tradeEvmTxHash, 6)}
@@ -254,7 +274,7 @@ export default function TradeDetailModal({ trade, onClose }) {
                   The collateral is the margin deposited to open the position.
                   {!isStablecoin ? (
                     <> This trade uses <strong>{collSymbol}</strong> as collateral, which was worth <strong>${formatNumber(collPrice, 6)}</strong> at the time of the trade.
-                    The raw collateral amount is {formatNumber(rawCollateral, 2)} {collSymbol}, converted to USD: {formatNumber(rawCollateral, 2)} × ${formatNumber(collPrice, 6)} = <strong>${formatNumber(collateralUsd, 2)}</strong>.</>
+                    The raw collateral amount is {formatNumber(rawCollateral, collateralUsd < 0.01 ? 6 : 2)} {collSymbol}, converted to USD: {formatNumber(rawCollateral, collateralUsd < 0.01 ? 6 : 2)} × ${formatNumber(collPrice, 6)} = <strong>${formatNumber(collateralUsd, collateralUsd < 0.01 ? 6 : 2)}</strong>.</>
                   ) : (
                     <> This trade uses <strong>{collSymbol}</strong> (a stablecoin pegged to ~$1), so the collateral value is <strong>${formatNumber(collateralUsd, 2)}</strong>.</>
                   )}
@@ -263,7 +283,7 @@ export default function TradeDetailModal({ trade, onClose }) {
               <div className="trade-detail-explainer-item">
                 <strong>Position Size</strong>
                 <p>
-                  The total position size is the collateral multiplied by the leverage: ${formatNumber(collateralUsd, 2)} × {formatNumber(tradeLeverage, 1)}x = <strong>${formatNumber(collateralUsd * (parseFloat(tradeLeverage) || 1), 2)}</strong>.
+                  The total position size is the collateral multiplied by the leverage: ${formatNumber(collateralUsd, collateralUsd < 0.01 ? 6 : 2)} × {formatNumber(tradeLeverage, 1)}x = <strong>${formatNumber(collateralUsd * (parseFloat(tradeLeverage) || 1), collateralUsd < 0.01 ? 6 : 2)}</strong>.
                 </p>
               </div>
               {(pnlUsd !== 0 || pnlPct !== 0) && (
