@@ -38,10 +38,10 @@ export default function VolumeChart({ showMethodology = false }) {
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const { data, loading, error } = useChartData(network, period);
 
-  const volumeByDayByAsset = data?.volumeByDayByAsset || [];
-  const volumeByDay = data?.volumeByDay || [];
-
   const chartData = useMemo(() => {
+    const volumeByDayByAsset = data?.volumeByDayByAsset || [];
+    const volumeByDay = data?.volumeByDay || [];
+
     if (volumeByDayByAsset.length === 0) {
       // Fallback to aggregate data if breakdown not available
       return {
@@ -86,7 +86,7 @@ export default function VolumeChart({ showMethodology = false }) {
     });
 
     return { labels: dates, datasets };
-  }, [volumeByDayByAsset, volumeByDay]);
+  }, [data]);
 
   const options = useMemo(() => ({
     responsive: true,

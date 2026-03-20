@@ -3,7 +3,6 @@ import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber } from '../../utils/formatters';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
-import { useSortedData } from '../../hooks/useSortedData';
 import DataTable from './DataTable';
 
 const SORT_OPTIONS = [

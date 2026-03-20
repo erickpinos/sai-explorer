@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { List, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY = 'sai-view-preference';
