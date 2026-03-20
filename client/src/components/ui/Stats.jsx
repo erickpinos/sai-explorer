@@ -21,13 +21,13 @@ export default function Stats() {
   return (
     <>
       <div className="stats-grid">
-        <div className="stat-card clickable" onClick={() => navigate('/trades')} title="View Perpetual Trades">
-          <div className="stat-label">Perpetual Trades</div>
-          <div className="stat-value">{formatNumber(stats?.trades?.total || 0, 0)}</div>
-        </div>
         <div className="stat-card clickable" onClick={() => navigate('/insights')} title="View Insights">
           <div className="stat-label">Total Volume</div>
           <div className="stat-value">{formatUSD(stats?.trades?.volume || 0)}</div>
+        </div>
+        <div className="stat-card clickable" onClick={() => navigate('/trades')} title="View Perpetual Trades">
+          <div className="stat-label">Perpetual Trades</div>
+          <div className="stat-value">{formatNumber(stats?.trades?.total || 0, 0)}</div>
         </div>
         <div className="stat-card clickable" onClick={() => navigate('/vaults')} title="View LP Vaults">
           <div className="stat-label">Total TVL</div>

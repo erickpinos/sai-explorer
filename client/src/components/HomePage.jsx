@@ -5,10 +5,10 @@ import { formatDate, formatAddress } from '../utils/formatters';
 import { getBadgeClass, formatTradeTypeBadge, formatPnl, toUsd } from '../utils/tradeHelpers';
 import Stats from './ui/Stats';
 import FunFacts from './ui/FunFacts';
+import InsightsGrid from './InsightsGrid';
 import LoadingSpinner from './ui/LoadingSpinner';
 import EmptyState from './ui/EmptyState';
 import DataTable from './tables/DataTable';
-import InsightsPage from './InsightsPage';
 import ActivityChart from './charts/ActivityChart';
 import VolumeChart from './charts/VolumeChart';
 
@@ -166,6 +166,7 @@ function TradesPreview({ network }) {
         defaultSortCol="time"
         defaultSortDir="desc"
         sortOptions={TRADES_SORT_OPTIONS}
+        hideLock
       />
     </div>
   );
@@ -179,13 +180,15 @@ export default function HomePage() {
   return (
     <>
       <Stats />
-      <ActivityChart />
-      <VolumeChart showMethodology />
+      <div className="charts-row">
+        <ActivityChart />
+        <VolumeChart showMethodology />
+      </div>
       <TradesPreview network={network} />
       <div className="home-section">
         <h3 className="section-title">Insights</h3>
         <FunFacts />
-        <InsightsPage embedded hideCharts />
+        <InsightsGrid />
       </div>
     </>
   );

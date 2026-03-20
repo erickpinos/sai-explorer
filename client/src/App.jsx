@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 're
 import { Toaster } from 'react-hot-toast';
 import { NetworkProvider } from './hooks/useNetwork';
 import Header from './components/ui/Header';
-import Tabs from './components/ui/Tabs';
 import Breadcrumbs from './components/ui/Breadcrumbs';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import UserProfileModal from './components/modals/UserProfileModal';
@@ -19,7 +18,6 @@ const WithdrawsTable = lazy(() => import('./components/tables/WithdrawsTable'));
 const VolumeTable = lazy(() => import('./components/tables/VolumeTable'));
 const MarketsTable = lazy(() => import('./components/tables/MarketsTable'));
 const CollateralTable = lazy(() => import('./components/tables/CollateralTable'));
-const InsightsPage = lazy(() => import('./components/InsightsPage'));
 const LpVaultsTable = lazy(() => import('./components/tables/LpVaultsTable'));
 const DataManagementPage = lazy(() => import('./components/DataManagementPage'));
 const CoinGeckoPricesTable = lazy(() => import('./components/tables/CoinGeckoPricesTable'));
@@ -102,9 +100,6 @@ function AppContent() {
       </div>
 
       <div className="container">
-        {/* Desktop tab bar — only shown on sub-pages */}
-        {!isHome && <Tabs />}
-
         {/* Breadcrumbs — only shown on sub-pages */}
         {!isHome && <Breadcrumbs />}
 
@@ -122,7 +117,6 @@ function AppContent() {
               <Route path="/volume" element={<VolumeTable key={`volume-${refreshKey}`} />} />
               <Route path="/markets" element={<MarketsTable key={`markets-${refreshKey}`} />} />
               <Route path="/collateral" element={<CollateralTable key={`collateral-${refreshKey}`} />} />
-              <Route path="/insights" element={<InsightsPage key={`insights-${refreshKey}`} />} />
               <Route path="/vaults" element={<LpVaultsTable key={`vaults-${refreshKey}`} />} />
               <Route path="/prices" element={<CoinGeckoPricesTable key={`prices-${refreshKey}`} />} />
               {import.meta.env.DEV && <Route path="/db-tools" element={<DataManagementPage setRefreshKey={setRefreshKey} />} />}

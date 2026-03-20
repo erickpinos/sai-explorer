@@ -33,8 +33,8 @@ const SORT_OPTIONS_PCT = [
   { key: 'timestamp', label: 'Date' },
 ];
 
-export default function InsightsTradeTable({ trades, config, isPct, isLoss, onSelectUser, onSelectTrade }) {
-  const { toggle, viewClass } = useViewToggle();
+export default function InsightsTradeTable({ trades, config, isPct, isLoss, onSelectUser, onSelectTrade, tableKey }) {
+  const { toggle, viewClass } = useViewToggle(tableKey);
   const defaultSort = isPct ? 'pnlPct' : 'pnlUsd';
   const { sorted, sortCol, sortDir, handleSort } = useSortedData(trades, defaultSort, 'desc', SORT_GETTERS);
   const sortOptions = isPct ? SORT_OPTIONS_PCT : SORT_OPTIONS_USD;
@@ -46,7 +46,6 @@ export default function InsightsTradeTable({ trades, config, isPct, isLoss, onSe
   return (
     <div className={viewClass}>
       <div className="table-info">
-        {sorted.length} trades
         {toggle}
       </div>
       <div className="table-wrapper profile-table-desktop">

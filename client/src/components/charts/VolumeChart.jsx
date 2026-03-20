@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { Info, X, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -143,16 +145,31 @@ export default function VolumeChart({ showMethodology = false }) {
   return (
     <div className="chart-section">
       <div className="chart-header">
-        <h3 className="chart-title">Daily Trading Volume</h3>
-        <select
-          className="chart-period-select"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-        >
-          {PERIODS.map(p => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h3 className="chart-title">Daily Trading Volume</h3>
+          <button
+            className="chart-info-btn"
+            onClick={() => setMethodologyOpen(true)}
+            aria-label="Volume methodology"
+          >
+            <Info size={15} />
+          </button>
+        </div>
+        <div className="chart-period-select-wrap">
+          <span className="chart-period-select-label">
+            {PERIODS.find(p => p.value === period)?.label}
+            <ChevronDown size={13} className="chart-period-select-chevron" />
+          </span>
+          <select
+            className="chart-period-select"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            {PERIODS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading && <div className="chart-loading">Loading...</div>}
@@ -164,17 +181,16 @@ export default function VolumeChart({ showMethodology = false }) {
         <Bar data={chartData} options={options} />
       )}
 
-      {showMethodology && (
-        <div className="volume-methodology-dropdown">
-          <button
-            className="volume-methodology-toggle"
-            onClick={() => setMethodologyOpen(o => !o)}
-          >
-            <span>Volume Methodology</span>
-            <span className="volume-methodology-chevron">{methodologyOpen ? '▲' : '▼'}</span>
-          </button>
-          {methodologyOpen && (
-            <div className="volume-methodology-body">
+      {methodologyOpen && createPortal(
+        <div className="modal-overlay" onClick={() => setMethodologyOpen(false)}>
+          <div className="modal" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Volume Methodology</h2>
+              <button className="modal-close" onClick={() => setMethodologyOpen(false)} aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-content" style={{ padding: '24px', overflowY: 'auto' }}>
               <div className="methodology-section">
                 <h3>How Trading Volume is Calculated</h3>
                 <p>
@@ -208,8 +224,9 @@ export default function VolumeChart({ showMethodology = false }) {
                 </ul>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
