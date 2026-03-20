@@ -20,7 +20,7 @@ function InsightCard({ icon, title, value, detail, valueClass }) {
   );
 }
 
-export default function InsightsPage({ embedded = false }) {
+export default function InsightsPage({ embedded = false, hideCharts = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { network, config } = useNetwork();
@@ -78,12 +78,16 @@ export default function InsightsPage({ embedded = false }) {
         </>
       )}
 
-      <div id="daily-activity" style={{ marginBottom: '2rem' }}>
-        <ActivityChart />
-      </div>
-      <div id="daily-volume" style={{ marginBottom: '2rem' }}>
-        <VolumeChart showMethodology />
-      </div>
+      {!hideCharts && (
+        <>
+          <div id="daily-activity" style={{ marginBottom: '2rem' }}>
+            <ActivityChart />
+          </div>
+          <div id="daily-volume" style={{ marginBottom: '2rem' }}>
+            <VolumeChart showMethodology />
+          </div>
+        </>
+      )}
 
       <div id="platform-stats" className="insights-grid">
         {insights.mostTradedMarket && (
@@ -232,28 +236,28 @@ export default function InsightsPage({ embedded = false }) {
 
       {insights.topWins?.length > 0 && (
         <div id="biggest-wins" style={{ marginTop: '2rem' }}>
-          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Wins</h3>
+          <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Biggest Wins</h3>
           <InsightsTradeTable trades={insights.topWins} config={config} onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topLosses?.length > 0 && (
         <div id="biggest-losses" style={{ marginTop: '2rem' }}>
-          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest Losses</h3>
+          <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Biggest Losses</h3>
           <InsightsTradeTable trades={insights.topLosses} config={config} isLoss onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topPctWins?.length > 0 && (
         <div id="biggest-pct-wins" style={{ marginTop: '2rem' }}>
-          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Wins</h3>
+          <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Biggest % Wins</h3>
           <InsightsTradeTable trades={insights.topPctWins} config={config} isPct onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}
 
       {insights.topPctLosses?.length > 0 && (
         <div id="biggest-pct-losses" style={{ marginTop: '2rem' }}>
-          <h3 style={{ color: '#e2e8f0', marginBottom: '0.75rem' }}>Biggest % Losses</h3>
+          <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Biggest % Losses</h3>
           <InsightsTradeTable trades={insights.topPctLosses} config={config} isPct isLoss onSelectUser={handleSelectUser} onSelectTrade={setSelectedTrade} />
         </div>
       )}

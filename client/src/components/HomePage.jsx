@@ -9,6 +9,8 @@ import LoadingSpinner from './ui/LoadingSpinner';
 import EmptyState from './ui/EmptyState';
 import DataTable from './tables/DataTable';
 import InsightsPage from './InsightsPage';
+import ActivityChart from './charts/ActivityChart';
+import VolumeChart from './charts/VolumeChart';
 
 const PREVIEW_COUNT = 10;
 
@@ -177,11 +179,13 @@ export default function HomePage() {
   return (
     <>
       <Stats />
+      <ActivityChart />
+      <VolumeChart showMethodology />
       <TradesPreview network={network} />
       <div className="home-section">
         <h3 className="section-title">Insights</h3>
         <FunFacts />
-        <InsightsPage embedded />
+        <InsightsPage embedded hideCharts />
       </div>
     </>
   );
