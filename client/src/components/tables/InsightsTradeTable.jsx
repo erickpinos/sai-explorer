@@ -39,10 +39,6 @@ export default function InsightsTradeTable({ trades, config, isPct, isLoss, onSe
   const { sorted, sortCol, sortDir, handleSort } = useSortedData(trades, defaultSort, 'desc', SORT_GETTERS);
   const sortOptions = isPct ? SORT_OPTIONS_PCT : SORT_OPTIONS_USD;
 
-  const Th = ({ col, children }) => (
-    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
-  );
-
   return (
     <div className={viewClass}>
       <div className="table-info">
@@ -53,14 +49,14 @@ export default function InsightsTradeTable({ trades, config, isPct, isLoss, onSe
           <thead>
             <tr>
               <th>#</th>
-              <Th col="trader">Trader</Th>
-              <Th col="symbol">Market</Th>
-              <Th col="direction">Direction</Th>
-              <Th col="leverage">Leverage</Th>
-              {isPct && <Th col="pnlPct">PnL %</Th>}
-              <Th col="pnlUsd">PnL {isPct ? '$' : ''}</Th>
-              <Th col="positionSize">Position Size</Th>
-              <Th col="timestamp">Date</Th>
+              <SortTh col="trader" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Trader</SortTh>
+              <SortTh col="symbol" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Market</SortTh>
+              <SortTh col="direction" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Direction</SortTh>
+              <SortTh col="leverage" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Leverage</SortTh>
+              {isPct && <SortTh col="pnlPct" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>PnL %</SortTh>}
+              <SortTh col="pnlUsd" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>PnL {isPct ? '$' : ''}</SortTh>
+              <SortTh col="positionSize" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Position Size</SortTh>
+              <SortTh col="timestamp" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Date</SortTh>
               <th>TX Hash</th>
               <th>EVM TX Hash</th>
             </tr>

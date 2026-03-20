@@ -38,10 +38,10 @@ export default function ActivityChart() {
   const [period, setPeriod] = useState('28');
   const { data, loading, error } = useChartData(network, period);
 
-  const activity = data?.activity || [];
-  const tradesByDayByAsset = data?.tradesByDayByAsset || [];
-
   const chartData = useMemo(() => {
+    const activity = data?.activity || [];
+    const tradesByDayByAsset = data?.tradesByDayByAsset || [];
+
     // Build deposit dataset from activity (keyed by date)
     const depositsByDate = {};
     for (const row of activity) depositsByDate[row.date] = row.deposits;
@@ -109,7 +109,7 @@ export default function ActivityChart() {
     };
 
     return { labels: dates, datasets: [...assetDatasets, depositDataset] };
-  }, [activity, tradesByDayByAsset]);
+  }, [data]);
 
   const options = useMemo(() => ({
     responsive: true,

@@ -82,7 +82,7 @@ export default function FunFacts() {
     setDismissed(true);
     try {
       sessionStorage.setItem('insights-dismissed', 'true');
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   return (

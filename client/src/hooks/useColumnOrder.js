@@ -15,7 +15,7 @@ export function useColumnOrder(tableKey, defaultColumns) {
         const newCols = defaultColumns.filter(c => !savedKeys.includes(c.key));
         return [...orderedCols, ...newCols];
       }
-    } catch (e) {}
+    } catch { /* ignore */ }
     return defaultColumns;
   });
 
@@ -26,7 +26,7 @@ export function useColumnOrder(tableKey, defaultColumns) {
       next.splice(toIndex, 0, col);
       try {
         localStorage.setItem(storageKey, JSON.stringify(next.map(c => c.key)));
-      } catch (e) {}
+      } catch { /* ignore */ }
       return next;
     });
   }, [storageKey]);
@@ -34,7 +34,7 @@ export function useColumnOrder(tableKey, defaultColumns) {
   const resetColumns = useCallback(() => {
     try {
       localStorage.removeItem(storageKey);
-    } catch (e) {}
+    } catch { /* ignore */ }
     setColumns(defaultColumns);
   }, [storageKey, defaultColumns]);
 

@@ -45,8 +45,6 @@ export default function LpVaultsTable() {
     state: { background: location, vault: v },
   });
 
-  const epochDurationDays = data?.epochDurationDays ?? '-';
-
   const vaults = (data?.vaults || []).map(v => {
     const p = v.collateralPrice || 1;
     return {
@@ -70,10 +68,6 @@ export default function LpVaultsTable() {
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!sorted.length) return <EmptyState message="No vaults found" />;
 
-  const Th = ({ col, children }) => (
-    <SortTh col={col} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{children}</SortTh>
-  );
-
   const symbol = (v) => v.collateralToken?.symbol || '-';
 
   return (
@@ -86,12 +80,12 @@ export default function LpVaultsTable() {
             <tr>
               <th>Vault</th>
               <th>Collateral</th>
-              <Th col="tvl">TVL</Th>
+              <SortTh col="tvl" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>TVL</SortTh>
               <th>Share Price</th>
-              <Th col="apy">APY</Th>
-              <Th col="availableAssets">Available</Th>
-              <Th col="netProfit">Net Profit</Th>
-              <Th col="liabilities">Liabilities</Th>
+              <SortTh col="apy" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>APY</SortTh>
+              <SortTh col="availableAssets" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Available</SortTh>
+              <SortTh col="netProfit" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Net Profit</SortTh>
+              <SortTh col="liabilities" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Liabilities</SortTh>
               <th>Revenue (cumul.)</th>
               <th>Trader Losses</th>
               <th>Open PnL (epoch)</th>

@@ -33,6 +33,7 @@ export function useApi(endpoint, network = 'mainnet', options = {}) {
     if (autoFetch) {
       fetchData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, network, limit, autoFetch]);
 
   return { data, loading, error, refetch: fetchData };
@@ -84,13 +85,10 @@ export function useChartData(network, days = '28') {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
     fetch(`/api/chart-data?network=${network}&days=${days}`)
       .then(r => { if (!r.ok) throw new Error(`API error: ${r.status}`); return r.json(); })
-      .then(setData)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+      .then(d => { setData(d); setError(null); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
   }, [network, days]);
 
   return { data, loading, error };

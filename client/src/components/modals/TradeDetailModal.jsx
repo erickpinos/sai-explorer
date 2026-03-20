@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
-import { getBadgeClass as getTradeTypeBadgeClass, formatTradeTypeBadge as getTradeTypeLabel, shortenHash, toUsd } from '../../utils/tradeHelpers';
+import { getBadgeClass as getTradeTypeBadgeClass, formatTradeTypeBadge as getTradeTypeLabel, shortenHash } from '../../utils/tradeHelpers';
 
 export default function TradeDetailModal({ trade, onClose }) {
   const { config } = useNetwork();

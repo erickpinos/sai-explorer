@@ -8,7 +8,7 @@ export function usePagination(data, perPage) {
 
   const paginatedData = useMemo(() => {
     return (data || []).slice(startIndex, startIndex + perPage);
-  }, [data, page, perPage]);
+  }, [data, startIndex, perPage]);
 
   return { page, setPage, paginatedData, totalPages, startIndex };
 }
