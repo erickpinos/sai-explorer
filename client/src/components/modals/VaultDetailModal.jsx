@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { formatNumber } from '../../utils/formatters';
 
 const Tag = ({ type }) => {
@@ -93,7 +94,7 @@ const sym = vault.collateralToken?.symbol || '-';
             <span className="badge badge-purple">{sym}</span>
             <span className={apyCls} style={{ fontWeight: 600 }}>APY: {apyDisplay}</span>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
         <div className="modal-content" style={{ padding: '24px', overflowY: 'auto' }}>

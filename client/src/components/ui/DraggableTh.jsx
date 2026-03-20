@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 
 export default function DraggableTh({
   index,
@@ -95,11 +96,11 @@ export default function DraggableTh({
       onClick={isSortable ? () => onSort(col) : undefined}
       style={{ width: width ? `${width}px` : undefined, position: 'relative' }}
     >
-      {isDraggable && <span className="col-drag-handle" title="Drag to reorder">⠿</span>}
+      {isDraggable && <span className="col-drag-handle" title="Drag to reorder"><GripVertical size={12} /></span>}
       {children}
       {isSortable && (
         <span className="sort-icon">
-          {isActive ? (sortDir === 'desc' ? '▼' : '▲') : '▼'}
+          {isActive ? (sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />) : <ChevronDown size={12} />}
         </span>
       )}
       {isResizable && (

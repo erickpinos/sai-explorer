@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { useUserStats, useUserTrades, useUserDeposits, useUserWithdraws } from '../../hooks/useApi';
 import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
@@ -364,7 +365,7 @@ export default function UserProfileModal({ address, onClose }) {
               )}
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
         {renderStats()}

@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
 import { getBadgeClass as getTradeTypeBadgeClass, formatTradeTypeBadge as getTradeTypeLabel, shortenHash, toUsd } from '../../utils/tradeHelpers';
@@ -70,7 +71,7 @@ export default function TradeDetailModal({ trade, onClose }) {
               {tradeIsLong ? 'Long' : 'Short'}
             </span>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
         <div className="modal-content" style={{ padding: '24px', overflowY: 'auto' }}>
