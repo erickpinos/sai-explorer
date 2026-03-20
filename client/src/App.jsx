@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { TAB_LABELS } from './utils/constants';
 import { Toaster } from 'react-hot-toast';
 import { NetworkProvider } from './hooks/useNetwork';
 import Header from './components/ui/Header';
@@ -110,6 +111,10 @@ function AppContent() {
         </ErrorBoundary>
 
         <Tabs />
+
+        {TAB_LABELS[location.pathname] && (
+          <h2 className="page-title">{TAB_LABELS[location.pathname]}</h2>
+        )}
 
         <div className="content">
           <Suspense fallback={<LoadingSpinner />}>

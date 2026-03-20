@@ -27,6 +27,19 @@ export const TABS = {
   PRICES: 'prices',
 };
 
+export const TAB_LABELS = {
+  '/trades':     'Perpetual Trades',
+  '/deposits':   'LP Deposits',
+  '/withdraws':  'Withdraw Requests',
+  '/markets':    'Markets',
+  '/collateral': 'Collateral Indices',
+  '/volume':     'User Stats',
+  '/insights':   'Insights',
+  '/vaults':     'LP Vaults',
+  '/prices':     'Price History',
+  '/db-tools':   'DB Tools',
+};
+
 export const TRADES_PER_PAGE = 50;
 export const DEPOSITS_PER_PAGE = 50;
 export const WITHDRAWS_PER_PAGE = 50;
