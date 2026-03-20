@@ -165,18 +165,30 @@ export default function TradeDetailModal({ trade, onClose }) {
             <div className="trade-detail-section">
               <h3 className="trade-detail-section-title">Collateral</h3>
               <div className="trade-detail-rows">
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">collateralAmount <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
+                    <span className="trade-detail-value">{formatNumber(parseFloat(t.collateralAmount) || 0, 0)}</span>
+                  </div>
+                )}
+                {!isInsightTrade && (
+                  <div className="trade-detail-row">
+                    <span className="trade-detail-label">openCollateralAmount <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 5px' }}>API</span></span>
+                    <span className="trade-detail-value">{formatNumber(parseFloat(t.openCollateralAmount) || 0, 0)}</span>
+                  </div>
+                )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">{isInsightTrade ? 'Collateral' : 'Current Collateral'}</span>
+                  <span className="trade-detail-label">{isInsightTrade ? 'Collateral' : 'Current Collateral'} <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
                   <span className="trade-detail-value"><strong>${formatNumber(collateralUsd, 2)}</strong></span>
                 </div>
                 {openCollateralUsd > 0 && openCollateralUsd !== collateralUsd && (
                   <div className="trade-detail-row">
-                    <span className="trade-detail-label">Opening Collateral</span>
+                    <span className="trade-detail-label">Opening Collateral <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
                     <span className="trade-detail-value">${formatNumber(openCollateralUsd, 2)}</span>
                   </div>
                 )}
                 <div className="trade-detail-row">
-                  <span className="trade-detail-label">Position Size</span>
+                  <span className="trade-detail-label">Position Size <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 5px' }}>calc</span></span>
                   <span className="trade-detail-value">${formatNumber(isInsightTrade ? (trade.positionSize || 0) : collateralUsd * (parseFloat(tradeLeverage) || 1), 2)}</span>
                 </div>
               </div>
