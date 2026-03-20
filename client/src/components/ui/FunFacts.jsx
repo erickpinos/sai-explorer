@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Lightbulb, X } from 'lucide-react';
 import { useInsights } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 
@@ -89,7 +90,7 @@ export default function FunFacts() {
   return (
     <div className="fun-facts">
       <div className="fun-fact-card">
-        <div className="fun-fact-icon">&#x1f4a1;</div>
+        <div className="fun-fact-icon"><Lightbulb size={24} /></div>
         <div className="fun-fact-content">
           <div className="fun-fact-text">{featuredFact.text}</div>
           <div className="fun-fact-detail">{featuredFact.detail}</div>
@@ -105,7 +106,7 @@ export default function FunFacts() {
           onClick={handleDismiss}
           title="Dismiss"
         >
-          ×
+          <X size={16} />
         </button>
       </div>
     </div>

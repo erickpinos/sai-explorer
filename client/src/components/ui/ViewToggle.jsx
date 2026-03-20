@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { List, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY = 'sai-view-preference';
 
@@ -24,14 +25,14 @@ export function useViewToggle() {
           onClick={() => setViewAndSave('table')}
           title="Table view"
         >
-          ☰
+          <List size={16} />
         </button>
         <button
           className={`view-toggle-btn ${view === 'cards' ? 'active' : ''}`}
           onClick={() => setViewAndSave('cards')}
           title="Card view"
         >
-          ▦
+          <LayoutGrid size={16} />
         </button>
       </div>
     </div>

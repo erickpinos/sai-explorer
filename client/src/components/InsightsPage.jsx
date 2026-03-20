@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Flame, Scale, Trophy, Zap, TrendingUp, TrendingDown, BarChart2, AlertTriangle, DollarSign, User, Clock } from 'lucide-react';
 import { useInsights } from '../hooks/useApi';
 import { useNetwork } from '../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../utils/formatters';
@@ -83,7 +84,7 @@ export default function InsightsPage() {
       <div id="platform-stats" className="insights-grid">
         {insights.mostTradedMarket && (
           <InsightCard
-            icon="&#x1f525;"
+            icon={<Flame size={20} />}
             title="Most Traded Market"
             value={insights.mostTradedMarket.symbol}
             detail={`${formatNumber(insights.mostTradedMarket.tradeCount, 0)} trades`}
@@ -92,7 +93,7 @@ export default function InsightsPage() {
 
         {insights.longVsShort && (
           <InsightCard
-            icon="&#x2696;&#xfe0f;"
+            icon={<Scale size={20} />}
             title="Long vs Short OI"
             value={`${insights.longVsShort.longPct}% Long / ${insights.longVsShort.shortPct}% Short`}
             detail={`$${formatNumber(insights.longVsShort.longOi, 2)} long / $${formatNumber(insights.longVsShort.shortOi, 2)} short`}
@@ -101,7 +102,7 @@ export default function InsightsPage() {
 
         {insights.biggestWin && (
           <InsightCard
-            icon="&#x1f3c6;"
+            icon={<Trophy size={20} />}
             title="Biggest % Win"
             value={`+${insights.biggestWin.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestWin.isLong ? 'Long' : 'Short'} ${insights.biggestWin.symbol} @ ${insights.biggestWin.leverage}x`}
@@ -111,7 +112,7 @@ export default function InsightsPage() {
 
         {insights.biggestLoss && (
           <InsightCard
-            icon="&#x1f4a5;"
+            icon={<Zap size={20} />}
             title="Biggest % Loss"
             value={`${insights.biggestLoss.pnlPct.toFixed(1)}%`}
             detail={`${insights.biggestLoss.isLong ? 'Long' : 'Short'} ${insights.biggestLoss.symbol} @ ${insights.biggestLoss.leverage}x`}
@@ -121,7 +122,7 @@ export default function InsightsPage() {
 
         {insights.topWins?.[0] && (
           <InsightCard
-            icon="&#x1f4b5;"
+            icon={<TrendingUp size={20} />}
             title="Biggest $ Win"
             value={`+$${formatNumber(insights.topWins[0].pnlUsd, 2)}`}
             detail={`${insights.topWins[0].isLong ? 'Long' : 'Short'} ${insights.topWins[0].symbol} @ ${insights.topWins[0].leverage}x`}
@@ -131,7 +132,7 @@ export default function InsightsPage() {
 
         {insights.topLosses?.[0] && (
           <InsightCard
-            icon="&#x1f4b8;"
+            icon={<TrendingDown size={20} />}
             title="Biggest $ Loss"
             value={`-$${formatNumber(Math.abs(insights.topLosses[0].pnlUsd), 2)}`}
             detail={`${insights.topLosses[0].isLong ? 'Long' : 'Short'} ${insights.topLosses[0].symbol} @ ${insights.topLosses[0].leverage}x`}
@@ -141,7 +142,7 @@ export default function InsightsPage() {
 
         {insights.avgLeverage && (
           <InsightCard
-            icon="&#x1f4ca;"
+            icon={<BarChart2 size={20} />}
             title="Average Leverage"
             value={`${insights.avgLeverage}x`}
             detail="Across all trades"
@@ -150,7 +151,7 @@ export default function InsightsPage() {
 
         {insights.liquidationRate && (
           <InsightCard
-            icon="&#x26a0;&#xfe0f;"
+            icon={<AlertTriangle size={20} />}
             title="Liquidation Rate"
             value={`${insights.liquidationRate.rate}%`}
             detail={`${formatNumber(insights.liquidationRate.liquidations, 0)} of ${formatNumber(insights.liquidationRate.closedTrades, 0)} closed trades`}
@@ -159,7 +160,7 @@ export default function InsightsPage() {
 
         {insights.mostProfitableMarket && (
           <InsightCard
-            icon="&#x1f4b0;"
+            icon={<DollarSign size={20} />}
             title="Most Profitable Market"
             value={insights.mostProfitableMarket.symbol}
             detail={`Avg PnL: ${insights.mostProfitableMarket.avgPnlPct > 0 ? '+' : ''}${insights.mostProfitableMarket.avgPnlPct}% (${insights.mostProfitableMarket.tradeCount} trades)`}
@@ -168,7 +169,7 @@ export default function InsightsPage() {
 
         {insights.profitByDirection?.long && (
           <InsightCard
-            icon="&#x1f7e2;"
+            icon={<TrendingUp size={20} />}
             title="Long Win Rate"
             value={`${insights.profitByDirection.long.winRate}%`}
             detail={`Avg PnL: ${insights.profitByDirection.long.avgPnlPct > 0 ? '+' : ''}${insights.profitByDirection.long.avgPnlPct}% (${formatNumber(insights.profitByDirection.long.tradeCount, 0)} trades)`}
@@ -177,7 +178,7 @@ export default function InsightsPage() {
 
         {insights.profitByDirection?.short && (
           <InsightCard
-            icon="&#x1f534;"
+            icon={<TrendingDown size={20} />}
             title="Short Win Rate"
             value={`${insights.profitByDirection.short.winRate}%`}
             detail={`Avg PnL: ${insights.profitByDirection.short.avgPnlPct > 0 ? '+' : ''}${insights.profitByDirection.short.avgPnlPct}% (${formatNumber(insights.profitByDirection.short.tradeCount, 0)} trades)`}
@@ -186,7 +187,7 @@ export default function InsightsPage() {
 
         {insights.mostActiveTrader && (
           <InsightCard
-            icon="&#x1f451;"
+            icon={<User size={20} />}
             title="Most Active Trader"
             value={formatAddress(insights.mostActiveTrader.evmTrader || insights.mostActiveTrader.trader)}
             detail={`${formatNumber(insights.mostActiveTrader.tradeCount, 0)} trades`}
@@ -195,7 +196,7 @@ export default function InsightsPage() {
 
         {insights.busiestHour != null && (
           <InsightCard
-            icon="&#x23f0;"
+            icon={<Clock size={20} />}
             title="Busiest Trading Hour"
             value={`${formatHour(insights.busiestHour.hour)} UTC`}
             detail={`${formatNumber(insights.busiestHour.tradeCount, 0)} trades`}

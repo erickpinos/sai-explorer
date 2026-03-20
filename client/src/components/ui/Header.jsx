@@ -1,3 +1,4 @@
+import { BarChart2 } from 'lucide-react';
 import { useNetwork } from '../../hooks/useNetwork';
 
 export default function Header() {
@@ -7,7 +8,7 @@ export default function Header() {
     <header className="header">
       <div className="header-content">
         <div className="logo">
-          <span className="logo-icon">📊</span>
+          <span className="logo-icon"><BarChart2 size={28} strokeWidth={1.75} /></span>
           <h1>Sai Transaction Explorer</h1>
         </div>
         <div className="header-controls">

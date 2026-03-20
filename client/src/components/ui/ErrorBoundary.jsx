@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -26,7 +27,7 @@ export class ErrorBoundary extends Component {
       }
       return (
         <div className="error-boundary">
-          <div className="error-boundary-icon">⚠</div>
+          <div className="error-boundary-icon"><AlertTriangle size={32} /></div>
           <h3 className="error-boundary-title">
             {this.props.title || 'Something went wrong'}
           </h3>
