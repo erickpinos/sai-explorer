@@ -29,9 +29,11 @@ export default function TradeDetailModal({ trade, onClose }) {
     rawPnl = pnlUsd;
     pnlPct = parseFloat(trade.pnlPct) || 0;
   } else {
-    rawCollateral = (parseFloat(t.collateralAmount) || 0) / 1000000;
+    const collAmt = parseFloat(t.collateralAmount) || 0;
+    const openCollAmt = parseFloat(t.openCollateralAmount) || 0;
+    rawCollateral = (collAmt !== 0 ? collAmt : openCollAmt) / 1000000;
     collateralUsd = rawCollateral * collPrice;
-    rawOpenCollateral = (parseFloat(t.openCollateralAmount) || 0) / 1000000;
+    rawOpenCollateral = openCollAmt / 1000000;
     openCollateralUsd = rawOpenCollateral * collPrice;
     rawPnl = (parseFloat(trade.realizedPnlCollateral) || 0) / 1000000;
     pnlUsd = rawPnl * collPrice;

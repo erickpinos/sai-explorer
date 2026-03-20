@@ -72,11 +72,13 @@ async function syncTrades(network, { full = false } = {}) {
           collateral_token_symbol = EXCLUDED.collateral_token_symbol,
           base_token_symbol = EXCLUDED.base_token_symbol,
           evm_trader = EXCLUDED.evm_trader,
-          tx_failed = EXCLUDED.tx_failed
+          tx_failed = EXCLUDED.tx_failed,
+          collateral_price = COALESCE(trades.collateral_price, EXCLUDED.collateral_price)
         WHERE trades.collateral_token_symbol IS NULL
           OR trades.base_token_symbol IS NULL
           OR trades.evm_trader IS NULL
           OR trades.tx_failed != EXCLUDED.tx_failed
+          OR trades.collateral_price IS NULL
       `));
       newTradesCount += results.filter(r => r.status === 'fulfilled').length;
     }

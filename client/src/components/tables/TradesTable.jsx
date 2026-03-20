@@ -29,7 +29,7 @@ const SORT_GETTERS = {
   leverage:       (t) => parseFloat(t.trade?.leverage) || 0,
   openPrice:      (t) => parseFloat(t.trade?.openPrice) || 0,
   closePrice:     (t) => parseFloat(t.trade?.closePrice) || 0,
-  collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice),
+  collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount),
   pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
   collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
   devNote:        (t) => t.devNote || '',
@@ -136,7 +136,7 @@ export default function TradesTable() {
       case 'closePrice':
         return <td>{parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}</td>;
       case 'collateral':
-        return <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</td>;
+        return <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount), 2)}</td>;
       case 'pnl':
         return (
           <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
@@ -196,7 +196,7 @@ export default function TradesTable() {
           <span className="profile-card-label">Leverage</span>
           <span className="profile-card-value">{formatNumber(trade.trade?.leverage, 1)}x</span>
           <span className="profile-card-label">Collateral</span>
-          <span className="profile-card-value">${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice), 2)}</span>
+          <span className="profile-card-value">${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount), 2)}</span>
         </div>
         <div className="profile-card-row">
           <span className="profile-card-label">Open</span>
