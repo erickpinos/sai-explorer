@@ -1,6 +1,8 @@
 import { sql } from '../shared/db.js';
 import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
+import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
+import { requireAdminAccess } from '../shared/adminAuth.js';
 
 function sendEvent(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -154,6 +156,8 @@ async function backfillWithdraws(network, res) {
 }
 
 export default async function handler(req, res) {
+  if (!requireAdminAccess(req, res)) return;
+  if (!checkRateLimit(req, res, SYNC_MAX)) return;
   if (process.env.VERCEL) {
     return res.status(404).json({ error: 'Not available in production' });
   }
@@ -186,7 +190,8 @@ export default async function handler(req, res) {
       withdraws,
     });
   } catch (err) {
-    sendEvent(res, { type: 'error', message: err.message });
+    console.error('Backfill error:', err);
+    sendEvent(res, { type: 'error', message: 'Backfill failed' });
   } finally {
     res.end();
   }

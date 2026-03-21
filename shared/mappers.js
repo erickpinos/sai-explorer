@@ -1,10 +1,12 @@
-export function mapTradeRow(row) {
+export function mapTradeRow(row, options = {}) {
+  const { includeDevNotes = process.env.NODE_ENV === 'development' } = options;
+
   return {
     id: row.id,
     tradeChangeType: row.trade_change_type,
     txFailed: row.tx_failed || false,
     createdAt: row.created_at,
-    devNote: row.dev_note || null,
+    ...(includeDevNotes ? { devNote: row.dev_note || null } : {}),
     realizedPnlPct: row.realized_pnl_pct,
     realizedPnlCollateral: row.realized_pnl_collateral,
     txHash: row.tx_hash,

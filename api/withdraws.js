@@ -1,6 +1,7 @@
 import { sql } from '../shared/db.js';
 import { validateNetwork, parsePagination } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -50,7 +51,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(withdraws);
   } catch (error) {
-    console.error('Error fetching withdraws:', error);
-    res.status(500).json({ error: 'Failed to fetch withdraws', details: error.message });
+    return sendServerError(res, 'Failed to fetch withdraws', error);
   }
 }

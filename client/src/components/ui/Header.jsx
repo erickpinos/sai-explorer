@@ -64,7 +64,6 @@ function NavCategory({ category }) {
 export default function Header() {
   const { network, switchNetwork } = useNetwork();
   const [open, setOpen] = useState(false);
-  const location = useLocation();
   const menuRef = useRef(null);
 
   const mobileItems = NAV_CATEGORIES.flatMap(c => c.items);
@@ -80,9 +79,6 @@ export default function Header() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
-
-  // Close on route change
-  useEffect(() => { setOpen(false); }, [location.pathname]);
 
   return (
     <header className="header">
@@ -133,6 +129,7 @@ export default function Header() {
                   <NavLink
                     key={tab.id}
                     to={tab.path}
+                    onClick={() => setOpen(false)}
                     className={({ isActive }) => `nav-dropdown-item${isActive ? ' active' : ''}`}
                   >
                     {tab.label}

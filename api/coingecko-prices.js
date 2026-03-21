@@ -1,5 +1,6 @@
 import { sql } from '../shared/db.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,7 +19,6 @@ export default async function handler(req, res) {
     `;
     res.status(200).json({ prices: rows });
   } catch (error) {
-    console.error('Error fetching coingecko prices:', error);
-    res.status(500).json({ error: 'Failed to fetch prices', details: error.message });
+    return sendServerError(res, 'Failed to fetch prices', error);
   }
 }

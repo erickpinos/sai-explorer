@@ -3,6 +3,7 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { buildPriceMap } from '../shared/buildPriceMap.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -71,7 +72,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ vaults, totalActiveTvl });
   } catch (error) {
-    console.error('Error fetching TVL breakdown:', error);
-    res.status(500).json({ error: 'Failed to fetch TVL breakdown', details: error.message });
+    return sendServerError(res, 'Failed to fetch TVL breakdown', error);
   }
 }

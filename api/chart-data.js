@@ -1,6 +1,7 @@
 import { sql } from '../shared/db.js';
-import { validateNetwork } from '../shared/validateParams.js';
+import { validateChartDays, validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 // NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {
@@ -15,10 +16,12 @@ export default async function handler(req, res) {
   try {
     const { network = 'mainnet', days = '28' } = req.query;
     if (!validateNetwork(network, res)) return;
+    const validatedDays = validateChartDays(days, res);
+    if (!validatedDays) return;
 
-    const cutoff = days === 'all'
+    const cutoff = validatedDays === 'all'
       ? null
-      : new Date(Date.now() - parseInt(days) * 24 * 60 * 60 * 1000);
+      : new Date(Date.now() - parseInt(validatedDays, 10) * 24 * 60 * 60 * 1000);
 
     const [tradesResult, depositsResult, volumeByAssetResult, tradesByAssetResult] = await Promise.all([
       cutoff
@@ -152,7 +155,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ activity, volumeByDay, volumeByDayByAsset, tradesByDayByAsset });
   } catch (error) {
-    console.error('Error fetching chart data:', error);
-    res.status(500).json({ error: 'Failed to fetch chart data', details: error.message });
+    return sendServerError(res, 'Failed to fetch chart data', error);
   }
 }

@@ -34,7 +34,7 @@ const ASSET_COLORS = [
   { bg: 'rgba(244, 114, 182, 0.85)', border: 'rgba(244, 114, 182, 1)' },
 ];
 
-export default function VolumeChart({ showMethodology = false }) {
+export default function VolumeChart() {
   const { network } = useNetwork();
   const [period, setPeriod] = useState('28');
   const [methodologyOpen, setMethodologyOpen] = useState(false);

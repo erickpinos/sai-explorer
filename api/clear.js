@@ -1,17 +1,13 @@
 import { sql } from '../shared/db.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
+import { requireAdminAccess } from '../shared/adminAuth.js';
+import { sendServerError } from '../shared/http.js';
 
 const ALLOWED_TABLES = new Set(['trades', 'deposits', 'withdraws']);
 
 export default async function handler(req, res) {
-  if (process.env.VERCEL) {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-  }
-  if (process.env.VERCEL && !checkRateLimit(req, res, SYNC_MAX)) return;
+  if (!requireAdminAccess(req, res)) return;
+  if (!checkRateLimit(req, res, SYNC_MAX)) return;
 
   const { table, network } = req.body || {};
 
@@ -46,7 +42,6 @@ export default async function handler(req, res) {
     console.log(`Cleared ${deleted} rows from ${table}${byNetwork ? ` (${network})` : ''}`);
     res.status(200).json({ success: true, table, network: network || 'all', deleted });
   } catch (error) {
-    console.error('Clear error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, 'Clear failed', error);
   }
 }

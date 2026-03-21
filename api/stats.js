@@ -5,6 +5,7 @@ import { buildPriceMap } from '../shared/buildPriceMap.js';
 import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 
 async function fetchLiveTvl(network) {
   return cachedFetch(`tvl:${network}`, async () => {
@@ -111,7 +112,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(stats);
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
+    return sendServerError(res, 'Failed to fetch stats', error);
   }
 }

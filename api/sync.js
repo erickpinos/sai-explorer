@@ -3,6 +3,7 @@ import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
+import { requireAdminAccess } from '../shared/adminAuth.js';
 
 async function syncTrades(network, { full = false } = {}) {
   console.log(`Syncing trades for ${network}...`);
@@ -405,17 +406,8 @@ async function syncVaultSharePrices(network) {
 }
 
 export default async function handler(req, res) {
-  // Require Authorization: Bearer <CRON_SECRET> on all Vercel environments.
-  // Locally (no VERCEL env var) the check is skipped for convenience.
-  if (process.env.VERCEL) {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-  }
-  if (process.env.VERCEL && !checkRateLimit(req, res, SYNC_MAX)) return;
+  if (!requireAdminAccess(req, res)) return;
+  if (!checkRateLimit(req, res, SYNC_MAX)) return;
 
   try {
     const startTime = Date.now();
@@ -463,8 +455,7 @@ export default async function handler(req, res) {
     console.error('Sync error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: 'Sync failed'
     });
   }
 }

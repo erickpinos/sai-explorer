@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { List, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY_PREFIX = 'sai-view-preference';
@@ -6,27 +6,24 @@ const mq = window.matchMedia('(max-width: 767px)');
 
 export function useViewToggle(tableKey) {
   const storageKey = tableKey ? `${STORAGE_KEY_PREFIX}-${tableKey}` : STORAGE_KEY_PREFIX;
-
-  const saved = localStorage.getItem(storageKey);
-  const manualRef = useRef(saved === 'table' || saved === 'cards');
-
   const [view, setView] = useState(() => {
-    if (manualRef.current) return saved;
+    const saved = localStorage.getItem(storageKey);
+    if (saved === 'table' || saved === 'cards') {
+      return saved;
+    }
     return mq.matches ? 'cards' : 'table';
   });
 
   useEffect(() => {
     const handler = (e) => {
-      manualRef.current = false;
       localStorage.removeItem(storageKey);
       setView(e.matches ? 'cards' : 'table');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
-  }, []);
+  }, [storageKey]);
 
   const setViewAndSave = (v) => {
-    manualRef.current = true;
     setView(v);
     localStorage.setItem(storageKey, v);
   };

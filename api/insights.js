@@ -3,6 +3,7 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 // PnL queries use != 'position_opened' (not the full exclusion list) because
 // only close/liquidation events realize PnL. This is intentional.
 
@@ -353,7 +354,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(insights);
   } catch (error) {
-    console.error('Error fetching insights:', error);
-    res.status(500).json({ error: 'Failed to fetch insights', details: error.message });
+    return sendServerError(res, 'Failed to fetch insights', error);
   }
 }

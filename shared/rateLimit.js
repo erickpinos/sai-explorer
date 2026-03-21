@@ -11,7 +11,10 @@ let lastCleanup = Date.now();
 
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return forwarded.split(',')[0].trim();
+  const trustProxy = process.env.TRUST_PROXY === 'true' || process.env.VERCEL === '1';
+  if (trustProxy && typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
   return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
 }
 
@@ -42,6 +45,13 @@ export function checkRateLimit(req, res, maxRequests = DEFAULT_MAX) {
 
   // Bucket by IP + endpoint path so sync limits don't bleed into general limits
   const ip = `${getClientIp(req)}:${req.path || req.url || ''}`;
+  if (requests.size > 10000 && !requests.has(ip)) {
+    cleanup();
+    if (requests.size > 10000) {
+      res.status(503).json({ error: 'Rate limiter busy, retry later' });
+      return false;
+    }
+  }
   const cutoff = now - WINDOW_MS;
   const timestamps = (requests.get(ip) || []).filter(t => t > cutoff);
 

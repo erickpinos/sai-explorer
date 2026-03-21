@@ -1,6 +1,7 @@
 import { sql } from '../shared/db.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
+import { sendServerError } from '../shared/http.js';
 // NOTE: Exclusion list must match shared/constants.js EXCLUDED_TRADE_TYPES
 
 export default async function handler(req, res) {
@@ -49,7 +50,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(stats);
   } catch (error) {
-    console.error('Error fetching user stats:', error);
-    res.status(500).json({ error: 'Failed to fetch user stats', details: error.message });
+    return sendServerError(res, 'Failed to fetch user stats', error);
   }
 }

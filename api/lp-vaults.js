@@ -3,6 +3,7 @@ import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
 import { sql } from '../shared/db.js';
+import { sendServerError } from '../shared/http.js';
 
 // Map collateral token symbols (lowercase) to CoinGecko coin IDs
 // Verify these IDs at https://www.coingecko.com if prices aren't loading
@@ -252,7 +253,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ vaults, epochDurationDays, epochDurationHours });
   } catch (error) {
-    console.error('Error fetching LP vaults:', error);
-    res.status(500).json({ error: 'Failed to fetch LP vaults', details: error.message });
+    return sendServerError(res, 'Failed to fetch LP vaults', error);
   }
 }
