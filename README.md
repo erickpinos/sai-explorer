@@ -2,6 +2,8 @@
 
 Sai Explorer is a blockchain analytics dashboard for Sai.fun, a perpetual trading platform on Nibiru chain. It indexes on-chain trade, deposit, and withdrawal data into a Postgres database and serves it through a React frontend.
 
+> Maintenance note: this README was touched in a minimal commit to verify the repository commit workflow.
+
 ## Features
 
 - Real-time trade, deposit, and withdraw tracking
