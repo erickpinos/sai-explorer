@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     const depositsResult = await sql`
       SELECT COUNT(*) as total_deposits
       FROM deposits
-      WHERE network = ${network} AND depositor = ${address}
+      WHERE network = ${network} AND (depositor = ${address} OR evm_depositor = ${address})
     `;
 
     const stats = {
