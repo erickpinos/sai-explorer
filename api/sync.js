@@ -49,7 +49,7 @@ async function syncTrades(network, { full = false } = {}) {
     // Insert all records in the fetch window — the buffer range may contain IDs
     // that are < lastId but were missing (e.g. late keeper registration). ON CONFLICT
     // handles already-existing records. Only extend the window for truly new IDs.
-    const trulyNewTrades = trades.filter(t => t.id > lastId);
+    const trulyNewTrades = trades.filter(t => parseInt(t.id) > lastId);
 
     if (trades.length > 0) {
       const failedHashes = await getFailedTxHashes(trades, network);
@@ -81,7 +81,7 @@ async function syncTrades(network, { full = false } = {}) {
           OR trades.tx_failed != EXCLUDED.tx_failed
           OR trades.collateral_price IS NULL
       `));
-      newTradesCount += results.filter(r => r.status === 'fulfilled').length;
+      newTradesCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
       const tradeFailures = results.filter(r => r.status === 'rejected');
       if (tradeFailures.length > 0) {
         console.error(`[sync] ${tradeFailures.length} trade inserts failed at offset ${offset}:`, tradeFailures.map(f => f.reason?.message));
@@ -144,7 +144,7 @@ async function fillTradeGaps(network) {
 
     const trades = res.data?.perp?.tradeHistory || [];
     const t = trades[0];
-    if (!t || t.id !== gapId) {
+    if (!t || parseInt(t.id) !== gapId) {
       console.log(`Gap ID ${gapId} not yet in GraphQL — skipping`);
       continue;
     }
@@ -374,8 +374,8 @@ async function syncWithdraws(network, { full: _full = false } = {}) {
 }
 
 async function syncVaultSharePrices(network) {
-  // Only snapshot once per day, at or after 8am UTC
-  if (new Date().getUTCHours() !== 0) return 0; // 8pm EDT = 00:00 UTC
+  // Only snapshot once per day, at midnight UTC (00:00 UTC = 8pm EDT)
+  if (new Date().getUTCHours() !== 0) return 0;
 
   const { rows: existing } = await sql`
     SELECT 1 FROM vault_share_prices

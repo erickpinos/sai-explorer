@@ -13,6 +13,11 @@ export async function fetchGraphQL(query, network) {
   const json = await res.json();
   if (json.errors) {
     console.error('GraphQL errors:', JSON.stringify(json.errors));
+    // If there is no data at all, throw so callers don't silently process nulls.
+    // When partial data is returned alongside errors, we log and continue.
+    if (!json.data) {
+      throw new Error(`GraphQL returned errors with no data: ${JSON.stringify(json.errors)}`);
+    }
   }
   return json;
 }

@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       SELECT
         COUNT(*) as total_trades,
         SUM(ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))) as total_volume,
-        SUM(realized_pnl_collateral / 1000000 * COALESCE(collateral_price, 1)) as realized_pnl
+        SUM(COALESCE(realized_pnl_collateral, 0) / 1000000 * COALESCE(collateral_price, 1)) as realized_pnl
       FROM trades
       WHERE network = ${network}
         AND (trader = ${address} OR evm_trader = ${address})
