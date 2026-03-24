@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       sql`
         SELECT
           COUNT(*) as total_deposits,
-          SUM(CASE WHEN amount IS NOT NULL THEN amount ELSE 0 END) as total_deposited
+          SUM(CASE WHEN amount IS NOT NULL THEN amount / 1000000.0 ELSE 0 END) as total_deposited
         FROM deposits
         WHERE network = ${network}
       `,
