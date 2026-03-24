@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     const result = await sql`
       SELECT
-        id, network, depositor, shares, unlock_epoch, auto_redeem,
+        id, network, depositor, evm_depositor, shares, unlock_epoch, auto_redeem,
         vault_address, collateral_token_symbol
       FROM withdraws
       WHERE network = ${network}
@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     // Transform to match frontend's expected format
     const withdraws = result.rows.map(row => ({
       depositor: row.depositor,
+      evmDepositor: row.evm_depositor,
       shares: row.shares,
       unlockEpoch: row.unlock_epoch,
       autoRedeem: row.auto_redeem,

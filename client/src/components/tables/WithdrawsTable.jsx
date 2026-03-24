@@ -1,3 +1,4 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useWithdraws } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatAddress } from '../../utils/formatters';
@@ -8,15 +9,41 @@ import DataTable from './DataTable';
 
 const DEFAULT_COLUMNS = [
   { key: 'depositor',   label: 'Depositor',    sortable: false },
+  { key: 'evmDepositor', label: 'EVM Address', sortable: false },
   { key: 'shares',      label: 'Shares',       sortable: false },
   { key: 'unlockEpoch', label: 'Unlock Epoch', sortable: false },
   { key: 'autoRedeem',  label: 'Auto Redeem',  sortable: false },
   { key: 'vault',       label: 'Vault',        sortable: false },
 ];
 
-function renderCell(key, withdraw) {
+function RenderCell({ columnKey: key, withdraw, navigate, location }) {
   switch (key) {
-    case 'depositor':   return <td title={withdraw.depositor}>{formatAddress(withdraw.depositor)}</td>;
+    case 'depositor':
+      return (
+        <td>
+          <span
+            className="address-link"
+            onClick={() => navigate(`/user/${withdraw.evmDepositor || withdraw.depositor}`, { state: { background: location } })}
+            style={{ cursor: 'pointer' }}
+            title={withdraw.depositor}
+          >
+            {formatAddress(withdraw.depositor)}
+          </span>
+        </td>
+      );
+    case 'evmDepositor':
+      return (
+        <td>
+          <span
+            className="address-link"
+            onClick={() => navigate(`/user/${withdraw.evmDepositor || withdraw.depositor}`, { state: { background: location } })}
+            style={{ cursor: 'pointer' }}
+            title={withdraw.evmDepositor}
+          >
+            {formatAddress(withdraw.evmDepositor)}
+          </span>
+        </td>
+      );
     case 'shares':      return <td>{formatNumber(withdraw.shares)}</td>;
     case 'unlockEpoch': return <td>{withdraw.unlockEpoch || '-'}</td>;
     case 'autoRedeem':  return <td>{withdraw.autoRedeem ? 'Yes' : 'No'}</td>;
@@ -47,12 +74,18 @@ function renderMobileCard(withdraw, i) {
 }
 
 export default function WithdrawsTable() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { network } = useNetwork();
   const { data: withdraws, loading, error } = useWithdraws(network);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
   if (!withdraws?.length) return <EmptyState message="No withdraws found" />;
+
+  const renderCell = (key, withdraw) => (
+    <RenderCell columnKey={key} withdraw={withdraw} navigate={navigate} location={location} />
+  );
 
   return (
     <DataTable

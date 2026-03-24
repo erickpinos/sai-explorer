@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     const result = await sql`
       SELECT
-        id, network, depositor, amount, shares,
+        id, network, depositor, evm_depositor, amount, shares,
         block_height, block_ts, tx_hash, evm_tx_hash,
         vault_address, collateral_token_symbol, vault_tvl
       FROM deposits
@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     const deposits = result.rows.map(row => ({
       id: row.id,
       depositor: row.depositor,
+      evmDepositor: row.evm_depositor,
       amount: row.amount,
       shares: row.shares,
       txHash: row.tx_hash,
