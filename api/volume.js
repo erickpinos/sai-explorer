@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       SELECT
         trader,
         evm_trader,
-        COUNT(*) as trade_count,
+        COUNT(*) FILTER (WHERE trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')) as trade_count,
         SUM(CASE WHEN trade_change_type NOT IN ('tp_updated', 'sl_updated', 'limit_order_created', 'limit_order_cancelled', 'stop_order_created', 'stop_order_cancelled')
             THEN ABS(collateral_amount * leverage / 1000000 * COALESCE(collateral_price, 1))
             ELSE 0 END) as total_volume,

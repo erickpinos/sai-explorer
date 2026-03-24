@@ -1,4 +1,6 @@
 const cache = new Map();
+// In-flight promises: prevents thundering-herd duplicate fetches for the same key.
+const inflight = new Map();
 
 const DEFAULT_TTL = 60 * 1000; // 60 seconds
 
@@ -19,7 +21,22 @@ export function setCached(key, value, ttl = DEFAULT_TTL) {
 export async function cachedFetch(key, fetchFn, ttl = DEFAULT_TTL) {
   const cached = getCached(key);
   if (cached !== null) return cached;
-  const value = await fetchFn();
-  setCached(key, value, ttl);
-  return value;
+
+  // If a fetch for this key is already in-flight, wait for it instead of issuing a duplicate.
+  if (inflight.has(key)) {
+    return inflight.get(key);
+  }
+
+  const promise = (async () => {
+    try {
+      const value = await fetchFn();
+      setCached(key, value, ttl);
+      return value;
+    } finally {
+      inflight.delete(key);
+    }
+  })();
+
+  inflight.set(key, promise);
+  return promise;
 }
