@@ -234,9 +234,13 @@ export default async function handler(req, res) {
           const partial = candidates.length === 0;
           const startEntry = partial ? sharePriceHistory[0] : candidates[candidates.length - 1];
           const actualDays = (nowTs - new Date(startEntry.ts).getTime()) / (24 * 60 * 60 * 1000);
+          if (!startEntry.sharePrice || startEntry.sharePrice === 0) {
+            apyWindows[`${days}d`] = { apy: null, startPrice: null, startTs: startEntry.ts, startSource: startEntry.source, endPrice, days, partial, actualDays };
+            continue;
+          }
           const ratio = endPrice / startEntry.sharePrice;
           apyWindows[`${days}d`] = {
-            apy: (Math.pow(ratio, 365 / (partial ? actualDays : days)) - 1) * 100,
+            apy: actualDays > 0 ? (Math.pow(ratio, 365 / (partial ? actualDays : days)) - 1) * 100 : null,
             startPrice: startEntry.sharePrice,
             startTs: startEntry.ts,
             startSource: startEntry.source,

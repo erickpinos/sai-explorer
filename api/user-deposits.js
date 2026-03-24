@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const result = await sql`
       SELECT *
       FROM deposits
-      WHERE network = ${network} AND depositor = ${address}
+      WHERE network = ${network} AND (depositor = ${address} OR evm_depositor = ${address})
       ORDER BY block_ts DESC
       LIMIT ${pagination.limit}
       OFFSET ${pagination.offset}

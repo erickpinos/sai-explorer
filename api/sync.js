@@ -82,6 +82,10 @@ async function syncTrades(network, { full = false } = {}) {
           OR trades.collateral_price IS NULL
       `));
       newTradesCount += results.filter(r => r.status === 'fulfilled').length;
+      const tradeFailures = results.filter(r => r.status === 'rejected');
+      if (tradeFailures.length > 0) {
+        console.error(`[sync] ${tradeFailures.length} trade inserts failed at offset ${offset}:`, tradeFailures.map(f => f.reason?.message));
+      }
     }
 
     if (trulyNewTrades.length > 0) {
@@ -299,15 +303,17 @@ async function syncDeposits(network, { full = false } = {}) {
     if (batch.length > 0) {
       const results = await Promise.allSettled(batch.map(d => sql`
         INSERT INTO deposits (
-          network, depositor, amount, shares,
+          network, depositor, evm_depositor, amount, shares,
           block_height, block_ts, tx_hash, evm_tx_hash,
           vault_address, collateral_token_symbol, vault_tvl
         ) VALUES (
-          ${network}, ${d.depositor}, ${d.amount}, ${d.shares},
+          ${network}, ${d.depositor}, ${nibiToHex(d.depositor)}, ${d.amount}, ${d.shares},
           ${d.block.block}, ${d.block.block_ts}, ${d.txHash}, ${d.evmTxHash},
           ${d.vault.address}, ${d.vault.collateralToken.symbol}, ${d.vault.tvl}
         )
-        ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
+        ON CONFLICT (network, depositor, block_ts, amount) DO UPDATE SET
+          evm_depositor = COALESCE(deposits.evm_depositor, EXCLUDED.evm_depositor)
+        WHERE deposits.evm_depositor IS NULL
       `));
       newDepositsCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
     }
@@ -347,13 +353,15 @@ async function syncWithdraws(network, { full: _full = false } = {}) {
 
     const results = await Promise.allSettled(withdraws.map(w => sql`
       INSERT INTO withdraws (
-        network, depositor, shares, unlock_epoch, auto_redeem,
+        network, depositor, evm_depositor, shares, unlock_epoch, auto_redeem,
         vault_address, collateral_token_symbol
       ) VALUES (
-        ${network}, ${w.depositor}, ${w.shares}, ${w.unlockEpoch}, ${w.autoRedeem},
+        ${network}, ${w.depositor}, ${nibiToHex(w.depositor)}, ${w.shares}, ${w.unlockEpoch}, ${w.autoRedeem},
         ${w.vault.address}, ${w.vault.collateralToken.symbol}
       )
-      ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO NOTHING
+      ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO UPDATE SET
+        evm_depositor = COALESCE(withdraws.evm_depositor, EXCLUDED.evm_depositor)
+      WHERE withdraws.evm_depositor IS NULL
     `));
     newWithdrawsCount += results.filter(r => r.status === 'fulfilled' && r.value?.rowCount > 0).length;
 

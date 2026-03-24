@@ -12,6 +12,7 @@ const DEFAULT_COLUMNS = [
   { key: 'time',        label: 'Time',                     sortable: false },
   { key: 'action',      label: 'Action',                   sortable: false },
   { key: 'depositor',   label: 'Depositor',                sortable: false },
+  { key: 'evmDepositor', label: 'EVM Address',             sortable: false },
   { key: 'amount',      label: 'Amount',                   sortable: false },
   { key: 'token',       label: 'Token',                    sortable: false },
   { key: 'shares',      label: 'Shares',                   sortable: false },
@@ -46,6 +47,19 @@ export default function DepositsTable() {
               title={deposit.depositor}
             >
               {formatAddress(deposit.depositor)}
+            </span>
+          </td>
+        );
+      case 'evmDepositor':
+        return (
+          <td>
+            <span
+              className="address-link"
+              onClick={() => navigate(`/user/${deposit.evmDepositor || deposit.depositor}`, { state: { background: location } })}
+              style={{ cursor: 'pointer' }}
+              title={deposit.evmDepositor}
+            >
+              {formatAddress(deposit.evmDepositor)}
             </span>
           </td>
         );

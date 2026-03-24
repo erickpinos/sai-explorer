@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const result = await sql`
       SELECT *
       FROM withdraws
-      WHERE network = ${network} AND depositor = ${address}
+      WHERE network = ${network} AND (depositor = ${address} OR evm_depositor = ${address})
       ORDER BY unlock_epoch DESC
       LIMIT ${pagination.limit}
       OFFSET ${pagination.offset}
