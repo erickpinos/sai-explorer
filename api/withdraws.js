@@ -37,6 +37,7 @@ export default async function handler(req, res) {
 
     // Transform to match frontend's expected format
     const withdraws = result.rows.map(row => ({
+      id: row.id,
       depositor: row.depositor,
       evmDepositor: row.evm_depositor,
       shares: row.shares,
