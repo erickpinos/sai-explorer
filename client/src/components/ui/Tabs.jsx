@@ -8,7 +8,7 @@ const tabs = [
   { id: TABS.MARKETS, label: 'Markets', path: '/markets' },
   { id: TABS.COLLATERAL, label: 'Collateral Indices', path: '/collateral' },
   { id: TABS.VOLUME, label: 'User Stats', path: '/volume' },
-  { id: TABS.VAULTS, label: 'LP Vaults', path: '/vaults' },
+  ...(import.meta.env.DEV ? [{ id: TABS.VAULTS, label: 'LP Vaults [DEV]', path: '/vaults' }] : [{ id: TABS.VAULTS, label: 'LP Vaults', path: '/vaults' }]),
   { id: TABS.PRICES, label: 'Price History', path: '/prices' },
   ...(import.meta.env.DEV ? [{ id: TABS.DB, label: 'DB Tools', path: '/db-tools' }] : []),
 ];

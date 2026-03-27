@@ -23,6 +23,8 @@ import collateralHandler from './api/collateral.js';
 import chartDataHandler from './api/chart-data.js';
 import lpVaultsHandler from './api/lp-vaults.js';
 import coingeckoPricesHandler from './api/coingecko-prices.js';
+import marketDepthHandler from './api/market-depth.js';
+import marketVolatilityHandler from './api/market-volatility.js';
 import backfillHandler from './api/backfill.js';
 
 dotenv.config({ path: '.env.local' });
@@ -64,6 +66,8 @@ app.get('/api/collateral', wrapHandler(collateralHandler));
 app.get('/api/chart-data', wrapHandler(chartDataHandler));
 app.get('/api/lp-vaults', wrapHandler(lpVaultsHandler));
 app.get('/api/coingecko-prices', wrapHandler(coingeckoPricesHandler));
+app.get('/api/market-depth', wrapHandler(marketDepthHandler));
+app.get('/api/market-volatility', wrapHandler(marketVolatilityHandler));
 app.post('/api/sync', wrapHandler(syncHandler));
 app.post('/api/clear', wrapHandler(clearHandler));
 app.get('/api/backfill', backfillHandler); // dev-only: full historical backfill via SSE

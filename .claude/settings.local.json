@@ -11,7 +11,12 @@
       "Bash(node --trace-deprecation -e \":*)",
       "Bash(node -e \":*)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(grep -rn url.parseb node_modules/ --include=*.js -l)"
+      "Bash(grep -rn url.parseb node_modules/ --include=*.js -l)",
+      "Bash(docker compose:*)",
+      "Bash(PGPASSWORD=localdev123 psql -h 127.0.0.1 -p 5433 -U saiexplorer -d sai_explorer -c \":*)",
+      "Bash(PGPASSWORD=localdev123 psql -h 127.0.0.1 -p 5433 -U saiexplorer -d sai_explorer -c \"SELECT MAX\\(block_ts\\) as latest_trade, MIN\\(block_ts\\) as earliest_trade FROM trades;\")",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

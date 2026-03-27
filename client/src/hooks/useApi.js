@@ -71,6 +71,14 @@ export function useMarkets(network) {
   return useApi('markets', network);
 }
 
+export function useMarketDepth(network, options) {
+  return useApi('market-depth', network, options);
+}
+
+export function useMarketVolatility(network, options) {
+  return useApi('market-volatility', network, options);
+}
+
 export function useCollateral(network) {
   return useApi('collateral', network);
 }

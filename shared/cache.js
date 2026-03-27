@@ -18,6 +18,10 @@ export function setCached(key, value, ttl = DEFAULT_TTL) {
   cache.set(key, { value, timestamp: Date.now(), ttl });
 }
 
+export function invalidateCache(key) {
+  cache.delete(key);
+}
+
 export async function cachedFetch(key, fetchFn, ttl = DEFAULT_TTL) {
   const cached = getCached(key);
   if (cached !== null) return cached;
