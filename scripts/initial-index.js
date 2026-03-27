@@ -34,7 +34,7 @@ async function indexAllTrades(network) {
           trade {
             id trader tradeType isLong isOpen leverage openPrice closePrice
             collateralAmount openCollateralAmount tp sl
-            perpBorrowing { marketId baseToken { symbol } }
+            perpBorrowing { marketId baseToken { symbol } collateralToken { symbol } }
           }
         }
       }
@@ -54,9 +54,9 @@ async function indexAllTrades(network) {
             id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
             tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
             trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-            collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol
+            collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
           )
           ON CONFLICT (id) DO NOTHING
         `, [
@@ -65,7 +65,8 @@ async function indexAllTrades(network) {
           t.trade.trader, nibiToHex(t.trade.trader), t.trade.tradeType, t.trade.isLong, t.trade.isOpen,
           t.trade.leverage, t.trade.openPrice, t.trade.closePrice,
           t.trade.collateralAmount, t.trade.openCollateralAmount, t.trade.tp, t.trade.sl,
-          t.trade.perpBorrowing?.marketId, t.trade.perpBorrowing?.baseToken?.symbol
+          t.trade.perpBorrowing?.marketId, t.trade.perpBorrowing?.baseToken?.symbol,
+          t.trade.perpBorrowing?.collateralToken?.symbol
         ]);
         totalIndexed++;
       } catch (err) {
@@ -119,15 +120,15 @@ async function indexAllDeposits(network) {
       try {
         await query(`
           INSERT INTO deposits (
-            network, depositor, amount, shares,
+            network, depositor, evm_depositor, amount, shares,
             block_height, block_ts, tx_hash, evm_tx_hash,
             vault_address, collateral_token_symbol, vault_tvl
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
           )
           ON CONFLICT (network, depositor, block_ts, amount) DO NOTHING
         `, [
-          network, d.depositor, d.amount, d.shares,
+          network, d.depositor, nibiToHex(d.depositor), d.amount, d.shares,
           d.block.block, d.block.block_ts, d.txHash, d.evmTxHash,
           d.vault.address, d.vault.collateralToken.symbol, d.vault.tvl
         ]);
@@ -180,14 +181,14 @@ async function indexAllWithdraws(network) {
       try {
         await query(`
           INSERT INTO withdraws (
-            network, depositor, shares, unlock_epoch, auto_redeem,
+            network, depositor, evm_depositor, shares, unlock_epoch, auto_redeem,
             vault_address, collateral_token_symbol
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7
+            $1, $2, $3, $4, $5, $6, $7, $8
           )
           ON CONFLICT (network, depositor, vault_address, shares, unlock_epoch) DO NOTHING
         `, [
-          network, w.depositor, w.shares, w.unlockEpoch, w.autoRedeem,
+          network, w.depositor, nibiToHex(w.depositor), w.shares, w.unlockEpoch, w.autoRedeem,
           w.vault.address, w.vault.collateralToken.symbol
         ]);
         totalIndexed++;
