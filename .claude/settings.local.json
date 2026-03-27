@@ -11,7 +11,12 @@
       "Bash(node --trace-deprecation -e \":*)",
       "Bash(node -e \":*)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(grep -rn url.parseb node_modules/ --include=*.js -l)"
+      "Bash(grep -rn url.parseb node_modules/ --include=*.js -l)",
+      "Bash(git -C /Users/Erick/Code/sai-explorer stash)",
+      "Bash(git -C /Users/Erick/Code/sai-explorer status --short)",
+      "Bash(git -C /Users/Erick/Code/sai-explorer cherry-pick f25d165)",
+      "Bash(git -C /Users/Erick/Code/sai-explorer diff --cached -- .gitignore)",
+      "Bash(git -C:*)"
     ]
   }
 }

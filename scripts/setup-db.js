@@ -200,6 +200,31 @@ async function setupDatabase() {
     `);
     console.log('✓ Created coingecko_prices table');
 
+    // Create market_depth table (±2% CoinGecko depth, refreshed once per day)
+    await query(`
+      CREATE TABLE IF NOT EXISTS market_depth (
+        symbol TEXT NOT NULL PRIMARY KEY,
+        coin_id TEXT NOT NULL,
+        depth_plus_2_percent_usd NUMERIC,
+        depth_minus_2_percent_usd NUMERIC,
+        fetched_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('✓ Created market_depth table');
+
+    // Create market_volatility table (organic volatility from CoinGecko, refreshed once per day)
+    await query(`
+      CREATE TABLE IF NOT EXISTS market_volatility (
+        symbol TEXT NOT NULL PRIMARY KEY,
+        coin_id TEXT NOT NULL,
+        volatility_pct NUMERIC,
+        data_points INTEGER,
+        avg_interval_sec INTEGER,
+        fetched_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('✓ Created market_volatility table');
+
     console.log('\n✅ Database schema created successfully!');
     process.exit(0);
   } catch (error) {
