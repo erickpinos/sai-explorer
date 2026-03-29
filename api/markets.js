@@ -3,7 +3,6 @@ import { cachedFetch } from '../shared/cache.js';
 import { validateNetwork } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
 import { sendServerError } from '../shared/http.js';
-import { MARKET_METADATA } from '../shared/constants.js';
 import { fetchLcdTokens, fetchLcdPrice } from '../shared/lcd.js';
 
 export default async function handler(req, res) {
@@ -69,7 +68,6 @@ export default async function handler(req, res) {
       }
     }
 
-    const networkMeta = MARKET_METADATA[network] || {};
     const liveMarketIds = new Set(rawMarkets.map(m => m.marketId));
 
     const markets = rawMarkets.map(m => {
@@ -77,7 +75,7 @@ export default async function handler(req, res) {
       const isUsd = collSymbol === 'usdc' || collSymbol === 'usdt';
       const collPrice = isUsd ? 1 : (collateralPrices[collSymbol] || 1);
 
-      // Resolve symbol: Keeper > LCD > Manual constant
+      // Resolve symbol: Keeper > LCD
       let symbolSource = null;
       let enrichedBaseToken = m.baseToken;
 
@@ -86,17 +84,13 @@ export default async function handler(req, res) {
       } else if (lcdTokens[m.marketId]) {
         enrichedBaseToken = { ...(m.baseToken || {}), symbol: lcdTokens[m.marketId].base };
         symbolSource = 'LCD';
-      } else if (networkMeta[m.marketId]) {
-        const meta = networkMeta[m.marketId];
-        enrichedBaseToken = { ...(m.baseToken || {}), symbol: meta.ticker, name: meta.name };
-        symbolSource = 'Manual';
       }
 
       return {
         ...m,
         baseToken: enrichedBaseToken,
         symbolSource,
-        visible: (lcdTokens[m.marketId] || networkMeta[m.marketId]) ? true : m.visible,
+        visible: lcdTokens[m.marketId] ? true : m.visible,
         oiLongUsd: m.oiLong != null ? m.oiLong / 1e6 * collPrice : null,
         oiShortUsd: m.oiShort != null ? m.oiShort / 1e6 * collPrice : null,
         oiMaxUsd: m.oiMax != null ? m.oiMax / 1e6 * collPrice : null,
@@ -122,28 +116,6 @@ export default async function handler(req, res) {
         visible: true,
         inactive: true,
         price,
-        priceChangePct24Hrs: null,
-        oiLong: null, oiShort: null, oiMax: null,
-        oiLongUsd: null, oiShortUsd: null, oiMaxUsd: null,
-        feesPerHourLong: null, feesPerHourShort: null,
-        minLeverage: null, maxLeverage: null,
-        openFeePct: null, closeFeePct: null,
-        collateralPrice: null,
-      });
-    }
-
-    // Append Manual-only markets not covered by keeper or LCD
-    for (const [idStr, meta] of Object.entries(networkMeta)) {
-      const id = parseInt(idStr);
-      if (liveMarketIds.has(id) || lcdTokens[id]) continue;
-      markets.push({
-        marketId: id,
-        baseToken: { symbol: meta.ticker, name: meta.name },
-        symbolSource: 'Manual',
-        collateralToken: null,
-        visible: true,
-        inactive: true,
-        price: null,
         priceChangePct24Hrs: null,
         oiLong: null, oiShort: null, oiMax: null,
         oiLongUsd: null, oiShortUsd: null, oiMaxUsd: null,

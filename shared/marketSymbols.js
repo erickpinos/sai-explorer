@@ -1,10 +1,7 @@
 import { fetchGraphQL } from './graphql.js';
-import { MARKET_METADATA } from './constants.js';
 
 /**
  * Fetch the current market_id → { symbol, price } map from live GraphQL borrowings.
- * Combined with MARKET_METADATA (from LCD), this is the authoritative source for
- * what symbol a market_id should have.
  */
 export async function fetchLiveMarketMap(network) {
   const res = await fetchGraphQL(`{
@@ -31,43 +28,18 @@ export async function fetchLiveMarketMap(network) {
 
 /**
  * Resolve the correct base_token_symbol for a trade.
- *
- * Priority:
- * 1. MARKET_METADATA (from LCD) — authoritative for markets the keeper doesn't name correctly
- * 2. Live market map (from GraphQL borrowings) — authoritative for active markets
- * 3. Keeper-provided symbol — used only if no authoritative source exists
- *
- * Returns { symbol, flag } where flag is a string if something looks wrong, null otherwise.
+ * Uses keeper symbol first, falls back to live market map. Returns null if neither has it.
  */
-export function resolveSymbol(marketId, keeperSymbol, network, liveMarketMap = {}) {
-  const meta = (MARKET_METADATA[network] || {})[marketId];
+export function resolveSymbol(marketId, keeperSymbol, _network, liveMarketMap = {}) {
+  // Use keeper symbol if available
+  if (keeperSymbol) return { symbol: keeperSymbol, flag: null };
+
+  // Fall back to live market map (keeper borrowings)
   const live = liveMarketMap[marketId];
+  if (live?.symbol) return { symbol: live.symbol, flag: null };
 
-  // LCD metadata is the highest authority
-  if (meta) {
-    const resolved = meta.ticker;
-    if (keeperSymbol && keeperSymbol !== resolved) {
-      return {
-        symbol: resolved,
-        flag: `keeper returned "${keeperSymbol}" for market ${marketId}, overridden to "${resolved}" (LCD)`,
-      };
-    }
-    return { symbol: resolved, flag: null };
-  }
-
-  // Live borrowings are the next authority
-  if (live?.symbol) {
-    if (keeperSymbol && keeperSymbol !== live.symbol) {
-      return {
-        symbol: live.symbol,
-        flag: `keeper returned "${keeperSymbol}" for market ${marketId}, overridden to "${live.symbol}" (live)`,
-      };
-    }
-    return { symbol: live.symbol, flag: null };
-  }
-
-  // No authoritative source — use keeper symbol as-is
-  return { symbol: keeperSymbol || null, flag: null };
+  // No symbol found
+  return { symbol: null, flag: null };
 }
 
 // Price deviation threshold — if trade price is more than this factor away

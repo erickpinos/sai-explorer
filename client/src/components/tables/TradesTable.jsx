@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTrades } from '../../hooks/useApi';
+import { useTrades, useMarkets } from '../../hooks/useApi';
 import { useNetwork } from '../../hooks/useNetwork';
 import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
 import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../../utils/tradeHelpers';
@@ -34,6 +35,7 @@ const SORT_GETTERS = {
   positionSize:   (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount) * (parseFloat(t.trade?.leverage) || 1),
   pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
   collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
+  historyId:      (t) => parseInt(t.id) || 0,
   devNote:        (t) => t.devNote || '',
 };
 
@@ -42,6 +44,7 @@ const DEFAULT_COLUMNS = [
   { key: 'type',           label: 'Type',            sortable: true },
   { key: 'marketId',       label: 'Market ID',       sortable: true },
   { key: 'market',         label: 'Market',          sortable: true },
+  ...(import.meta.env.DEV ? [{ key: 'marketLive', label: 'Market (Live)', sortable: true }] : []),
   { key: 'collateralType', label: 'Collateral Type', sortable: true },
   { key: 'trader',         label: 'Trader',          sortable: true },
   { key: 'evmAddress',     label: 'EVM Address',     sortable: true },
@@ -54,7 +57,10 @@ const DEFAULT_COLUMNS = [
   { key: 'pnl',            label: 'PNL',             sortable: true },
   { key: 'txHash',         label: 'TX Hash',         sortable: false },
   { key: 'evmTxHash',      label: 'EVM TX Hash',     sortable: false },
-  ...(import.meta.env.DEV ? [{ key: 'devNote', label: 'Dev Notes', sortable: true }] : []),
+  ...(import.meta.env.DEV ? [
+    { key: 'historyId',  label: 'History ID',  sortable: true },
+    { key: 'devNote',    label: 'Dev Notes',   sortable: true },
+  ] : []),
 ];
 
 export default function TradesTable() {
@@ -62,6 +68,23 @@ export default function TradesTable() {
   const location = useLocation();
   const { network, config } = useNetwork();
   const { data: trades, loading, error } = useTrades(network);
+  const { data: markets } = useMarkets(network);
+
+  const marketLiveMap = useMemo(() => {
+    const map = {};
+    const list = markets?.markets || markets;
+    if (Array.isArray(list)) {
+      for (const m of list) {
+        if (m.marketId != null) map[m.marketId] = m.baseToken?.symbol || null;
+      }
+    }
+    return map;
+  }, [markets]);
+
+  const sortGetters = useMemo(() => ({
+    ...SORT_GETTERS,
+    marketLive: (t) => marketLiveMap[t.trade?.perpBorrowing?.marketId] || '',
+  }), [marketLiveMap]);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -90,6 +113,17 @@ export default function TradesTable() {
         return <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>;
       case 'market':
         return <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>;
+      case 'marketLive': {
+        const mid = trade.trade?.perpBorrowing?.marketId;
+        const liveSymbol = mid != null ? marketLiveMap[mid] : null;
+        const dbSymbol = trade.trade?.perpBorrowing?.baseToken?.symbol;
+        const mismatch = liveSymbol && dbSymbol && liveSymbol !== dbSymbol;
+        return (
+          <td style={mismatch ? { color: '#f59e0b', fontWeight: 600 } : undefined}>
+            {liveSymbol || '-'}{mismatch ? ` (was: ${dbSymbol})` : ''}
+          </td>
+        );
+      }
       case 'collateralType':
         return (
           <td>
@@ -173,6 +207,8 @@ export default function TradesTable() {
             ) : '-'}
           </td>
         );
+      case 'historyId':
+        return <td>{trade.id}</td>;
       case 'devNote':
         return (
           <td style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600 }}>
@@ -262,7 +298,7 @@ export default function TradesTable() {
       columns={DEFAULT_COLUMNS}
       renderCell={renderCell}
       renderMobileCard={renderMobileCard}
-      sortGetters={SORT_GETTERS}
+      sortGetters={sortGetters}
       defaultSortCol="time"
       defaultSortDir="desc"
       sortOptions={SORT_OPTIONS}

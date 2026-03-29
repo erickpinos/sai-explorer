@@ -1,4 +1,4 @@
-export function mapTradeRow(row, options = {}, networkMeta = {}) {
+export function mapTradeRow(row, options = {}) {
   const { includeDevNotes = process.env.NODE_ENV === 'development' } = options;
 
   return {
@@ -32,7 +32,7 @@ export function mapTradeRow(row, options = {}, networkMeta = {}) {
       sl: row.sl,
       perpBorrowing: {
         marketId: row.market_id,
-        baseToken: { symbol: networkMeta[row.market_id]?.ticker || row.base_token_symbol || null },
+        baseToken: { symbol: row.base_token_symbol || null },
         collateralToken: { symbol: row.collateral_token_symbol },
       },
     },

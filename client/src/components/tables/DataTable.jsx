@@ -26,17 +26,29 @@ export default function DataTable({
   footer,
   hideLock = false,
 }) {
+  const PAGE_SIZE_OPTIONS = [50, 100, 500];
   const tableRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchCol, setSearchCol] = useState('__all__');
+  const [selectedPerPage, setSelectedPerPage] = useState(perPage ?? PAGE_SIZE_OPTIONS[0]);
   const { toggle, viewClass } = useViewToggle(tableKey);
   const { locked, toggleLock } = useLockView(tableKey);
   const { columns, moveColumn, resetColumns } = useColumnOrder(tableKey, defaultColumns);
   const { widths, setWidth, setAllWidths, resetWidths } = useColumnWidths(tableKey);
 
-  // Filter data by search term across all columns using sortGetters
+  // Filter data by search term, optionally scoped to a single column
   const filteredData = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q || !sortGetters) return data;
+    if (searchCol !== '__all__' && sortGetters[searchCol]) {
+      const getter = sortGetters[searchCol];
+      return data.filter(row => {
+        try {
+          const val = getter(row);
+          return val != null && String(val).toLowerCase().includes(q);
+        } catch { return false; }
+      });
+    }
     return data.filter(row =>
       Object.values(sortGetters).some(getter => {
         try {
@@ -45,19 +57,18 @@ export default function DataTable({
         } catch { return false; }
       })
     );
-  }, [data, searchTerm, sortGetters]);
+  }, [data, searchTerm, searchCol, sortGetters]);
 
   const { sorted, sortCol, sortDir, handleSort: rawHandleSort } =
     useSortedData(filteredData, defaultSortCol ?? null, defaultSortDir, sortGetters ?? null);
 
-  const effectivePerPage = perPage ?? Math.max(1, sorted.length);
   const { page, setPage, paginatedData, totalPages, startIndex } =
-    usePagination(sorted, effectivePerPage);
+    usePagination(sorted, selectedPerPage);
 
   const handleSort = useCallback((col) => {
     rawHandleSort(col);
-    if (perPage != null) setPage(1);
-  }, [rawHandleSort, setPage, perPage]);
+    setPage(1);
+  }, [rawHandleSort, setPage]);
 
   // Snapshot all current column widths from the DOM before first resize,
   // so the table can switch to table-layout:fixed without a layout jump.
@@ -75,7 +86,7 @@ export default function DataTable({
   const anyWidthSet = Object.keys(widths).length > 0;
 
   const resolvedInfoText = typeof infoText === 'function'
-    ? infoText(sorted.length, startIndex + 1, Math.min(startIndex + effectivePerPage, sorted.length))
+    ? infoText(sorted.length, startIndex + 1, Math.min(startIndex + selectedPerPage, sorted.length))
     : infoText;
 
   const getKey = getRowKey ?? ((_, i) => i);
@@ -84,11 +95,21 @@ export default function DataTable({
     <div className={viewClass}>
       {sortGetters && (
         <div className="table-search">
+          <select
+            className="table-search-select"
+            value={searchCol}
+            onChange={(e) => { setSearchCol(e.target.value); setPage(1); }}
+          >
+            <option value="__all__">All columns</option>
+            {columns.filter(c => sortGetters[c.key]).map(c => (
+              <option key={c.key} value={c.key}>{c.label}</option>
+            ))}
+          </select>
           <input
             type="text"
-            placeholder="Search across all columns..."
+            placeholder={searchCol === '__all__' ? 'Search across all columns...' : `Search by ${columns.find(c => c.key === searchCol)?.label ?? searchCol}...`}
             value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); if (perPage != null) setPage(1); }}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="table-search-input"
           />
           {searchTerm && (
@@ -99,6 +120,16 @@ export default function DataTable({
       <div className="table-info">
         {resolvedInfoText}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <select
+            className="table-search-select"
+            value={selectedPerPage}
+            onChange={(e) => { setSelectedPerPage(Number(e.target.value)); setPage(1); }}
+            style={{ minWidth: 'auto' }}
+          >
+            {PAGE_SIZE_OPTIONS.map(n => (
+              <option key={n} value={n}>{n} rows</option>
+            ))}
+          </select>
           {!hideLock && !locked && (
             <button
               className="reset-cols-btn"
