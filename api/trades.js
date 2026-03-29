@@ -3,6 +3,7 @@ import { mapTradeRow } from '../shared/mappers.js';
 import { validateNetwork, parsePagination } from '../shared/validateParams.js';
 import { checkRateLimit } from '../shared/rateLimit.js';
 import { sendServerError } from '../shared/http.js';
+import { MARKET_METADATA } from '../shared/constants.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -38,7 +39,8 @@ export default async function handler(req, res) {
       OFFSET ${pagination.offset}
     `;
 
-    res.status(200).json(result.rows.map(mapTradeRow));
+    const networkMeta = MARKET_METADATA[network] || {};
+    res.status(200).json(result.rows.map(row => mapTradeRow(row, {}, networkMeta)));
   } catch (error) {
     return sendServerError(res, 'Failed to fetch trades', error);
   }

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useRef } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import DraggableTh from '../ui/DraggableTh';
 import Pagination from '../ui/Pagination';
 import SortDropdown from '../ui/SortDropdown';
@@ -27,13 +27,28 @@ export default function DataTable({
   hideLock = false,
 }) {
   const tableRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toggle, viewClass } = useViewToggle(tableKey);
   const { locked, toggleLock } = useLockView(tableKey);
   const { columns, moveColumn, resetColumns } = useColumnOrder(tableKey, defaultColumns);
   const { widths, setWidth, setAllWidths, resetWidths } = useColumnWidths(tableKey);
 
+  // Filter data by search term across all columns using sortGetters
+  const filteredData = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q || !sortGetters) return data;
+    return data.filter(row =>
+      Object.values(sortGetters).some(getter => {
+        try {
+          const val = getter(row);
+          return val != null && String(val).toLowerCase().includes(q);
+        } catch { return false; }
+      })
+    );
+  }, [data, searchTerm, sortGetters]);
+
   const { sorted, sortCol, sortDir, handleSort: rawHandleSort } =
-    useSortedData(data, defaultSortCol ?? null, defaultSortDir, sortGetters ?? null);
+    useSortedData(filteredData, defaultSortCol ?? null, defaultSortDir, sortGetters ?? null);
 
   const effectivePerPage = perPage ?? Math.max(1, sorted.length);
   const { page, setPage, paginatedData, totalPages, startIndex } =
@@ -67,6 +82,20 @@ export default function DataTable({
 
   return (
     <div className={viewClass}>
+      {sortGetters && (
+        <div className="table-search">
+          <input
+            type="text"
+            placeholder="Search across all columns..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); if (perPage != null) setPage(1); }}
+            className="table-search-input"
+          />
+          {searchTerm && (
+            <button className="table-search-clear" onClick={() => setSearchTerm('')}>×</button>
+          )}
+        </div>
+      )}
       <div className="table-info">
         {resolvedInfoText}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

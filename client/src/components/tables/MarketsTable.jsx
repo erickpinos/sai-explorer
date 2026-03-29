@@ -8,6 +8,33 @@ import DataTable from './DataTable';
 
 const IS_DEV = import.meta.env.DEV;
 
+const SOURCE_COLORS = {
+  Keeper:    { bg: '#2563eb33', color: '#60a5fa' },
+  LCD:       { bg: '#7c3aed33', color: '#a78bfa' },
+  Manual:    { bg: '#dc262633', color: '#f87171' },
+  Calc:      { bg: '#ca8a0433', color: '#fbbf24' },
+  CoinGecko: { bg: '#16a34a33', color: '#4ade80' },
+  Error:     { bg: '#dc262633', color: '#f87171' },
+};
+
+function SourceBadge({ source, onClick }) {
+  const c = SOURCE_COLORS[source];
+  if (!c) return null;
+  return (
+    <span
+      onClick={onClick}
+      style={{
+        fontSize: '8px', marginLeft: 5, padding: '1px 4px',
+        borderRadius: 3, verticalAlign: 'middle',
+        background: c.bg, color: c.color, whiteSpace: 'nowrap',
+        cursor: onClick ? 'pointer' : undefined,
+      }}
+    >
+      {source}
+    </span>
+  );
+}
+
 const SORT_OPTIONS = [
   { key: 'totalOi',    label: 'Total OI' },
   { key: 'symbol',     label: 'Market' },
@@ -64,32 +91,45 @@ const DEFAULT_COLUMNS = [
   ] : []),
 ];
 
-function renderCell(key, m, onDepthInfo, onVolInfo) {
+function renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, onErrorInfo) {
   const priceChange = m.priceChangePct24Hrs || 0;
   const changeClass = priceChange >= 0 ? 'pnl-positive' : 'pnl-negative';
   const changeSign = priceChange >= 0 ? '+' : '';
   const symbol = m.baseToken?.symbol || (m.marketId != null ? String(m.marketId) : '-');
 
+  const B = (source) => sourceErrors[source]
+    ? <SourceBadge source="Error" onClick={() => onErrorInfo(source, sourceErrors[source])} />
+    : <SourceBadge source={source} />;
+
   switch (key) {
-    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong></td>;
-    case 'symbol':      return <td><strong>{symbol}</strong></td>;
-    case 'collateral':  return <td>{m.collateralToken?.symbol || '-'}</td>;
-    case 'price':       return <td>{formatPrice(m.price || 0)}</td>;
-    case 'priceChange': return <td className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}%</td>;
-    case 'oiLong':      return <td>${formatNumber(m.oiLongUsd || 0, 2)}</td>;
-    case 'oiShort':     return <td>${formatNumber(m.oiShortUsd || 0, 2)}</td>;
-    case 'oiMax':       return <td>${formatNumber(m.oiMaxUsd || 0, 2)}</td>;
-    case 'leverage':    return <td>{m.minLeverage || 1}x - {m.maxLeverage || 100}x</td>;
-    case 'openFee':     return <td>{formatNumber((m.openFeePct || 0) * 100, 3)}%</td>;
-    case 'closeFee':    return <td>{formatNumber((m.closeFeePct || 0) * 100, 3)}%</td>;
-    case 'fundingLong': return <td>{formatNumber((m.feesPerHourLong || 0) * 100, 4)}%/hr</td>;
-    case 'fundingShort':return <td>{formatNumber((m.feesPerHourShort || 0) * 100, 4)}%/hr</td>;
+    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong> {B(m.inactive ? (m.symbolSource || 'LCD') : 'Keeper')}</td>;
+    case 'symbol':
+      return (
+        <td>
+          <strong>{symbol}</strong>
+          {m.symbolSource && (sourceErrors[m.symbolSource]
+            ? <SourceBadge source="Error" onClick={() => onErrorInfo(m.symbolSource, sourceErrors[m.symbolSource])} />
+            : <SourceBadge source={m.symbolSource} />)}
+        </td>
+      );
+    case 'collateral':  return <td>{m.collateralToken?.symbol || '-'} {B('Keeper')}</td>;
+    case 'price':       return <td>{formatPrice(m.price || 0)} {B(m.inactive && m.price ? 'LCD' : 'Keeper')}</td>;
+    case 'priceChange': return <td className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}% {B('Keeper')}</td>;
+    case 'oiLong':      return <td>${formatNumber(m.oiLongUsd || 0, 2)} {B('Calc')}</td>;
+    case 'oiShort':     return <td>${formatNumber(m.oiShortUsd || 0, 2)} {B('Calc')}</td>;
+    case 'oiMax':       return <td>${formatNumber(m.oiMaxUsd || 0, 2)} {B('Calc')}</td>;
+    case 'leverage':    return <td>{m.minLeverage || 1}x - {m.maxLeverage || 100}x {B('Keeper')}</td>;
+    case 'openFee':     return <td>{formatNumber((m.openFeePct || 0) * 100, 3)}% {B('Keeper')}</td>;
+    case 'closeFee':    return <td>{formatNumber((m.closeFeePct || 0) * 100, 3)}% {B('Keeper')}</td>;
+    case 'fundingLong': return <td>{formatNumber((m.feesPerHourLong || 0) * 100, 4)}%/hr {B('Keeper')}</td>;
+    case 'fundingShort':return <td>{formatNumber((m.feesPerHourShort || 0) * 100, 4)}%/hr {B('Keeper')}</td>;
     case 'depth_up':
       return (
         <td style={{ whiteSpace: 'nowrap' }}>
           {m._depth?.depth_plus_2_percent_usd != null
             ? `$${formatNumber(m._depth.depth_plus_2_percent_usd, 0)}`
             : '—'}
+          {' '}{B('CoinGecko')}
           {m._depth && (
             <button onClick={() => onDepthInfo(m._depth)} style={infoIconStyle} title="How is this calculated?">ⓘ</button>
           )}
@@ -101,6 +141,7 @@ function renderCell(key, m, onDepthInfo, onVolInfo) {
           {m._depth?.depth_minus_2_percent_usd != null
             ? `$${formatNumber(m._depth.depth_minus_2_percent_usd, 0)}`
             : '—'}
+          {' '}{B('CoinGecko')}
           {m._depth && (
             <button onClick={() => onDepthInfo(m._depth)} style={infoIconStyle} title="How is this calculated?">ⓘ</button>
           )}
@@ -112,6 +153,7 @@ function renderCell(key, m, onDepthInfo, onVolInfo) {
           {m._volatility?.volatility_pct != null
             ? `${formatNumber(m._volatility.volatility_pct, 3)}%`
             : '—'}
+          {' '}{B('CoinGecko')}
           {m._volatility && (
             <button onClick={() => onVolInfo(m._volatility)} style={infoIconStyle} title="How is this calculated?">ⓘ</button>
           )}
@@ -136,7 +178,10 @@ function renderMobileCard(m, i, onDepthInfo, onVolInfo) {
     <div key={i} className="profile-card">
       <div className="profile-card-header">
         <div className="profile-card-badges">
-          <span className="profile-card-market">{symbol}</span>
+          <span className="profile-card-market">
+            {symbol}
+            {m.symbolSource && <SourceBadge source={m.symbolSource} />}
+          </span>
           <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {m.marketId}</span>
           <span className="badge badge-purple" style={{ fontSize: '11px' }}>{m.collateralToken?.symbol || '-'}</span>
         </div>
@@ -363,6 +408,53 @@ function VolatilityInfoModal({ vol, onClose }) {
   );
 }
 
+function ErrorInfoModal({ source, message, onClose }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--bg-secondary, #1a1a2e)', border: '1px solid #dc2626',
+          borderRadius: 8, padding: 24, maxWidth: 480, width: '90%', color: 'var(--text, #eee)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, color: '#f87171' }}>
+          {source} Fetch Error
+        </h3>
+        <div style={{
+          background: '#111', border: '1px solid #333', borderRadius: 4,
+          padding: '8px 12px', margin: '0 0 16px', fontSize: 12, fontFamily: 'monospace',
+          color: '#f87171', wordBreak: 'break-word',
+        }}>
+          {message}
+        </div>
+        <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: '#aaa' }}>
+          The values shown for <strong style={{ color: '#eee' }}>{source}</strong> cells
+          may be stale, incomplete, or zeroed out.
+          Data will automatically refresh on the next successful fetch.
+        </p>
+        <div>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '6px 16px', background: '#333', border: '1px solid #555',
+              borderRadius: 4, color: '#eee', cursor: 'pointer', fontSize: 13,
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketsTable() {
   const { network } = useNetwork();
   const { data, loading, error } = useMarkets(network);
@@ -371,6 +463,9 @@ export default function MarketsTable() {
   const [showDepthInfo, setShowDepthInfo] = useState(false);
   const [selectedDepth, setSelectedDepth] = useState(null);
   const [selectedVol, setSelectedVol] = useState(null);
+  const [errorModal, setErrorModal] = useState(null);
+
+  const sourceErrors = data?.errors || {};
 
   const markets = useMemo(() => {
     const raw = (data?.markets || []).filter(m => m.visible !== false);
@@ -428,6 +523,13 @@ export default function MarketsTable() {
       {selectedVol && (
         <VolatilityInfoModal vol={selectedVol} onClose={() => setSelectedVol(null)} />
       )}
+      {errorModal && (
+        <ErrorInfoModal
+          source={errorModal.source}
+          message={errorModal.message}
+          onClose={() => setErrorModal(null)}
+        />
+      )}
     </>
   );
 
@@ -436,7 +538,7 @@ export default function MarketsTable() {
       tableKey="markets"
       data={markets}
       columns={DEFAULT_COLUMNS}
-      renderCell={(key, m) => renderCell(key, m, onDepthInfo, onVolInfo)}
+      renderCell={(key, m) => renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, (src, msg) => setErrorModal({ source: src, message: msg }))}
       renderMobileCard={(m, i) => renderMobileCard(m, i, onDepthInfo, onVolInfo)}
       sortGetters={SORT_GETTERS}
       defaultSortCol="totalOi"

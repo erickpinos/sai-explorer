@@ -3,6 +3,7 @@ import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 import { requireAdminAccess } from '../shared/adminAuth.js';
+import { fetchLiveMarketMap, resolveSymbol, checkPriceDeviation } from '../shared/marketSymbols.js';
 
 function sendEvent(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -13,6 +14,13 @@ async function backfillTrades(network, res) {
   const MAX_PAGES = 200;
   let offset = 0;
   let total = 0;
+
+  let liveMarketMap = {};
+  try {
+    liveMarketMap = await fetchLiveMarketMap(network);
+  } catch (e) {
+    console.warn(`[backfill] Could not fetch live market map: ${e.message}`);
+  }
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
     const gqlRes = await fetchGraphQL(`{
@@ -33,28 +41,41 @@ async function backfillTrades(network, res) {
     const trades = gqlRes.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    const results = await Promise.allSettled(trades.map(t => sql`
-      INSERT INTO trades (
-        id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
-        tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
-        trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
-        collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol
-      ) VALUES (
-        ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
-        ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
-        ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
-        ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
-        ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
-        ${t.trade.perpBorrowing?.marketId}, ${t.trade.perpBorrowing?.baseToken?.symbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol}
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        collateral_token_symbol = EXCLUDED.collateral_token_symbol,
-        base_token_symbol = EXCLUDED.base_token_symbol,
-        evm_trader = EXCLUDED.evm_trader
-      WHERE trades.collateral_token_symbol IS NULL
-        OR trades.base_token_symbol IS NULL
-        OR trades.evm_trader IS NULL
-    `));
+    const results = await Promise.allSettled(trades.map(t => {
+      const marketId = t.trade.perpBorrowing?.marketId;
+      const keeperSymbol = t.trade.perpBorrowing?.baseToken?.symbol;
+      const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, liveMarketMap);
+      const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, liveMarketMap);
+      const flags = [symbolFlag, priceFlag].filter(Boolean);
+      const devNote = flags.length > 0 ? flags.join('; ') : null;
+      if (flags.length > 0) console.warn(`[backfill] trade ${t.id}: ${flags.join('; ')}`);
+
+      return sql`
+        INSERT INTO trades (
+          id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
+          tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
+          trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
+          collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol,
+          dev_note
+        ) VALUES (
+          ${t.id}, ${network}, ${t.tradeChangeType}, ${t.realizedPnlPct}, ${t.realizedPnlCollateral},
+          ${t.txHash}, ${t.evmTxHash}, ${t.collateralPrice}, ${t.block.block}, ${t.block.block_ts},
+          ${t.trade.trader}, ${nibiToHex(t.trade.trader)}, ${t.trade.tradeType}, ${t.trade.isLong}, ${t.trade.isOpen},
+          ${t.trade.leverage}, ${t.trade.openPrice}, ${t.trade.closePrice},
+          ${t.trade.collateralAmount}, ${t.trade.openCollateralAmount}, ${t.trade.tp}, ${t.trade.sl},
+          ${marketId}, ${resolvedSymbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol},
+          ${devNote}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          collateral_token_symbol = EXCLUDED.collateral_token_symbol,
+          base_token_symbol = EXCLUDED.base_token_symbol,
+          evm_trader = EXCLUDED.evm_trader,
+          dev_note = COALESCE(EXCLUDED.dev_note, trades.dev_note)
+        WHERE trades.collateral_token_symbol IS NULL
+          OR trades.base_token_symbol IS NULL
+          OR trades.evm_trader IS NULL
+      `;
+    }));
 
     total += results.filter(r => r.status === 'fulfilled').length;
     const page = Math.floor(offset / PAGE_SIZE) + 1;

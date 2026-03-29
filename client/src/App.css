@@ -900,6 +900,49 @@ h1 {
 }
 
 /* Tables */
+.table-search {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.table-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3a;
+  border-radius: var(--radius-md);
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.table-search-input:focus {
+  border-color: #4a4af0;
+}
+
+.table-search-input::placeholder {
+  color: #555;
+}
+
+.table-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.table-search-clear:hover {
+  color: #e0e0e0;
+}
+
 .table-info {
   color: #888;
   font-size: 13px;
