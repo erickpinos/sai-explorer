@@ -14,6 +14,7 @@ export function getCached(key) {
   return entry.value;
 }
 
+
 export function setCached(key, value, ttl = DEFAULT_TTL) {
   cache.set(key, { value, timestamp: Date.now(), ttl });
 }
