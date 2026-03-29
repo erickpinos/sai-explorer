@@ -288,6 +288,8 @@ function TradesPreview({ network }) {
         defaultSortDir="desc"
         sortOptions={TRADES_SORT_OPTIONS}
         hideLock
+        hideSearch
+        hidePageSize
         onRowClick={(trade) => setSelectedTrade(trade)}
         getRowKey={(trade) => trade.id}
       />

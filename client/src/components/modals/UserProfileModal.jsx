@@ -8,6 +8,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
 import SortTh from '../ui/SortTh';
 import { useSortedData } from '../../hooks/useSortedData';
+import { usePagination } from '../../hooks/usePagination';
 
 const TRADE_SORT_GETTERS = {
   time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
@@ -55,7 +56,28 @@ export default function UserProfileModal({ address, onClose }) {
   const { sorted: sortedWithdraws, sortCol: withdrawSortCol, sortDir: withdrawSortDir, handleSort: handleWithdrawSort } =
     useSortedData(withdraws, 'epoch', 'desc', WITHDRAW_SORT_GETTERS);
 
+  const MODAL_PER_PAGE = 50;
+  const { page: tradePage, setPage: setTradePage, paginatedData: tradeList, totalPages: tradeTotalPages, startIndex: tradeStartIndex } =
+    usePagination(sortedTrades, MODAL_PER_PAGE);
+  const { page: depositPage, setPage: setDepositPage, paginatedData: depositList, totalPages: depositTotalPages, startIndex: depositStartIndex } =
+    usePagination(sortedDeposits, MODAL_PER_PAGE);
+  const { page: withdrawPage, setPage: setWithdrawPage, paginatedData: withdrawList, totalPages: withdrawTotalPages, startIndex: withdrawStartIndex } =
+    usePagination(sortedWithdraws, MODAL_PER_PAGE);
+
   if (!address) return null;
+
+  const renderPagination = (total, startIndex, pageLength, page, totalPages, setPage) => (
+    <div className="pagination" style={{ marginTop: '12px' }}>
+      <span className="pagination-info">
+        Showing {startIndex + 1}-{startIndex + pageLength} of {total}
+      </span>
+      <div className="pagination-controls">
+        <button disabled={page <= 1} onClick={() => setPage(page - 1)}>&laquo; Prev</button>
+        <span className="pagination-page">Page {page} of {totalPages}</span>
+        <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next &raquo;</button>
+      </div>
+    </div>
+  );
 
   const renderStats = () => (
     <div className="modal-stats">
@@ -92,8 +114,6 @@ export default function UserProfileModal({ address, onClose }) {
   const renderTrades = () => {
     if (tradesLoading) return <LoadingSpinner />;
     if (!trades || trades.length === 0) return <EmptyState message="No trades found" />;
-
-    const tradeList = sortedTrades.slice(0, 50);
 
     return (
       <>
@@ -211,6 +231,8 @@ export default function UserProfileModal({ address, onClose }) {
             );
           })}
         </div>
+
+        {tradeTotalPages > 1 && renderPagination(trades.length, tradeStartIndex, tradeList.length, tradePage, tradeTotalPages, setTradePage)}
       </>
     );
   };
@@ -218,8 +240,6 @@ export default function UserProfileModal({ address, onClose }) {
   const renderDeposits = () => {
     if (depositsLoading) return <LoadingSpinner />;
     if (!deposits || deposits.length === 0) return <EmptyState message="No deposits found" />;
-
-    const depositList = sortedDeposits.slice(0, 50);
 
     return (
       <>
@@ -264,6 +284,8 @@ export default function UserProfileModal({ address, onClose }) {
             </div>
           ))}
         </div>
+
+        {depositTotalPages > 1 && renderPagination(deposits.length, depositStartIndex, depositList.length, depositPage, depositTotalPages, setDepositPage)}
       </>
     );
   };
@@ -271,8 +293,6 @@ export default function UserProfileModal({ address, onClose }) {
   const renderWithdrawals = () => {
     if (withdrawsLoading) return <LoadingSpinner />;
     if (!withdraws || withdraws.length === 0) return <EmptyState message="No withdrawals found" />;
-
-    const withdrawList = sortedWithdraws.slice(0, 50);
 
     return (
       <>
@@ -317,6 +337,8 @@ export default function UserProfileModal({ address, onClose }) {
             </div>
           ))}
         </div>
+
+        {withdrawTotalPages > 1 && renderPagination(withdraws.length, withdrawStartIndex, withdrawList.length, withdrawPage, withdrawTotalPages, setWithdrawPage)}
       </>
     );
   };

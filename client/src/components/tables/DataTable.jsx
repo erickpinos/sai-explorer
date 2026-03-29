@@ -25,6 +25,8 @@ export default function DataTable({
   infoText,
   footer,
   hideLock = false,
+  hideSearch = false,
+  hidePageSize = false,
 }) {
   const PAGE_SIZE_OPTIONS = [50, 100, 500];
   const tableRef = useRef(null);
@@ -93,7 +95,7 @@ export default function DataTable({
 
   return (
     <div className={viewClass}>
-      {sortGetters && (
+      {sortGetters && !hideSearch && (
         <div className="table-search">
           <select
             className="table-search-select"
@@ -120,16 +122,18 @@ export default function DataTable({
       <div className="table-info">
         {resolvedInfoText}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <select
-            className="table-search-select"
-            value={selectedPerPage}
-            onChange={(e) => { setSelectedPerPage(Number(e.target.value)); setPage(1); }}
-            style={{ minWidth: 'auto' }}
-          >
-            {PAGE_SIZE_OPTIONS.map(n => (
-              <option key={n} value={n}>{n} rows</option>
-            ))}
-          </select>
+          {!hidePageSize && (
+            <select
+              className="table-search-select"
+              value={selectedPerPage}
+              onChange={(e) => { setSelectedPerPage(Number(e.target.value)); setPage(1); }}
+              style={{ minWidth: 'auto' }}
+            >
+              {PAGE_SIZE_OPTIONS.map(n => (
+                <option key={n} value={n}>{n} rows</option>
+              ))}
+            </select>
+          )}
           {!hideLock && !locked && (
             <button
               className="reset-cols-btn"
