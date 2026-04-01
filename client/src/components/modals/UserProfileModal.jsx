@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useNetwork } from '../../hooks/useNetwork';
 import { useUserStats, useUserTrades, useUserDeposits, useUserWithdraws } from '../../hooks/useApi';
-import { formatNumber, formatDate, formatPrice } from '../../utils/formatters';
+import { formatNumber, formatDate, formatAddress, formatPrice } from '../../utils/formatters';
 import { getBadgeClass, formatTradeTypeBadge, formatPnl, shortenHash, toUsd } from '../../utils/tradeHelpers';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
@@ -11,15 +11,22 @@ import { useSortedData } from '../../hooks/useSortedData';
 import { usePagination } from '../../hooks/usePagination';
 
 const TRADE_SORT_GETTERS = {
-  time:       (t) => new Date(t.block?.block_ts || 0).getTime(),
-  type:       (t) => t.tradeChangeType || '',
-  market:     (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
-  direction:  (t) => t.trade?.isLong ? 1 : 0,
-  leverage:   (t) => parseFloat(t.trade?.leverage) || 0,
-  openPrice:  (t) => parseFloat(t.trade?.openPrice) || 0,
-  closePrice: (t) => parseFloat(t.trade?.closePrice) || 0,
-  collateral: (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice),
-  pnl:        (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
+  time:           (t) => new Date(t.block?.block_ts || 0).getTime(),
+  type:           (t) => t.txFailed ? `failed_${t.tradeChangeType || ''}` : (t.tradeChangeType || ''),
+  market:         (t) => t.trade?.perpBorrowing?.baseToken?.symbol || '',
+  marketId:       (t) => t.trade?.perpBorrowing?.marketId ?? 0,
+  trader:         (t) => t.trade?.trader || '',
+  evmAddress:     (t) => t.trade?.evmTrader || '',
+  direction:      (t) => t.trade?.isLong ? 1 : 0,
+  leverage:       (t) => parseFloat(t.trade?.leverage) || 0,
+  openPrice:      (t) => parseFloat(t.trade?.openPrice) || 0,
+  closePrice:     (t) => parseFloat(t.trade?.closePrice) || 0,
+  collateral:     (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount),
+  positionSize:   (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount) * (parseFloat(t.trade?.leverage) || 1),
+  pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
+  collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
+  keeperId:       (t) => t.keeperId ?? -1,
+  devNote:        (t) => t.devNote || '',
 };
 
 const DEPOSIT_SORT_GETTERS = {
@@ -39,12 +46,14 @@ export default function UserProfileModal({ address, onClose }) {
   const { network, config } = useNetwork();
   const [activeTab, setActiveTab] = useState('trades');
 
-  // Extract addresses - address can be either a string or an object with bech32 and evm
-  const bech32Address = typeof address === 'string' ? address : address?.bech32;
-  const evmAddress = typeof address === 'string' ? address : address?.evm;
-  const apiAddress = evmAddress || bech32Address; // Use EVM address for API calls
+  // Use the raw address string for API calls; resolved addresses come from stats response
+  const apiAddress = typeof address === 'string' ? address : (address?.evm || address?.bech32);
 
   const { data: stats, loading: statsLoading } = useUserStats(apiAddress, network);
+
+  // Resolved addresses from the API (covers both bech32 and EVM)
+  const bech32Address = stats?.bech32Address || (apiAddress?.startsWith('nibi') ? apiAddress : null);
+  const evmAddress = stats?.evmAddress || (apiAddress?.startsWith('0x') ? apiAddress : null);
   const { data: trades, loading: tradesLoading } = useUserTrades(apiAddress, network);
   const { data: deposits, loading: depositsLoading } = useUserDeposits(apiAddress, network);
   const { data: withdraws, loading: withdrawsLoading } = useUserWithdraws(apiAddress, network);
@@ -124,15 +133,26 @@ export default function UserProfileModal({ address, onClose }) {
               <tr>
                 <SortTh col="time" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>TIME</SortTh>
                 <SortTh col="type" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>TYPE</SortTh>
+                <SortTh col="marketId" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>MARKET ID</SortTh>
                 <SortTh col="market" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>MARKET</SortTh>
+                <SortTh col="collateralType" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>COLLATERAL TYPE</SortTh>
+                <SortTh col="trader" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>TRADER</SortTh>
+                <SortTh col="evmAddress" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>EVM ADDRESS</SortTh>
                 <SortTh col="direction" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>DIRECTION</SortTh>
                 <SortTh col="leverage" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>LEVERAGE</SortTh>
                 <SortTh col="openPrice" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>OPEN PRICE</SortTh>
                 <SortTh col="closePrice" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>CLOSE PRICE</SortTh>
                 <SortTh col="collateral" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>COLLATERAL</SortTh>
+                <SortTh col="positionSize" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>POSITION SIZE</SortTh>
                 <SortTh col="pnl" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>PNL</SortTh>
                 <th>TX Hash</th>
                 <th>EVM TX Hash</th>
+                {import.meta.env.DEV && (
+                  <>
+                    <SortTh col="keeperId" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>KEEPER ID</SortTh>
+                    <SortTh col="devNote" sortCol={tradeSortCol} sortDir={tradeSortDir} onSort={handleTradeSort}>DEV NOTES</SortTh>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -143,6 +163,8 @@ export default function UserProfileModal({ address, onClose }) {
                 !parseFloat(trade.trade?.closePrice) &&
                 !parseFloat(trade.realizedPnlCollateral)
               ) ? 'limit_order_cancelled' : trade.tradeChangeType;
+              const collUsd = toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount);
+              const posSize = collUsd * (parseFloat(trade.trade?.leverage) || 1);
               return (
                 <tr key={trade.id}>
                   <td>{formatDate(trade.block?.block_ts)}</td>
@@ -151,7 +173,23 @@ export default function UserProfileModal({ address, onClose }) {
                       {formatTradeTypeBadge(displayType, trade.txFailed)}
                     </span>
                   </td>
+                  <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>
                   <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>
+                  <td>
+                    <span className="badge badge-purple" style={{ fontSize: '11px' }}>
+                      {trade.trade?.perpBorrowing?.collateralToken?.symbol || '-'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="address-link" title={trade.trade?.trader}>
+                      {formatAddress(trade.trade?.trader)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="address-link" title={trade.trade?.evmTrader}>
+                      {formatAddress(trade.trade?.evmTrader)}
+                    </span>
+                  </td>
                   <td>
                     <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
                       {trade.trade?.isLong ? 'Long' : 'Short'}
@@ -162,7 +200,8 @@ export default function UserProfileModal({ address, onClose }) {
                   <td>
                     {parseFloat(trade.trade?.closePrice) > 0 ? formatPrice(trade.trade.closePrice) : '-'}
                   </td>
-                  <td>${formatNumber(toUsd(trade.trade?.collateralAmount, trade.collateralPrice, trade.trade?.openCollateralAmount), 2)}</td>
+                  <td>${formatNumber(collUsd, collUsd < 0.01 ? 6 : 2)}</td>
+                  <td>${formatNumber(posSize, posSize < 0.01 ? 6 : 2)}</td>
                   <td className={trade.realizedPnlCollateral > 0 ? 'pnl-positive' : 'pnl-negative'}>
                     {formatPnl(toUsd(trade.realizedPnlCollateral, trade.collateralPrice))}
                   </td>
@@ -180,6 +219,14 @@ export default function UserProfileModal({ address, onClose }) {
                     </a>
                   ) : '-'}
                 </td>
+                {import.meta.env.DEV && (
+                  <>
+                    <td>{trade.keeperId ?? '-'}</td>
+                    <td style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600 }}>
+                      {trade.devNote ? `⚠ ${trade.devNote}` : ''}
+                    </td>
+                  </>
+                )}
                 </tr>
                 );
             })}
@@ -201,9 +248,11 @@ export default function UserProfileModal({ address, onClose }) {
                     <span className={trade.trade?.isLong ? 'badge badge-green' : 'badge badge-red'}>
                       {trade.trade?.isLong ? 'Long' : 'Short'}
                     </span>
+                    <span className="profile-card-time" style={{ fontSize: '12px', color: '#888' }}>ID {trade.trade?.perpBorrowing?.marketId ?? '-'}</span>
                     <span className="profile-card-market">
                       {trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}
                     </span>
+                    <span className="badge badge-purple" style={{ fontSize: '11px' }}>{trade.trade?.perpBorrowing?.collateralToken?.symbol || '-'}</span>
                   </div>
                   <span className="profile-card-time">{formatDate(trade.block?.block_ts)}</span>
                 </div>
@@ -225,6 +274,29 @@ export default function UserProfileModal({ address, onClose }) {
                   <div className="profile-card-row">
                     <span className="profile-card-label">PnL</span>
                     <span className={pnl > 0 ? 'pnl-positive profile-card-value' : 'pnl-negative profile-card-value'}>{formatPnl(pnl)}</span>
+                  </div>
+                )}
+                <div className="profile-card-row">
+                  <span className="profile-card-label">Trader</span>
+                  <span className="profile-card-value">
+                    <span className="address-link">
+                      {formatAddress(trade.trade?.evmTrader || trade.trade?.trader)}
+                    </span>
+                  </span>
+                  {trade.txHash && (
+                    <>
+                      <span className="profile-card-label">TX</span>
+                      <span className="profile-card-value">
+                        <a href={`${config.explorerTx}${trade.txHash}`} target="_blank" rel="noopener noreferrer" className="tx-hash">
+                          {shortenHash(trade.txHash)}
+                        </a>
+                      </span>
+                    </>
+                  )}
+                </div>
+                {import.meta.env.DEV && trade.devNote && (
+                  <div className="profile-card-row" style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 600 }}>
+                    ⚠ {trade.devNote}
                   </div>
                 )}
               </div>

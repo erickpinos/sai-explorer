@@ -35,7 +35,9 @@ const SORT_GETTERS = {
   positionSize:   (t) => toUsd(t.trade?.collateralAmount, t.collateralPrice, t.trade?.openCollateralAmount) * (parseFloat(t.trade?.leverage) || 1),
   pnl:            (t) => toUsd(t.realizedPnlCollateral, t.collateralPrice),
   collateralType: (t) => t.trade?.perpBorrowing?.collateralToken?.symbol || '',
-  historyId:      (t) => parseInt(t.id) || 0,
+  txHash:         (t) => t.txHash || '',
+  evmTxHash:      (t) => t.evmTxHash || '',
+  keeperId:       (t) => t.keeperId ?? -1,
   devNote:        (t) => t.devNote || '',
 };
 
@@ -58,7 +60,7 @@ const DEFAULT_COLUMNS = [
   { key: 'txHash',         label: 'TX Hash',         sortable: false },
   { key: 'evmTxHash',      label: 'EVM TX Hash',     sortable: false },
   ...(import.meta.env.DEV ? [
-    { key: 'historyId',  label: 'History ID',  sortable: true },
+    { key: 'keeperId',   label: 'Keeper ID',   sortable: true },
     { key: 'devNote',    label: 'Dev Notes',   sortable: true },
   ] : []),
 ];
@@ -207,8 +209,8 @@ export default function TradesTable() {
             ) : '-'}
           </td>
         );
-      case 'historyId':
-        return <td>{trade.id}</td>;
+      case 'keeperId':
+        return <td>{trade.keeperId ?? '-'}</td>;
       case 'devNote':
         return (
           <td style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600 }}>

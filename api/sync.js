@@ -183,22 +183,21 @@ async function syncMarkets(network) {
 async function syncTrades(network, { full = false } = {}, marketMap = {}) {
   console.log(`Syncing trades for ${network}...`);
 
-  // Use keeper's sequential ID as watermark — immune to out-of-order block_ts insertions.
-  // Fetch ascending (oldest first) starting just before lastId so a small overlap
-  // catches any records the keeper registered late with an earlier block_ts.
+  // Use keeper_id as the watermark — the keeper's sequential history ID.
+  // Dedup by keeper_id (unique constraint) instead of the old id primary key.
   const BUFFER = 20;
   const PAGE_SIZE = 100;
   let newTradesCount = 0;
 
-  let lastId = 0;
+  let lastKeeperId = 0;
   if (!full) {
     const result = await sql`
-      SELECT COALESCE(MAX(id::int), 0) AS max_id FROM trades WHERE network = ${network}
+      SELECT COALESCE(MAX(keeper_id), 0) AS max_kid FROM trades WHERE network = ${network}
     `;
-    lastId = parseInt(result.rows[0].max_id);
+    lastKeeperId = parseInt(result.rows[0].max_kid);
   }
 
-  let offset = Math.max(0, lastId - BUFFER);
+  let offset = Math.max(0, lastKeeperId - BUFFER);
   // Keep fetching as long as the last page contained new records
   let maxOffset = offset + PAGE_SIZE;
 
@@ -221,10 +220,7 @@ async function syncTrades(network, { full = false } = {}, marketMap = {}) {
     const trades = res.data?.perp?.tradeHistory || [];
     if (trades.length === 0) break;
 
-    // Insert all records in the fetch window — the buffer range may contain IDs
-    // that are < lastId but were missing (e.g. late keeper registration). ON CONFLICT
-    // handles already-existing records. Only extend the window for truly new IDs.
-    const trulyNewTrades = trades.filter(t => parseInt(t.id) > lastId);
+    const trulyNewTrades = trades.filter(t => parseInt(t.id) > lastKeeperId);
 
     if (trades.length > 0) {
       const failedHashes = await getFailedTxHashes(trades, network);
@@ -239,7 +235,7 @@ async function syncTrades(network, { full = false } = {}, marketMap = {}) {
 
         return sql`
           INSERT INTO trades (
-            id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
+            keeper_id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
             tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
             trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
             collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol,
@@ -253,7 +249,7 @@ async function syncTrades(network, { full = false } = {}, marketMap = {}) {
             ${marketId}, ${resolvedSymbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol},
             ${failedHashes.has(t.evmTxHash)}, ${devNote}
           )
-          ON CONFLICT (id) DO UPDATE SET
+          ON CONFLICT (network, keeper_id) DO UPDATE SET
             collateral_token_symbol = EXCLUDED.collateral_token_symbol,
             base_token_symbol = EXCLUDED.base_token_symbol,
             evm_trader = EXCLUDED.evm_trader,
@@ -277,7 +273,7 @@ async function syncTrades(network, { full = false } = {}, marketMap = {}) {
     if (trulyNewTrades.length > 0) {
       // Extend the search window — there may be more pages ahead
       maxOffset = offset + PAGE_SIZE;
-      console.log(`Found ${trulyNewTrades.length} new trades at offset ${offset} (ids ${Math.min(...trulyNewTrades.map(t=>t.id))}–${Math.max(...trulyNewTrades.map(t=>t.id))})`);
+      console.log(`Found ${trulyNewTrades.length} new trades at offset ${offset} (keeper_ids ${Math.min(...trulyNewTrades.map(t=>t.id))}–${Math.max(...trulyNewTrades.map(t=>t.id))})`);
     }
 
     if (trades.length < PAGE_SIZE) break;
@@ -288,20 +284,20 @@ async function syncTrades(network, { full = false } = {}, marketMap = {}) {
   return newTradesCount;
 }
 
-// After each sync, check the last GAP_WINDOW IDs for holes and fetch any missing ones.
-// IDs are sequential so offset = id - 1 maps directly to the GraphQL position.
+// After each sync, check the last GAP_WINDOW keeper_ids for holes and fetch any missing ones.
+// keeper_ids are sequential so offset = keeper_id - 1 maps directly to the GraphQL position.
 async function fillTradeGaps(network, marketMap = {}) {
   const GAP_WINDOW = 200;
 
   const gapResult = await sql`
     WITH bounds AS (
-      SELECT GREATEST(1, MAX(id::int) - ${GAP_WINDOW}) AS lo, MAX(id::int) AS hi
+      SELECT GREATEST(1, MAX(keeper_id) - ${GAP_WINDOW}) AS lo, MAX(keeper_id) AS hi
       FROM trades WHERE network = ${network}
     )
     SELECT s.id
     FROM bounds, generate_series(bounds.lo, bounds.hi) s(id)
     WHERE NOT EXISTS (
-      SELECT 1 FROM trades WHERE network = ${network} AND id::int = s.id
+      SELECT 1 FROM trades WHERE network = ${network} AND keeper_id = s.id
     )
     ORDER BY s.id
   `;
@@ -309,7 +305,7 @@ async function fillTradeGaps(network, marketMap = {}) {
   const gapIds = gapResult.rows.map(r => parseInt(r.id));
   if (gapIds.length === 0) return 0;
 
-  console.log(`Found ${gapIds.length} gap IDs for ${network}: ${gapIds.join(', ')}`);
+  console.log(`Found ${gapIds.length} gap keeper_ids for ${network}: ${gapIds.join(', ')}`);
 
   let filled = 0;
   for (const gapId of gapIds) {
@@ -331,7 +327,7 @@ async function fillTradeGaps(network, marketMap = {}) {
     const trades = res.data?.perp?.tradeHistory || [];
     const t = trades[0];
     if (!t || parseInt(t.id) !== gapId) {
-      console.log(`Gap ID ${gapId} not yet in GraphQL — skipping`);
+      console.log(`Gap keeper_id ${gapId} not yet in GraphQL — skipping`);
       continue;
     }
 
@@ -346,7 +342,7 @@ async function fillTradeGaps(network, marketMap = {}) {
     const failedHashes = await getFailedTxHashes([t], network);
     await sql`
       INSERT INTO trades (
-        id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
+        keeper_id, network, trade_change_type, realized_pnl_pct, realized_pnl_collateral,
         tx_hash, evm_tx_hash, collateral_price, block_height, block_ts,
         trader, evm_trader, trade_type, is_long, is_open, leverage, open_price, close_price,
         collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol,
@@ -360,9 +356,9 @@ async function fillTradeGaps(network, marketMap = {}) {
         ${marketId}, ${resolvedSymbol}, ${t.trade.perpBorrowing?.collateralToken?.symbol},
         ${failedHashes.has(t.evmTxHash)}, ${devNote}
       )
-      ON CONFLICT (id) DO NOTHING
+      ON CONFLICT (network, keeper_id) DO NOTHING
     `;
-    console.log(`Filled gap ID ${gapId} for ${network}`);
+    console.log(`Filled gap keeper_id ${gapId} for ${network}`);
     filled++;
   }
 
@@ -428,7 +424,7 @@ async function backfillTradeSymbols(network, marketMap = {}) {
           collateral_token_symbol = COALESCE(trades.collateral_token_symbol, ${u.symbol}),
           base_token_symbol = COALESCE(trades.base_token_symbol, ${u.baseSymbol}),
           evm_trader = COALESCE(trades.evm_trader, ${u.evmTrader})
-        WHERE id = ${u.id} AND network = ${network}
+        WHERE keeper_id = ${u.id} AND network = ${network}
           AND (collateral_token_symbol IS NULL OR base_token_symbol IS NULL OR evm_trader IS NULL)
       `));
       updatedCount += results.filter(r => r.status === 'fulfilled' && r.value.rowCount > 0).length;

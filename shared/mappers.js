@@ -6,7 +6,7 @@ export function mapTradeRow(row, options = {}) {
     tradeChangeType: row.trade_change_type,
     txFailed: row.tx_failed || false,
     createdAt: row.created_at,
-    ...(includeDevNotes ? { devNote: row.dev_note || null } : {}),
+    ...(includeDevNotes ? { devNote: row.dev_note || null, keeperId: row.keeper_id ?? null } : {}),
     realizedPnlPct: row.realized_pnl_pct,
     realizedPnlCollateral: row.realized_pnl_collateral,
     txHash: row.tx_hash,

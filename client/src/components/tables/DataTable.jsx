@@ -28,7 +28,7 @@ export default function DataTable({
   hideSearch = false,
   hidePageSize = false,
 }) {
-  const PAGE_SIZE_OPTIONS = [50, 100, 500];
+  const PAGE_SIZE_OPTIONS = [50, 100, 500, 1000, 2500, 5000];
   const tableRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchCol, setSearchCol] = useState('__all__');
@@ -91,6 +91,50 @@ export default function DataTable({
     ? infoText(sorted.length, startIndex + 1, Math.min(startIndex + selectedPerPage, sorted.length))
     : infoText;
 
+  const exportCsv = useCallback(() => {
+    const headers = columns.map(c => c.label);
+    const rows = paginatedData.map(row =>
+      columns.map(col => {
+        const getter = sortGetters?.[col.key];
+        if (!getter) return '';
+        try {
+          const val = getter(row);
+          if (val == null) return '';
+          const str = String(val);
+          return str.includes(',') || str.includes('"') || str.includes('\n')
+            ? `"${str.replace(/"/g, '""')}"` : str;
+        } catch { return ''; }
+      })
+    );
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tableKey}-page${page}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [columns, paginatedData, sortGetters, tableKey, page]);
+
+  // Track mousedown position to distinguish clicks from text selection
+  const mouseDownPos = useRef(null);
+  const handleRowMouseDown = useCallback((e) => {
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+  }, []);
+  const handleRowClick = useCallback((row, e) => {
+    if (!onRowClick) return;
+    // If user selected text, don't open modal
+    const sel = window.getSelection();
+    if (sel && sel.toString().length > 0) return;
+    // If mouse moved more than 5px, treat as drag/selection, not click
+    if (mouseDownPos.current) {
+      const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+      const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+      if (dx > 5 || dy > 5) return;
+    }
+    onRowClick(row);
+  }, [onRowClick]);
+
   const getKey = getRowKey ?? ((_, i) => i);
 
   return (
@@ -133,6 +177,15 @@ export default function DataTable({
                 <option key={n} value={n}>{n} rows</option>
               ))}
             </select>
+          )}
+          {sortGetters && (
+            <button
+              className="reset-cols-btn"
+              onClick={exportCsv}
+              title="Export current page as CSV"
+            >
+              CSV
+            </button>
           )}
           {!hideLock && !locked && (
             <button
@@ -187,7 +240,8 @@ export default function DataTable({
               <tr
                 key={getKey(row, i)}
                 className={onRowClick ? 'clickable-row' : ''}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onMouseDown={onRowClick ? handleRowMouseDown : undefined}
+                onClick={onRowClick ? (e) => handleRowClick(row, e) : undefined}
               >
                 {columns.map((col) => (
                   <Fragment key={col.key}>

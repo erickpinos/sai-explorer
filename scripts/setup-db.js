@@ -45,6 +45,16 @@ async function setupDatabase() {
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS base_token_symbol TEXT');
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
     await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS tx_failed BOOLEAN DEFAULT FALSE');
+    await query('ALTER TABLE trades ADD COLUMN IF NOT EXISTS keeper_id INTEGER');
+    // keeper_id unique per network — used for ON CONFLICT dedup in sync
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE trades ADD CONSTRAINT uq_trades_network_keeper_id UNIQUE (network, keeper_id);
+      EXCEPTION WHEN duplicate_table THEN NULL;
+      END $$
+    `);
+    // Auto-generate id for new rows so it's independent of keeper history IDs
+    await query(`ALTER TABLE trades ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`);
     console.log('✓ Ensured trades columns up to date');
 
     // Create indexes for trades

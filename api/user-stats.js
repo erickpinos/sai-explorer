@@ -41,11 +41,37 @@ export default async function handler(req, res) {
       WHERE network = ${network} AND (depositor = ${address} OR evm_depositor = ${address})
     `;
 
+    // Resolve both address forms (bech32 + EVM) from trades or deposits
+    const addressResult = await sql`
+      SELECT trader, evm_trader FROM trades
+      WHERE network = ${network} AND (trader = ${address} OR evm_trader = ${address})
+      LIMIT 1
+    `;
+    let bech32 = null;
+    let evm = null;
+    if (addressResult.rows.length > 0) {
+      bech32 = addressResult.rows[0].trader;
+      evm = addressResult.rows[0].evm_trader;
+    } else {
+      // Fallback to deposits table
+      const depAddr = await sql`
+        SELECT depositor, evm_depositor FROM deposits
+        WHERE network = ${network} AND (depositor = ${address} OR evm_depositor = ${address})
+        LIMIT 1
+      `;
+      if (depAddr.rows.length > 0) {
+        bech32 = depAddr.rows[0].depositor;
+        evm = depAddr.rows[0].evm_depositor;
+      }
+    }
+
     const stats = {
       tradeCount: parseInt(tradesResult.rows[0].total_trades) || 0,
       totalVolume: parseFloat(tradesResult.rows[0].total_volume) || 0,
       realizedPnl: parseFloat(tradesResult.rows[0].realized_pnl) || 0,
-      lpDepositsCount: parseInt(depositsResult.rows[0].total_deposits) || 0
+      lpDepositsCount: parseInt(depositsResult.rows[0].total_deposits) || 0,
+      bech32Address: bech32,
+      evmAddress: evm,
     };
 
     res.status(200).json(stats);
