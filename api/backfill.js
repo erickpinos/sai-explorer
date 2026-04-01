@@ -3,7 +3,7 @@ import { nibiToHex } from '../scripts/addressUtils.js';
 import { fetchGraphQL } from '../shared/graphql.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 import { requireAdminAccess } from '../shared/adminAuth.js';
-import { fetchLiveMarketMap, resolveSymbol, checkPriceDeviation } from '../shared/marketSymbols.js';
+import { resolveSymbol, checkPriceDeviation } from '../shared/marketSymbols.js';
 
 function sendEvent(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -15,11 +15,17 @@ async function backfillTrades(network, res) {
   let offset = 0;
   let total = 0;
 
-  let liveMarketMap = {};
-  try {
-    liveMarketMap = await fetchLiveMarketMap(network);
-  } catch (e) {
-    console.warn(`[backfill] Could not fetch live market map: ${e.message}`);
+  // Build market map from the markets table (populated by syncMarkets)
+  const marketResult = await sql`
+    SELECT market_id, base_token_symbol, data FROM markets
+    WHERE network = ${network} AND base_token_symbol IS NOT NULL
+  `;
+  const marketMap = {};
+  for (const row of marketResult.rows) {
+    marketMap[row.market_id] = {
+      symbol: row.base_token_symbol,
+      price: row.data?.price ? parseFloat(row.data.price) : null,
+    };
   }
 
   while (offset < MAX_PAGES * PAGE_SIZE) {
@@ -44,8 +50,8 @@ async function backfillTrades(network, res) {
     const results = await Promise.allSettled(trades.map(t => {
       const marketId = t.trade.perpBorrowing?.marketId;
       const keeperSymbol = t.trade.perpBorrowing?.baseToken?.symbol;
-      const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, liveMarketMap);
-      const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, liveMarketMap);
+      const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, marketMap);
+      const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, marketMap);
       const flags = [symbolFlag, priceFlag].filter(Boolean);
       const devNote = flags.length > 0 ? flags.join('; ') : null;
       if (flags.length > 0) console.warn(`[backfill] trade ${t.id}: ${flags.join('; ')}`);

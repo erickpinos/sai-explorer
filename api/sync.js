@@ -4,9 +4,183 @@ import { fetchGraphQL } from '../shared/graphql.js';
 import { getFailedTxHashes } from '../shared/evmReceipt.js';
 import { checkRateLimit, SYNC_MAX } from '../shared/rateLimit.js';
 import { requireAdminAccess } from '../shared/adminAuth.js';
-import { fetchLiveMarketMap, resolveSymbol, checkPriceDeviation } from '../shared/marketSymbols.js';
+import { resolveSymbol, checkPriceDeviation } from '../shared/marketSymbols.js';
+import { fetchLcdTokens, fetchLcdPrice } from '../shared/lcd.js';
 
-async function syncTrades(network, { full = false } = {}, liveMarketMap = {}) {
+/**
+ * Upsert full market data into the markets table from keeper + LCD + oracle sources.
+ * Called on the same sync cycle as trades. The /api/markets endpoint reads from this table.
+ * Returns a market_id → base_token_symbol map for symbol fallback.
+ */
+async function syncMarkets(network) {
+  const errors = {};
+
+  // Fetch keeper borrowings (full data, not just the slim liveMarketMap)
+  let rawMarkets = [];
+  let tokenPrices = [];
+  try {
+    const json = await fetchGraphQL(`{
+      perp {
+        borrowings {
+          marketId
+          collateralToken { id symbol }
+          baseToken { symbol }
+          feesPerHourLong
+          feesPerHourShort
+          oiLong
+          oiShort
+          oiMax
+          price
+          priceChangePct24Hrs
+          minLeverage
+          maxLeverage
+          openFeePct
+          closeFeePct
+          visible
+        }
+      }
+      oracle {
+        tokenPricesUsd {
+          token { symbol }
+          priceUsd
+        }
+      }
+    }`, network);
+    rawMarkets = json.data?.perp?.borrowings || [];
+    tokenPrices = json.data?.oracle?.tokenPricesUsd || [];
+  } catch (e) {
+    errors.Keeper = e.message;
+    console.warn(`[sync] Could not fetch keeper borrowings for ${network}: ${e.message}`);
+  }
+
+  // Fetch LCD tokens
+  let lcdTokens = {};
+  try {
+    lcdTokens = await fetchLcdTokens(network);
+  } catch (e) {
+    errors.LCD = e.message;
+    console.warn(`[sync] Could not fetch LCD tokens for ${network}: ${e.message}`);
+  }
+
+  // Build collateral price lookup from oracle
+  const collateralPrices = {};
+  for (const tp of tokenPrices) {
+    if (tp.token?.symbol) {
+      collateralPrices[tp.token.symbol.toLowerCase()] = tp.priceUsd || 1;
+    }
+  }
+
+  const liveMarketIds = new Set(rawMarkets.map(m => m.marketId));
+  let upserted = 0;
+
+  // Upsert keeper markets
+  for (const m of rawMarkets) {
+    const collSymbol = (m.collateralToken?.symbol || '').toLowerCase();
+    const isUsd = collSymbol === 'usdc' || collSymbol === 'usdt';
+    const collPrice = isUsd ? 1 : (collateralPrices[collSymbol] || 1);
+
+    let symbolSource = null;
+    let baseSymbol = null;
+    if (m.baseToken?.symbol) {
+      baseSymbol = m.baseToken.symbol;
+      symbolSource = 'Keeper';
+    } else if (lcdTokens[m.marketId]) {
+      baseSymbol = lcdTokens[m.marketId].base;
+      symbolSource = 'LCD';
+    }
+
+    const data = {
+      baseToken: { symbol: baseSymbol },
+      collateralToken: m.collateralToken,
+      symbolSource,
+      visible: lcdTokens[m.marketId] ? true : m.visible,
+      feesPerHourLong: m.feesPerHourLong,
+      feesPerHourShort: m.feesPerHourShort,
+      oiLong: m.oiLong,
+      oiShort: m.oiShort,
+      oiMax: m.oiMax,
+      oiLongUsd: m.oiLong != null ? m.oiLong / 1e6 * collPrice : null,
+      oiShortUsd: m.oiShort != null ? m.oiShort / 1e6 * collPrice : null,
+      oiMaxUsd: m.oiMax != null ? m.oiMax / 1e6 * collPrice : null,
+      price: m.price,
+      priceChangePct24Hrs: m.priceChangePct24Hrs,
+      minLeverage: m.minLeverage,
+      maxLeverage: m.maxLeverage,
+      openFeePct: m.openFeePct,
+      closeFeePct: m.closeFeePct,
+      collateralPrice: collPrice,
+    };
+
+    const collateralTokenSymbol = m.collateralToken?.symbol || null;
+    await sql`
+      INSERT INTO markets (network, market_id, base_token_symbol, collateral_token_symbol, data)
+      VALUES (${network}, ${m.marketId}, ${baseSymbol}, ${collateralTokenSymbol}, ${JSON.stringify(data)}::jsonb)
+      ON CONFLICT (network, market_id) DO UPDATE SET
+        base_token_symbol = COALESCE(EXCLUDED.base_token_symbol, markets.base_token_symbol),
+        collateral_token_symbol = COALESCE(EXCLUDED.collateral_token_symbol, markets.collateral_token_symbol),
+        data = EXCLUDED.data,
+        updated_at = NOW()
+    `;
+    upserted++;
+  }
+
+  // Upsert LCD-only markets not in keeper
+  for (const [idStr, token] of Object.entries(lcdTokens)) {
+    const id = parseInt(idStr);
+    if (liveMarketIds.has(id)) continue;
+
+    let price = null;
+    try {
+      const priceData = await fetchLcdPrice(network, id);
+      price = priceData?.price ? parseFloat(priceData.price) : null;
+    } catch {}
+
+    const data = {
+      baseToken: { symbol: token.base },
+      collateralToken: null,
+      symbolSource: 'LCD',
+      visible: true,
+      inactive: true,
+      price,
+      priceChangePct24Hrs: null,
+      oiLong: null, oiShort: null, oiMax: null,
+      oiLongUsd: null, oiShortUsd: null, oiMaxUsd: null,
+      feesPerHourLong: null, feesPerHourShort: null,
+      minLeverage: null, maxLeverage: null,
+      openFeePct: null, closeFeePct: null,
+      collateralPrice: null,
+    };
+
+    await sql`
+      INSERT INTO markets (network, market_id, base_token_symbol, data)
+      VALUES (${network}, ${id}, ${token.base}, ${JSON.stringify(data)}::jsonb)
+      ON CONFLICT (network, market_id) DO UPDATE SET
+        base_token_symbol = COALESCE(EXCLUDED.base_token_symbol, markets.base_token_symbol),
+        data = EXCLUDED.data,
+        updated_at = NOW()
+    `;
+    upserted++;
+  }
+
+  // Build and return the market map from the markets table
+  // Shape matches liveMarketMap: { [marketId]: { symbol, price } }
+  const result = await sql`
+    SELECT market_id, base_token_symbol, data FROM markets
+    WHERE network = ${network} AND base_token_symbol IS NOT NULL
+  `;
+  const marketMap = {};
+  for (const row of result.rows) {
+    marketMap[row.market_id] = {
+      symbol: row.base_token_symbol,
+      price: row.data?.price ? parseFloat(row.data.price) : null,
+    };
+  }
+
+  console.log(`[sync] Synced ${upserted} markets for ${network}, ${Object.keys(marketMap).length} in map`);
+  return marketMap;
+}
+
+async function syncTrades(network, { full = false } = {}, marketMap = {}) {
   console.log(`Syncing trades for ${network}...`);
 
   // Use keeper's sequential ID as watermark — immune to out-of-order block_ts insertions.
@@ -57,8 +231,8 @@ async function syncTrades(network, { full = false } = {}, liveMarketMap = {}) {
       const results = await Promise.allSettled(trades.map(t => {
         const marketId = t.trade.perpBorrowing?.marketId;
         const keeperSymbol = t.trade.perpBorrowing?.baseToken?.symbol;
-        const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, liveMarketMap);
-        const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, liveMarketMap);
+        const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, marketMap);
+        const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, marketMap);
         const flags = [symbolFlag, priceFlag].filter(Boolean);
         const devNote = flags.length > 0 ? flags.join('; ') : null;
         if (flags.length > 0) console.warn(`[sync] trade ${t.id}: ${flags.join('; ')}`);
@@ -116,7 +290,7 @@ async function syncTrades(network, { full = false } = {}, liveMarketMap = {}) {
 
 // After each sync, check the last GAP_WINDOW IDs for holes and fetch any missing ones.
 // IDs are sequential so offset = id - 1 maps directly to the GraphQL position.
-async function fillTradeGaps(network, liveMarketMap = {}) {
+async function fillTradeGaps(network, marketMap = {}) {
   const GAP_WINDOW = 200;
 
   const gapResult = await sql`
@@ -163,8 +337,8 @@ async function fillTradeGaps(network, liveMarketMap = {}) {
 
     const marketId = t.trade.perpBorrowing?.marketId;
     const keeperSymbol = t.trade.perpBorrowing?.baseToken?.symbol;
-    const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, liveMarketMap);
-    const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, liveMarketMap);
+    const { symbol: resolvedSymbol, flag: symbolFlag } = resolveSymbol(marketId, keeperSymbol, network, marketMap);
+    const priceFlag = checkPriceDeviation(marketId, t.trade.openPrice, resolvedSymbol, marketMap);
     const flags = [symbolFlag, priceFlag].filter(Boolean);
     const devNote = flags.length > 0 ? flags.join('; ') : null;
     if (flags.length > 0) console.warn(`[sync] gap trade ${t.id}: ${flags.join('; ')}`);
@@ -195,7 +369,7 @@ async function fillTradeGaps(network, liveMarketMap = {}) {
   return filled;
 }
 
-async function backfillTradeSymbols(network, liveMarketMap = {}) {
+async function backfillTradeSymbols(network, marketMap = {}) {
   const missing = await sql`
     SELECT COUNT(*) as cnt FROM trades
     WHERE network = ${network} AND collateral_token_symbol IS NULL
@@ -238,7 +412,7 @@ async function backfillTradeSymbols(network, liveMarketMap = {}) {
       .map(t => {
         const marketId = t.trade?.perpBorrowing?.marketId;
         const keeperSymbol = t.trade?.perpBorrowing?.baseToken?.symbol;
-        const { symbol: resolvedSymbol } = resolveSymbol(marketId, keeperSymbol, network, liveMarketMap);
+        const { symbol: resolvedSymbol } = resolveSymbol(marketId, keeperSymbol, network, marketMap);
         return {
           id: t.id,
           symbol: t.trade?.perpBorrowing?.collateralToken?.symbol,
@@ -452,22 +626,18 @@ export default async function handler(req, res) {
 
     const allResults = await Promise.all(
       networks.map(async (net) => {
-        // Fetch live market map once per network — shared by all trade sync functions
-        let liveMarketMap = {};
+        // Sync markets table first — provides symbol + price map for trade resolution
+        let marketMap = {};
         if (!table || table === 'trades') {
-          try {
-            liveMarketMap = await fetchLiveMarketMap(net);
-          } catch (e) {
-            console.warn(`[sync] Could not fetch live market map for ${net}: ${e.message}`);
-          }
+          marketMap = await syncMarkets(net);
         }
 
         let trades = 0, deposits = 0, withdraws = 0;
-        if (!table || table === 'trades')    trades    = await syncTrades(net, opts, liveMarketMap);
+        if (!table || table === 'trades')    trades    = await syncTrades(net, opts, marketMap);
         if (!table || table === 'deposits')  deposits  = await syncDeposits(net, opts);
         if (!table || table === 'withdraws') withdraws = await syncWithdraws(net, opts);
-        const backfilled = (!table || table === 'trades') ? await backfillTradeSymbols(net, liveMarketMap) : 0;
-        const gaps = (!table || table === 'trades') ? await fillTradeGaps(net, liveMarketMap) : 0;
+        const backfilled = (!table || table === 'trades') ? await backfillTradeSymbols(net, marketMap) : 0;
+        const gaps = (!table || table === 'trades') ? await fillTradeGaps(net, marketMap) : 0;
         const vaultPrices = await syncVaultSharePrices(net);
         return { network: net, trades, deposits, withdraws, backfilled, gaps, vaultPrices };
       })
