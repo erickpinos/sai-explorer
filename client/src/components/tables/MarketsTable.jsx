@@ -104,7 +104,7 @@ function renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, onErrorInfo, s
   const Null = (source) => !showBadges ? null : <>{' '}<SourceBadge source={source} /><SourceBadge source="Error" /></>;
 
   switch (key) {
-    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong> {B(m.symbolSource)}</td>;
+    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong>{m.marketId >= 1000 ? <span className="badge badge-dev" style={{ marginLeft: 4, fontSize: '10px' }}>DEV</span> : null} {B(m.symbolSource)}</td>;
     case 'symbol':
       return m.baseToken?.symbol
         ? (

@@ -11,7 +11,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const SORT_OPTIONS = [
   { key: 'tvl', label: 'TVL' },
-  { key: 'apy', label: 'APY' },
   { key: 'feeApy', label: 'Fee APY' },
   { key: 'perf30d', label: '30D Perf' },
   { key: 'netProfit', label: 'Net Profit' },
@@ -93,7 +92,6 @@ export default function LpVaultsTable() {
               <th>Collateral</th>
               <SortTh col="tvl" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>TVL</SortTh>
               <th>Share Price</th>
-              <SortTh col="apy" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>APY</SortTh>
               <SortTh col="feeApy" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Fee APY</SortTh>
               <SortTh col="perf30d" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>30D Perf</SortTh>
               <SortTh col="availableAssets" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Available</SortTh>
@@ -130,9 +128,6 @@ export default function LpVaultsTable() {
                   <td><strong>{sym}</strong></td>
                   <td>${formatNumber(v.tvlUsd, 2)}</td>
                   <td>{formatNumber(v.sharePrice || 0, 6)}</td>
-                  <td className={apyCls}>
-                    {apyPct != null ? `${v.apy >= 0 ? '+' : ''}${apyPct}%` : '-'}
-                  </td>
                   <td className={feeApyCls}>
                     {feeApyPct != null ? `${(v.feeApy ?? 0) >= 0 ? '+' : ''}${feeApyPct}%` : '-'}
                   </td>
@@ -157,8 +152,6 @@ export default function LpVaultsTable() {
 
       <div className="profile-cards-mobile">
         {sorted.map((v, i) => {
-          const apyPct = v.apy != null ? formatNumber(v.apy, 2) : null;
-          const apyCls = v.apy >= 0 ? 'pnl-positive' : 'pnl-negative';
           const feeApyPct = v.feeApy != null ? formatNumber(v.feeApy, 2) : null;
           const feeApyCls = (v.feeApy ?? 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
           const perf30dPct = v.perf30d != null ? formatNumber(v.perf30d, 2) : null;
@@ -172,8 +165,8 @@ export default function LpVaultsTable() {
                   <span className="profile-card-market">{sym}</span>
                   <code style={{ fontSize: '11px', color: '#888' }}>{shortAddress(v.address)}</code>
                 </div>
-                {apyPct != null && (
-                  <span className={apyCls}>{v.apy >= 0 ? '+' : ''}{apyPct}% APY</span>
+                {feeApyPct != null && (
+                  <span className={feeApyCls}>{(v.feeApy ?? 0) >= 0 ? '+' : ''}{feeApyPct}% Fee APY</span>
                 )}
               </div>
               <div className="profile-card-row">

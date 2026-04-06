@@ -111,8 +111,10 @@ export default function TradesTable() {
             </span>
           </td>
         );
-      case 'marketId':
-        return <td><strong>{trade.trade?.perpBorrowing?.marketId != null ? trade.trade.perpBorrowing.marketId : '-'}</strong></td>;
+      case 'marketId': {
+        const mid = trade.trade?.perpBorrowing?.marketId;
+        return <td><strong>{mid != null ? mid : '-'}</strong>{mid >= 1000 ? <span className="badge badge-dev" style={{ marginLeft: 4, fontSize: '10px' }}>DEV</span> : null}</td>;
+      }
       case 'market':
         return <td>{trade.trade?.perpBorrowing?.baseToken?.symbol || '-'}</td>;
       case 'marketLive': {

@@ -1204,6 +1204,11 @@ td a:hover {
   color: #a855f7;
 }
 
+.badge-dev {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
 /* Trade/Position Colors */
 .long {
   color: #22c55e;
