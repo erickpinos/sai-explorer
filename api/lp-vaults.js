@@ -89,6 +89,7 @@ export default async function handler(req, res) {
           tvl
           sharePrice
           apy
+          feeApy
           availableAssets
           currentEpoch
           epochStart

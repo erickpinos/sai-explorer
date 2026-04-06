@@ -12,6 +12,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const SORT_OPTIONS = [
   { key: 'tvl', label: 'TVL' },
   { key: 'apy', label: 'APY' },
+  { key: 'feeApy', label: 'Fee APY' },
+  { key: 'perf30d', label: '30D Perf' },
   { key: 'netProfit', label: 'Net Profit' },
   { key: 'liabilities', label: 'Liabilities' },
   { key: 'availableAssets', label: 'Available' },
@@ -20,10 +22,18 @@ const SORT_OPTIONS = [
 const SORT_KEYS = {
   tvl:             (v) => v.tvlUsd || 0,
   apy:             (v) => v.apy ?? 0,
+  feeApy:          (v) => v.feeApy ?? 0,
+  perf30d:         (v) => v.perf30d ?? -Infinity,
   netProfit:       (v) => v.netProfitUsd || 0,
   liabilities:     (v) => v.liabilitiesUsd || 0,
   availableAssets: (v) => v.availableUsd || 0,
 };
+
+function calc30dPerf(apyWindows) {
+  const w = apyWindows?.['30d'];
+  if (!w || !w.startPrice || !w.endPrice) return null;
+  return (w.endPrice / w.startPrice - 1) * 100;
+}
 
 function toUsd(microAmount, collateralPrice = 1) {
   return (microAmount || 0) / 1e6 * collateralPrice;
@@ -49,6 +59,7 @@ export default function LpVaultsTable() {
     const p = v.collateralPrice || 1;
     return {
       ...v,
+      perf30d: calc30dPerf(v.apyWindows),
       epochDurationDays: data?.epochDurationDays,
       tvlUsd:           toUsd(v.tvl, p),
       availableUsd:     toUsd(v.availableAssets, p),
@@ -83,6 +94,8 @@ export default function LpVaultsTable() {
               <SortTh col="tvl" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>TVL</SortTh>
               <th>Share Price</th>
               <SortTh col="apy" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>APY</SortTh>
+              <SortTh col="feeApy" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Fee APY</SortTh>
+              <SortTh col="perf30d" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>30D Perf</SortTh>
               <SortTh col="availableAssets" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Available</SortTh>
               <SortTh col="netProfit" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Net Profit</SortTh>
               <SortTh col="liabilities" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Liabilities</SortTh>
@@ -96,6 +109,10 @@ export default function LpVaultsTable() {
             {sorted.map((v, i) => {
               const apyPct = v.apy != null ? formatNumber(v.apy, 2) : null;
               const apyCls = v.apy >= 0 ? 'pnl-positive' : 'pnl-negative';
+              const feeApyPct = v.feeApy != null ? formatNumber(v.feeApy, 2) : null;
+              const feeApyCls = (v.feeApy ?? 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+              const perf30dPct = v.perf30d != null ? formatNumber(v.perf30d, 2) : null;
+              const perf30dCls = (v.perf30d ?? 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
               const netCls = v.netProfitUsd >= 0 ? 'pnl-positive' : 'pnl-negative';
               const sym = symbol(v);
               return (
@@ -115,6 +132,12 @@ export default function LpVaultsTable() {
                   <td>{formatNumber(v.sharePrice || 0, 6)}</td>
                   <td className={apyCls}>
                     {apyPct != null ? `${v.apy >= 0 ? '+' : ''}${apyPct}%` : '-'}
+                  </td>
+                  <td className={feeApyCls}>
+                    {feeApyPct != null ? `${(v.feeApy ?? 0) >= 0 ? '+' : ''}${feeApyPct}%` : '-'}
+                  </td>
+                  <td className={perf30dCls}>
+                    {perf30dPct != null ? `${(v.perf30d ?? 0) >= 0 ? '+' : ''}${perf30dPct}%` : '-'}
                   </td>
                   <td>${formatNumber(v.availableUsd, 2)}</td>
                   <td className={netCls}>${formatNumber(v.netProfitUsd, 2)}</td>
@@ -136,6 +159,10 @@ export default function LpVaultsTable() {
         {sorted.map((v, i) => {
           const apyPct = v.apy != null ? formatNumber(v.apy, 2) : null;
           const apyCls = v.apy >= 0 ? 'pnl-positive' : 'pnl-negative';
+          const feeApyPct = v.feeApy != null ? formatNumber(v.feeApy, 2) : null;
+          const feeApyCls = (v.feeApy ?? 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+          const perf30dPct = v.perf30d != null ? formatNumber(v.perf30d, 2) : null;
+          const perf30dCls = (v.perf30d ?? 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
           const netCls = v.netProfitUsd >= 0 ? 'pnl-positive' : 'pnl-negative';
           const sym = symbol(v);
           return (
@@ -154,6 +181,16 @@ export default function LpVaultsTable() {
                 <span className="profile-card-value">${formatNumber(v.tvlUsd, 2)}</span>
                 <span className="profile-card-label">Available</span>
                 <span className="profile-card-value">${formatNumber(v.availableUsd, 2)}</span>
+              </div>
+              <div className="profile-card-row">
+                <span className="profile-card-label">Fee APY</span>
+                <span className={`profile-card-value ${feeApyCls}`}>
+                  {feeApyPct != null ? `${(v.feeApy ?? 0) >= 0 ? '+' : ''}${feeApyPct}%` : '-'}
+                </span>
+                <span className="profile-card-label">30D Perf</span>
+                <span className={`profile-card-value ${perf30dCls}`}>
+                  {perf30dPct != null ? `${(v.perf30d ?? 0) >= 0 ? '+' : ''}${perf30dPct}%` : '-'}
+                </span>
               </div>
               <div className="profile-card-row">
                 <span className="profile-card-label">Net Profit</span>
@@ -181,8 +218,8 @@ export default function LpVaultsTable() {
       <div className="markets-note">
         <span className="markets-note-icon">ℹ</span>
         <span>
-          APY = ((share_price_now / share_price_30d_ago)^(365/30) − 1) × 100.
-          A negative APY means the vault share price has declined over the last 30 days.
+          APY = ((share_price_now / share_price_30d_ago)^(365/30) − 1) × 100 (annualized, from on-chain share price history).
+          Fee APY = fee income only (from keeper). 30D Perf = raw share price return over 30 days, not annualized.
         </span>
       </div>
 

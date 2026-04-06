@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         collateral_amount, open_collateral_amount, tp, sl, market_id, base_token_symbol, collateral_token_symbol, tx_failed, dev_note, keeper_id
       FROM trades
       WHERE network = ${network}
-        ${!process.env.VERCEL ? sql`` : sql`AND market_id < 1000`}
+        AND (${!process.env.VERCEL} OR market_id < 1000)
       ORDER BY block_ts DESC
       LIMIT ${pagination.limit}
       OFFSET ${pagination.offset}

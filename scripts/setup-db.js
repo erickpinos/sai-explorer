@@ -161,8 +161,7 @@ async function setupDatabase() {
         collateral_token_symbol TEXT,
         base_token_symbol TEXT,
         data JSONB NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(network, market_id)
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
     console.log('✓ Created markets table');
@@ -170,6 +169,15 @@ async function setupDatabase() {
     await query('ALTER TABLE markets ADD COLUMN IF NOT EXISTS collateral_token_symbol TEXT');
     await query('ALTER TABLE markets ADD COLUMN IF NOT EXISTS base_token_symbol TEXT');
     console.log('✓ Ensured markets columns up to date');
+
+    // Migrate from simple unique to partial unique indexes (supports multiple collateral tokens per market)
+    await query('ALTER TABLE markets DROP CONSTRAINT IF EXISTS markets_network_market_id_key');
+    await query('DROP INDEX IF EXISTS markets_network_market_id_key');
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS markets_keeper_unique
+      ON markets(network, market_id, collateral_token_symbol) WHERE collateral_token_symbol IS NOT NULL`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS markets_lcd_unique
+      ON markets(network, market_id) WHERE collateral_token_symbol IS NULL`);
+    console.log('✓ Ensured markets partial unique indexes');
 
     // Create metadata table (for tracking sync state)
     await query(`

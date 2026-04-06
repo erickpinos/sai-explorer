@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       FROM markets
       WHERE network = ${network}
         AND (data->>'symbolSource' IS DISTINCT FROM 'LCD')
-        ${!process.env.VERCEL ? sql`` : sql`AND market_id < 1000`}
+        AND (${!process.env.VERCEL} OR market_id < 1000)
       ORDER BY market_id
     `;
 
