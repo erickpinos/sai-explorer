@@ -104,7 +104,7 @@ function renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, onErrorInfo, s
   const Null = (source) => !showBadges ? null : <>{' '}<SourceBadge source={source} /><SourceBadge source="Error" /></>;
 
   switch (key) {
-    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong> {B(m.inactive ? (m.symbolSource || 'LCD') : 'Keeper')}</td>;
+    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong> {B(m.symbolSource)}</td>;
     case 'symbol':
       return m.baseToken?.symbol
         ? (
@@ -115,12 +115,12 @@ function renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, onErrorInfo, s
               : <SourceBadge source={m.symbolSource} />)}
           </td>
         )
-        : <td>—{Null(m.symbolSource || 'LCD')}</td>;
+        : <td>—{Null(m.symbolSource)}</td>;
     case 'collateral':  return <td>{m.collateralToken?.symbol ? <>{m.collateralToken.symbol} {B('Keeper')}</> : <>—{Null('Keeper')}</>}</td>;
     case 'price':
       return m.price != null
-        ? <td>{formatPrice(m.price)} {B(m.inactive ? 'LCD' : 'Keeper')}</td>
-        : <td>—{Null(m.inactive ? 'LCD' : 'Keeper')}</td>;
+        ? <td>{formatPrice(m.price)} {B(m.symbolSource)}</td>
+        : <td>—{Null(m.symbolSource)}</td>;
     case 'priceChange':
       return m.priceChangePct24Hrs != null
         ? <td className={changeClass}>{changeSign}{formatNumber(priceChange, 2)}% {B('Keeper')}</td>
@@ -498,12 +498,11 @@ export default function MarketsTable() {
 
   const sourceErrors = data?.errors || {};
   const [simulateKeeperFail, setSimulateKeeperFail] = useState(false);
-  const [simulateLcdFail, setSimulateLcdFail] = useState(false);
   const [simulateCoinGeckoFail, setSimulateCoinGeckoFail] = useState(false);
   const [simulateProd, setSimulateProd] = useState(false);
 
   const markets = useMemo(() => {
-    const raw = (data?.markets || []).filter(m => m.visible !== false);
+    const raw = (data?.markets || []);
     if (!IS_DEV) return raw;
     const depthByMarketId = depthData?.markets
       ? Object.fromEntries(depthData.markets.map(d => [d.marketId, d]))
@@ -530,15 +529,12 @@ export default function MarketsTable() {
           feesPerHourLong: null, feesPerHourShort: null,
         };
       }
-      if (simulateLcdFail && m.inactive) {
-        enriched = { ...enriched, price: null, baseToken: null };
-      }
       if (simulateCoinGeckoFail) {
         enriched = { ...enriched, _depth: null, _volatility: null };
       }
       return enriched;
     });
-  }, [data, depthData, volData, simulateKeeperFail, simulateLcdFail, simulateCoinGeckoFail]);
+  }, [data, depthData, volData, simulateKeeperFail, simulateCoinGeckoFail]);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <EmptyState message={`Error: ${error}`} />;
@@ -592,20 +588,6 @@ export default function MarketsTable() {
               }}
             >
               {simulateKeeperFail ? 'Keeper fail: ON' : 'Simulate Keeper fail'}
-            </button>
-            {' | '}
-            <button
-              onClick={() => setSimulateLcdFail(v => !v)}
-              style={{
-                background: simulateLcdFail ? '#dc262633' : 'none',
-                border: simulateLcdFail ? '1px solid #f87171' : 'none',
-                color: simulateLcdFail ? '#f87171' : '#60a5fa',
-                cursor: 'pointer', padding: simulateLcdFail ? '1px 6px' : 0,
-                fontSize: 'inherit', textDecoration: simulateLcdFail ? 'none' : 'underline',
-                borderRadius: 3,
-              }}
-            >
-              {simulateLcdFail ? 'LCD fail: ON' : 'Simulate LCD fail'}
             </button>
             {' | '}
             <button

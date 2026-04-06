@@ -20,6 +20,8 @@ export default async function handler(req, res) {
       SELECT market_id, base_token_symbol, collateral_token_symbol, data, updated_at
       FROM markets
       WHERE network = ${network}
+        AND (data->>'symbolSource' IS DISTINCT FROM 'LCD')
+        ${!process.env.VERCEL ? sql`` : sql`AND market_id < 1000`}
       ORDER BY market_id
     `;
 

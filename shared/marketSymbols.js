@@ -28,11 +28,15 @@ export async function fetchLiveMarketMap(network) {
 
 /**
  * Resolve the correct base_token_symbol for a trade.
- * Uses keeper symbol first, falls back to live market map. Returns null if neither has it.
+ * Uses keeper symbol first, then keeper name (for custom markets like pokemon-card-index
+ * that have no symbol), then falls back to live market map. Returns null if none found.
  */
-export function resolveSymbol(marketId, keeperSymbol, _network, liveMarketMap = {}) {
+export function resolveSymbol(marketId, keeperSymbol, _network, liveMarketMap = {}, keeperName = null) {
   // Use keeper symbol if available
   if (keeperSymbol) return { symbol: keeperSymbol, flag: null };
+
+  // Use keeper name as fallback (custom markets have name but no symbol)
+  if (keeperName) return { symbol: keeperName, flag: null };
 
   // Fall back to live market map (keeper borrowings)
   const live = liveMarketMap[marketId];
