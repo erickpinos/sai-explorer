@@ -191,8 +191,8 @@ export default async function handler(req, res) {
         marketId: m.marketId,
         symbol,
         coinId:                    row?.coin_id                    ?? SYMBOL_TO_COINGECKO_ID[symbol] ?? null,
-        depth_plus_2_percent_usd:  row?.depth_plus_2_percent_usd  ?? null,
-        depth_minus_2_percent_usd: row?.depth_minus_2_percent_usd ?? null,
+        depth_plus_2_percent_usd:  row?.depth_plus_2_percent_usd  != null ? Number(row.depth_plus_2_percent_usd)  : null,
+        depth_minus_2_percent_usd: row?.depth_minus_2_percent_usd != null ? Number(row.depth_minus_2_percent_usd) : null,
         fetched_at:                row?.fetched_at                 ?? null,
       };
     });

@@ -65,28 +65,28 @@ const SORT_GETTERS = {
   fundingLong: (m) => m.feesPerHourLong || 0,
   fundingShort:(m) => m.feesPerHourShort || 0,
   totalOi:     (m) => (m.oiLongUsd || 0) + (m.oiShortUsd || 0),
-  depth_up:    (m) => m._depth?.depth_plus_2_percent_usd  || 0,
-  depth_down:  (m) => m._depth?.depth_minus_2_percent_usd || 0,
+  depth_up:    (m) => Number(m._depth?.depth_plus_2_percent_usd)  || 0,
+  depth_down:  (m) => Number(m._depth?.depth_minus_2_percent_usd) || 0,
   volatility:  (m) => m._volatility?.volatility_pct || 0,
 };
 
 const DEFAULT_COLUMNS = [
-  { key: 'marketId',    label: 'Market ID',          sortable: true },
-  { key: 'symbol',      label: 'Market',             sortable: true },
-  { key: 'collateral',  label: 'Collateral',         sortable: true },
-  { key: 'price',       label: 'Price',              sortable: true },
-  { key: 'priceChange', label: '24h Change',         sortable: true },
-  { key: 'oiLong',      label: 'OI Long',            sortable: true },
-  { key: 'oiShort',     label: 'OI Short',           sortable: true },
-  { key: 'oiMax',       label: 'Max OI',             sortable: true },
+  { key: 'marketId',    label: 'Market ID',          sortable: true  },
+  { key: 'symbol',      label: 'Market',             sortable: true  },
+  { key: 'collateral',  label: 'Collateral',         sortable: true  },
+  { key: 'price',       label: 'Price',              sortable: true  },
+  { key: 'priceChange', label: '24h Change',         sortable: true  },
+  { key: 'oiLong',      label: 'OI Long',            sortable: true  },
+  { key: 'oiShort',     label: 'OI Short',           sortable: true  },
+  { key: 'oiMax',       label: 'Max OI',             sortable: true  },
   { key: 'leverage',    label: 'Leverage',           sortable: false },
-  { key: 'openFee',     label: 'Open Fee',           sortable: true },
-  { key: 'closeFee',    label: 'Close Fee',          sortable: true },
-  { key: 'fundingLong', label: 'Funding Long',       sortable: true },
-  { key: 'fundingShort',label: 'Funding Short',      sortable: true },
+  { key: 'openFee',     label: 'Open Fee',           sortable: true  },
+  { key: 'closeFee',    label: 'Close Fee',          sortable: true  },
+  { key: 'fundingLong', label: 'Funding Long',       sortable: true  },
+  { key: 'fundingShort',label: 'Funding Short',      sortable: true  },
   ...(IS_DEV ? [
-    { key: 'depth_up',   label: '+2% Depth [DEV]',   sortable: true },
-    { key: 'depth_down', label: '-2% Depth [DEV]',   sortable: true },
+    { key: 'depth_up',   label: '+2% Depth [DEV]',   sortable: true  },
+    { key: 'depth_down', label: '-2% Depth [DEV]',   sortable: true  },
     { key: 'volatility', label: 'Organic Volatility [DEV]', sortable: true },
   ] : []),
 ];
@@ -104,18 +104,18 @@ function renderCell(key, m, onDepthInfo, onVolInfo, sourceErrors, onErrorInfo, s
   const Null = (source) => !showBadges ? null : <>{' '}<SourceBadge source={source} /><SourceBadge source="Error" /></>;
 
   switch (key) {
-    case 'marketId':    return <td><strong>{m.marketId != null ? m.marketId : '-'}</strong>{m.marketId >= 1000 ? <span className="badge badge-dev" style={{ marginLeft: 4, fontSize: '10px' }}>DEV</span> : null} {B(m.symbolSource)}</td>;
+    case 'marketId':    return <td style={{ minWidth: 140 }}><strong>{m.marketId != null ? m.marketId : '-'}</strong>{m.marketId >= 1000 ? <span className="badge badge-dev" style={{ marginLeft: 4, fontSize: '10px' }}>DEV</span> : null} {B(m.symbolSource)}</td>;
     case 'symbol':
       return m.baseToken?.symbol
         ? (
-          <td>
+          <td style={{ minWidth: 160 }}>
             <strong>{m.baseToken.symbol}</strong>
             {showBadges && m.symbolSource && (sourceErrors[m.symbolSource]
               ? <SourceBadge source="Error" onClick={() => onErrorInfo(m.symbolSource, sourceErrors[m.symbolSource])} />
               : <SourceBadge source={m.symbolSource} />)}
           </td>
         )
-        : <td>—{Null(m.symbolSource)}</td>;
+        : <td style={{ minWidth: 160 }}>—{Null(m.symbolSource)}</td>;
     case 'collateral':  return <td>{m.collateralToken?.symbol ? <>{m.collateralToken.symbol} {B('Keeper')}</> : <>—{Null('Keeper')}</>}</td>;
     case 'price':
       return m.price != null
@@ -504,8 +504,8 @@ export default function MarketsTable() {
   const markets = useMemo(() => {
     const raw = (data?.markets || []);
     if (!IS_DEV) return raw;
-    const depthByMarketId = depthData?.markets
-      ? Object.fromEntries(depthData.markets.map(d => [d.marketId, d]))
+    const depthBySymbol = depthData?.markets
+      ? Object.fromEntries(depthData.markets.map(d => [d.symbol, d]))
       : {};
     const volBySymbol = volData?.markets
       ? Object.fromEntries(volData.markets.map(v => [v.symbol, v]))
@@ -513,7 +513,7 @@ export default function MarketsTable() {
     return raw.map(m => {
       let enriched = {
         ...m,
-        _depth: depthByMarketId[m.marketId] ?? null,
+        _depth: depthBySymbol[m.baseToken?.symbol] ?? null,
         _volatility: volBySymbol[m.baseToken?.symbol] ?? null,
       };
       if (simulateKeeperFail) {

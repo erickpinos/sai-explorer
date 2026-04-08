@@ -18,12 +18,17 @@ export function useSortedData(data, defaultCol, defaultDir = 'desc', sortGetters
     if (!sortCol) return data;
     const getter = sortGetters ? sortGetters[sortCol] : (item) => item[sortCol];
     if (!getter) return data;
-    return [...data].sort((a, b) => {
-      const aVal = getter(a) ?? 0;
-      const bVal = getter(b) ?? 0;
-      if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
+    try {
+      return [...data].sort((a, b) => {
+        const aVal = getter(a) ?? 0;
+        const bVal = getter(b) ?? 0;
+        if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+    } catch (e) {
+      console.error('[useSortedData] sort error for col', sortCol, e);
+      return data;
+    }
   }, [data, sortCol, sortDir, sortGetters]);
 
   return { sorted, sortCol, sortDir, handleSort };
